@@ -83,6 +83,11 @@ type value =
   | VZero
   | VSucc of value
 (*=End*)
+(*=Value_Bool *)
+  | VBool
+  | VTrue
+  | VFalse
+(*=End*)
 (*=Value_Vector *)
   | VVec of value * value 
   | VDNil of value
@@ -94,6 +99,7 @@ and neutral =
   | NFree of name 
   | NApp of neutral * value 
   | NIter of value * value * value * value
+  | NIfte of value * value * value * value
 (*=neutral_fold *)
   | NDFold of value * value * value * value * value * value 
 (*=End *)
@@ -353,6 +359,11 @@ let rec big_step_eval_inTm t envi =
   | Zero -> VZero
   | Succ(n) -> VSucc(big_step_eval_inTm n envi)
 (*=End *)
+(*=big_step_bool *) 
+  | Bool -> VBool
+  | True -> VTrue 
+  | False -> VFalse 
+(*=End *)
 (*=big_step_vec *) 
   | Vec(alpha,n) -> VVec((big_step_eval_inTm alpha envi),(big_step_eval_inTm n envi))
   | DNil(alpha) -> VDNil(big_step_eval_inTm alpha envi)
@@ -380,6 +391,11 @@ and vfold(alpha,p,n,xs,f,a) =
   | (VDCons(elem,y),VLam fu,VSucc(ni)) -> vapp(vapp(vapp(fu n,xs),elem),vfold(alpha,p,ni,y,f,a))
   | _ -> VNeutral(NDFold(alpha,p,n,xs,f,a))
 (*=End *)
+and vifte(p,c,tHen,eLse) = 
+  match c with 
+  | VTrue -> tHen 
+  | VFalse -> eLse 
+  | _ -> VNeutral(NIfte(p,c,tHen,eLse))
 and big_step_eval_exTm t envi = 
   match t with
   | Ann(x,_) -> big_step_eval_inTm x envi 
@@ -391,6 +407,12 @@ and big_step_eval_exTm t envi =
 			     (big_step_eval_inTm n envi),
 			     (big_step_eval_inTm f envi),
 			     (big_step_eval_inTm a envi))
+(*=End *)
+(*=big_step_bool *)
+  | Ifte(p,c,tHen,eLse) -> vifte((big_step_eval_inTm p envi),
+				 (big_step_eval_inTm c envi),
+				 (big_step_eval_inTm tHen envi),
+				 (big_step_eval_inTm eLse envi))
 (*=End *)
   | DFold(alpha,p,n,xs,f,a) -> vfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm p envi),
 				      (big_step_eval_inTm n envi),(big_step_eval_inTm xs envi),
@@ -423,6 +445,9 @@ let rec value_to_inTm i v =
   | VNat -> Nat
   | VZero -> Zero
   | VSucc(n) -> Succ(value_to_inTm i n)
+  | VBool -> Bool 
+  | VTrue -> True 
+  | VFalse -> False 
   | VVec(alpha,n) -> Vec((value_to_inTm i alpha),(value_to_inTm i n))
   | VDNil(alpha) -> DNil(value_to_inTm i alpha)
   | VDCons(a,xs) -> DCons((value_to_inTm i a),(value_to_inTm i xs)) 
@@ -435,6 +460,7 @@ and neutral_to_exTm i v =
   | NDFold(alpha,p,n,xs,f,a) -> DFold((value_to_inTm i alpha),(value_to_inTm i p),(value_to_inTm i n),
 				      (value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
   | NIter(p,n,f,a) -> Iter((value_to_inTm i p),(value_to_inTm i n),(value_to_inTm i f),(value_to_inTm i a))
+  | NIfte(p,c,tHen,eLse) -> Ifte((value_to_inTm i p),(value_to_inTm i c),(value_to_inTm i tHen),(value_to_inTm i eLse))
   | NTrans(gA,p,a,b,q,x) -> Trans((value_to_inTm i gA),(value_to_inTm i p),(value_to_inTm i a),
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
 
@@ -448,6 +474,9 @@ let rec equal_inTm t1 t2 =
   | (Zero,Zero) -> true 
   | (Succ(n1),Succ(n2)) -> equal_inTm n1 n2
   | (Nat,Nat) -> true
+  | (Bool,Bool) -> true 
+  | (True,True) -> true 
+  | (False,False) -> true 
   | (Inv(x1),Inv(x2)) -> equal_exTm x1 x2
   | (Pair(x1,y1),Pair(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | (Cross(x1,y1),Cross(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false 
@@ -463,6 +492,8 @@ and equal_exTm t1 t2 =
   | (FVar(x1),FVar(x2)) -> x1 = x2
   | (Appl(x1,y1),Appl(x2,y2)) -> if equal_exTm x1 x2 then equal_inTm y1 y2 else false
   | (Iter(w1,x1,y1,z1),Iter(w2,x2,y2,z2)) -> 
+     if equal_inTm w1 w2 then (if equal_inTm x1 x2 then (if equal_inTm y1 y2 then equal_inTm z1 z2 else false) else false) else false
+  | (Ifte(w1,x1,y1,z1),Ifte(w2,x2,y2,z2)) -> 
      if equal_inTm w1 w2 then (if equal_inTm x1 x2 then (if equal_inTm y1 y2 then equal_inTm z1 z2 else false) else false) else false
   | (P0(x1),P0(x2)) -> equal_exTm x1 x2
   | (P1(x1),P1(x2)) -> equal_exTm x1 x2
@@ -533,6 +564,9 @@ let rec lcheck contexte ty inT =
 	 | _ -> false
      end
   (*=End *)
+  | Bool -> ty = VStar
+  | True -> ty = VBool
+  | False -> ty = VBool
 (*=check_vec *)
   | Vec(alpha,n) -> ty = VStar && 
 		      lcheck contexte VStar alpha  &&
@@ -623,6 +657,15 @@ and lsynth ctxt exT =
      then (vapp(big_p,big_n))
      else failwith "Iter synth fail"
   (*=End *)
+  | Ifte(p,c,tHen,eLse) -> 
+     let big_p = big_step_eval_inTm p [] in 
+     let big_c = big_step_eval_inTm c [] in 
+     if lcheck ctxt (big_step_eval_inTm (read "(-> B *)") []) p &&
+	  lcheck ctxt (big_step_eval_inTm (read "B") []) c &&
+	    lcheck ctxt (vapp(big_p,VTrue)) tHen && 
+	      lcheck ctxt (vapp(big_p,VFalse)) eLse 
+     then (vapp(big_p,big_c))
+     else failwith "Ifte synth fail" 
   (*=synth_dfold *)
   | DFold(alpha,p,n,xs,f,a) ->
      let type_p = (Pi(Global"n",Nat,(Pi(Global"xs",Vec(alpha,Inv(BVar 0)),Star)))) in 
@@ -722,6 +765,24 @@ test le retour de la synthèse *)
        match ty with 
 	 | VNat -> check contexte x VNat (pretty_print_inTm inT [] ^ ";"^ steps)
 	 | _ -> create_report false (contexte_to_string contexte) steps "Succ : ty must be VNat"
+     end 
+  | Bool -> 
+     begin 
+       match ty with 
+       | VStar -> create_report true (contexte_to_string contexte) steps "No"
+       | _ -> create_report false (contexte_to_string contexte) steps "Bool: ty must VStar"
+     end 
+  | True -> 
+     begin 
+       match ty with 
+       | VBool -> create_report true (contexte_to_string contexte) steps "No"
+       | _ -> create_report false (contexte_to_string contexte) steps "True: ty must VBool"
+     end 
+  | False -> 
+     begin 
+       match ty with 
+       | VBool -> create_report true (contexte_to_string contexte) steps "No"
+       | _ -> create_report false (contexte_to_string contexte) steps "False: ty must VBool"
      end 
   | Vec(alpha,n) -> 
      begin        
@@ -839,6 +900,32 @@ and synth contexte exT steps =
 			 else create_retSynth (create_report false (contexte_to_string contexte) steps "Iter : p is not of type (-> N *)") VStar
 		       end 
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Iter : n is not of type VNat") VStar     
+  | Ifte(p,c,tHen,eLse) -> 
+     let big_p = big_step_eval_inTm p [] in
+     let big_c = big_step_eval_inTm c [] in 
+     let check_p = check contexte p (big_step_eval_inTm (read "(-> B *)") []) (pretty_print_exTm exT [] ^ ";") in    
+     let check_c = check contexte c (big_step_eval_inTm (read "B") []) (pretty_print_exTm exT [] ^ ";") in
+     let check_tHen = check contexte tHen (vapp(big_p,VTrue)) (pretty_print_exTm exT [] ^ ";") in
+     let check_eLse = check contexte eLse (vapp(big_p,VFalse)) (pretty_print_exTm exT [] ^ ";") in
+     if res_debug(check_p)
+     then
+       begin 
+	 if res_debug(check_c)
+	 then 
+	   begin
+	     if res_debug(check_tHen)
+	     then 
+	       begin 
+		 if res_debug(check_eLse) 
+		 then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (vapp(big_p,big_c)) 
+		 else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : eLse is not of type (P VFalse)") VStar
+	       end 
+	     else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : tHen is not of type (P VTrue)") VStar     
+	   end 
+	 else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : c is not of type VBool") VStar     
+       end  
+     else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : p is not of type (-> B *)") VStar
+     
   | DFold(alpha,p,n,xs,f,a) -> let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in
 			       let type_p = (Pi(Global"n",Nat,(Pi(Global"xs",Vec(alpha,Inv(BVar 0)),Star)))) in 
 			       let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
