@@ -1,5 +1,12 @@
 open Sexplib
 
+(*
+  To load in the OCaml toplevel:
+  #use "topfind";;
+  #require "sexplib";;
+  #require "oUnit";;
+  #use "lambda.ml";;
+*)
 
 type name =
   | Global of string 
@@ -36,6 +43,11 @@ type inTm =
   | Id of inTm * inTm * inTm
   | Refl (* TODO: remove *) of inTm 
 (*=exTm_head *) 
+(*=terme_bool *)				 
+  | Bool
+  | True 
+  | False	
+(*=End *)		 
 and exTm = 
 (*=End *)
 (*=exTm *) 
@@ -52,6 +64,9 @@ and exTm =
   | P1 of exTm 
 (*=terme_dfold *)
   | DFold of inTm * inTm * inTm * inTm * inTm * inTm 
+(*=End *)
+(*=terme_ifte *)
+  | Ifte of inTm * inTm * inTm * inTm 
 (*=End *)
  
 (*=value_head *)
@@ -139,6 +154,9 @@ let rec parse_term env t =
       | Sexp.Atom "*" -> Star
       | Sexp.Atom "zero" -> Zero
       | Sexp.Atom "N" -> Nat 
+      | Sexp.Atom "B" -> Bool 
+      | Sexp.Atom "false" -> True
+      | Sexp.Atom "true" -> False
       | Sexp.Atom "?" -> What
       | Sexp.List [Sexp.Atom "succ"; n] -> 
 	 Succ(parse_term env n)
@@ -212,6 +230,8 @@ and parse_exTm env t =
   | Sexp.List [Sexp.Atom "trans"; gA;p;a;b;q;x] ->
      Trans((parse_term env gA),(parse_term env p),(parse_term env a),(parse_term env b),(parse_term env q),(parse_term env x))
   | Sexp.Atom v -> lookup_var env 0 (Global(v))
+  | Sexp.List [Sexp.Atom "ifte"; p;c;tHen;eLse] ->
+     Ifte((parse_term env p),(parse_term env c),(parse_term env tHen),(parse_term env eLse))
   | Sexp.List (f::args) -> 
      List.fold_left 
        (fun x y -> Appl(x, y))
@@ -232,6 +252,9 @@ let rec pretty_print_inTm t l =
   | Succ n -> "(succ " ^ pretty_print_inTm n l ^ ")"
   | Zero -> "zero"
   | Nat -> "N" 
+  | Bool -> "B"
+  | True -> "true"
+  | False -> "false"
   | Pair(a,b) -> "(" ^ pretty_print_inTm a l ^ " , " ^ pretty_print_inTm b l ^ ")"
   | Cross(a,b) -> "(" ^ pretty_print_inTm a l ^ " X " ^ pretty_print_inTm b l ^ ")"
   | List(alpha) -> "(list " ^ pretty_print_inTm alpha l ^ ")"
@@ -256,6 +279,7 @@ and pretty_print_exTm t l =
   | FVar (Bound x) -> string_of_int x
   | Appl(x,y) -> "(" ^ pretty_print_exTm x l ^ " " ^ pretty_print_inTm y l ^ ")"
   | Iter(p,n,f,z) -> "(iter " ^ pretty_print_inTm p l ^ " " ^ pretty_print_inTm n l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm z l ^ ")"
+  | Ifte(p,c,tHen,eLse) -> "(ifte " ^ pretty_print_inTm p l ^ " " ^ pretty_print_inTm c l ^ " " ^ pretty_print_inTm tHen l ^ " " ^ pretty_print_inTm eLse l ^ ")"
   | P0(x) -> "(p0 " ^ pretty_print_exTm x l ^ ")"
   | P1(x) -> "(p1 " ^ pretty_print_exTm x l ^ ")"
   |  DFold(alpha,p,n,xs,f,a) -> "(dfold " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm p l ^ " " ^pretty_print_inTm n l ^ 
@@ -274,6 +298,9 @@ let rec substitution_inTm t tsub var =
   | Zero -> Zero 
   | Succ n -> Succ(substitution_inTm n tsub var)
   | Nat -> Nat
+  | Bool -> Bool
+  | True -> True 
+  | False -> False 
   | Pair(x,y) -> Pair((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   | Cross(x,y) -> Cross((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   | List(alpha) -> List(substitution_inTm alpha tsub var)
@@ -295,6 +322,7 @@ and substitution_exTm  t tsub var =
   | Ann(x,y) -> Ann((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   (*=End *)
   | Iter(p,n,f,a) -> Iter((substitution_inTm p tsub var),(substitution_inTm n tsub var),(substitution_inTm f tsub var),(substitution_inTm a tsub var))
+  | Ifte(p,c,tHen,eLse) -> Ifte((substitution_inTm p tsub var),(substitution_inTm c tsub var),(substitution_inTm tHen tsub var),(substitution_inTm eLse tsub var))
   | P0(x) -> P0(substitution_exTm x tsub var)
   | P1(x) -> P1(substitution_exTm x tsub var)
   | DFold(alpha,p,n,xs,f,a) -> DFold((substitution_inTm alpha tsub var),(substitution_inTm p tsub var),(substitution_inTm n tsub var),
@@ -411,35 +439,42 @@ and neutral_to_exTm i v =
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
 
 
+
 let rec equal_inTm t1 t2 = 
   match (t1,t2) with 
   | (Abs(_,x1),Abs(_,x2)) -> equal_inTm x1 x2
-  | (Pi(_,x1,y1),Pi(_,x2,y2)) -> equal_inTm x1 x2 = equal_inTm y1 y2
+  | (Pi(_,x1,y1),Pi(_,x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | (Star,Star) -> true 
   | (Zero,Zero) -> true 
   | (Succ(n1),Succ(n2)) -> equal_inTm n1 n2
   | (Nat,Nat) -> true
   | (Inv(x1),Inv(x2)) -> equal_exTm x1 x2
-  | (Pair(x1,y1),Pair(x2,y2)) -> equal_inTm x1 x2 = equal_inTm y1 y2
-  | (Cross(x1,y1),Cross(x2,y2)) -> equal_inTm x1 x2 = equal_inTm y1 y2
+  | (Pair(x1,y1),Pair(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (Cross(x1,y1),Cross(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false 
   | (What,What) -> true
-  | (Vec(x1,y1),Vec(x2,y2)) -> equal_inTm x1 x2 = equal_inTm y1 y2
-  | (DNil x1,DNil x2) -> equal_inTm x1 x2
-  | (DCons(x1,y1),DCons(x2,y2)) -> equal_inTm x1 x2 = equal_inTm y1 y2 
+  | (Vec(x1,y1),Vec(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (DNil x1,DNil x2) -> equal_inTm x1 x2 
+  | (DCons(x1,y1),DCons(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | _ -> false
 and equal_exTm t1 t2 = 
   match (t1,t2) with 
-  | (Ann(x1,y1),Ann(x2,y2)) -> equal_inTm x1 x2 = equal_inTm y1 y2
-  | (BVar(x1),BVar(x2)) -> x1 = x2
+  | (Ann(x1,y1),Ann(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (BVar(x1),BVar(x2)) -> x1 = x2 
   | (FVar(x1),FVar(x2)) -> x1 = x2
-  | (Appl(x1,y1),Appl(x2,y2)) -> equal_exTm x1 x2 = equal_inTm y1 y2 
+  | (Appl(x1,y1),Appl(x2,y2)) -> if equal_exTm x1 x2 then equal_inTm y1 y2 else false
   | (Iter(w1,x1,y1,z1),Iter(w2,x2,y2,z2)) -> 
-     equal_inTm w1 w2 = equal_inTm x1 x2 = equal_inTm y1 y2 = equal_inTm z1 z2
+     if equal_inTm w1 w2 then (if equal_inTm x1 x2 then (if equal_inTm y1 y2 then equal_inTm z1 z2 else false) else false) else false
   | (P0(x1),P0(x2)) -> equal_exTm x1 x2
   | (P1(x1),P1(x2)) -> equal_exTm x1 x2
-  | (DFold(alpha1,p1,n1,xs1,f1,a1),DFold(alpha2,p2,n2,xs2,f2,a2)) -> equal_inTm alpha1 alpha2 = equal_inTm p1 p2 
-								     = equal_inTm p1 p2 = equal_inTm n1 n2 
-								     = equal_inTm xs1 xs2 = equal_inTm f1 f2 = equal_inTm a1 a2
+  | (DFold(alpha1,p1,n1,xs1,f1,a1),DFold(alpha2,p2,n2,xs2,f2,a2)) -> if equal_inTm alpha1 alpha2 then (if equal_inTm p1 p2 
+								     then (if equal_inTm p1 p2 then (if equal_inTm n1 n2 
+								     then (if equal_inTm xs1 xs2 then (if equal_inTm f1 f2 
+												       then equal_inTm a1 a2 else false)
+													else false) 
+												     else false) else false) else false) else false
+												       
+									    
+														       
   | _ -> false
 
 
@@ -649,7 +684,8 @@ let rec check contexte inT ty steps =
      if res_debug_synth ret
      then 
        begin 
-	 if equal_inTm (value_to_inTm 0 (ty)) (value_to_inTm 0 (ret_debug_synth ret))
+	 if equal_inTm (value_to_inTm 0 (ty)) (value_to_inTm 0 (ret_debug_synth ret)) (* elle est ici l'erreur il faut que je 
+test le retour de la synthèse *) 
 	 then create_report true (contexte_to_string contexte) steps "NO"
 	 else create_report false (contexte_to_string contexte) steps "Inv: ret and ty are not equal"
        end

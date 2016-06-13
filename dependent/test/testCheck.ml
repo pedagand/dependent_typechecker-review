@@ -13,31 +13,78 @@ let eq = "(lambda A (lambda a (lambda b (pi P (-> A *) (-> (P a) (P b))))))"
 
 let inputs =   
   [    
+    (* tests vérification lambda *)
     ("(lambda x x)","(-> * *)",true);  
+    ("(lambda x x)","(-> * N)",false);
+    ("(lambda x x)","(-> N N)",true);
+    ("(lambda x x)","(-> N *)",false);
+    ("(lambda x (lambda y (x y)))","(-> (-> N N) (-> N N))",true);
+    ("(lambda x (lambda y (x y)))","(-> (-> N N) (-> N N))",true);
+    ("(lambda x (lambda y (y x)))","(-> (-> N N) (-> N N))",false);
     ("(lambda x x)","(-> (-> * *) *)",false); 
-    ("(pi x * *)","*",true);
     ("(lambda x (x y))","(-> * *)",false);
-    ("(lambda x (lambda y y))","(-> * (-> * *))",true);
-    ("(((: (lambda x (lambda y (y x))) (-> * (-> (-> * *) *))) N) (lambda z z))","*",true);
-    
+    ("(lambda x (lambda y y))","(-> * (-> * *))",true);    
     ("(lambda x (lambda y (y x)))","(-> * (-> (-> * *) *))",true);
     ("(lambda x (lambda y (x y)))","(-> * (-> (-> * *) *))",false);
     ("(lambda x (lambda y x))","(-> * (-> (-> * *) *))",true); 
-    ("(: (lambda x (lambda y y)) (-> * (-> * *)))","(-> * (-> * *))",true);
+    ("(lambda x zero)","(-> * N)",true);
+    ("(lambda x N)","(-> N *)",true);
+
+
+
+    (* tests vérification Pi *)
+    ("(pi x * *)","*",true);
     ("(pi x * *)","N",false); 
-    ("((: (lambda x x) (-> (-> * (-> * *)) (-> * (-> * *)))) (lambda (x y) x))","(-> * (-> * *))",true); (*
+    ("(-> * *)","*",true);
+    ("(pi y N N)","*",true);
+    ("(pi x * x)","*",true);
+    ("(pi x (lambda y y) *)","*",false);
+    ("(pi x N (pi y N N))","*",true); 
+    ("(pi x N (pi y N x))","*",false); 
+    ("(pi A * (pi B (pi x A *) *))","*",true); 
+
+
+
+    (* tests synthèse Ann *)
+    ("(: (lambda x x) (-> N N))","(-> N N)",true);
+    ("(: (lambda x x) (-> N *))","(-> N *)",false);
+    ("(: (lambda x x) (-> * *))","(-> N N)",false); 
+    ("(lambda x (: x N))","(-> N N)",true);
+    ("(lambda x (: x *))","(-> N N)",false);
+    ("(lambda x (: x N))","(-> * *)",false);
+    ("(lambda x (: x N))","(-> * N)",false);
+    
+    
+    (* tests synthèse application *)
+    ("(((: (lambda x (lambda y (y x))) (-> * (-> (-> * *) *))) N) (lambda z z))","*",true);
+    ("(: (lambda x (lambda y y)) (-> * (-> * *)))","(-> * (-> * *))",true);
+    ("((: (lambda x x) (-> (-> * (-> * *)) (-> * (-> * *)))) (lambda (x y) x))","(-> * (-> * *))",true); 
     ("(:(lambda x (succ x)) (-> N N))","(-> N N)",true);
     ("((: (lambda x (succ x)) (-> N N)) zero)","N",true); 
-    ("((: (lambda x (succ x)) (-> * *)) zero)","N",false); 
-    ("(-> * *)","*",true); *)
-    ("(pi A * (pi B (pi x A *) *))","*",true); 
-    (eq, "(pi A * (-> A (-> A *)))",true); 
-    (test1y,"*",true);
+    ("((: (lambda x (succ x)) (-> * *)) zero)","N",false);  
+    ("((: (lambda x N) (-> N *)) zero)","*",true);  
+    ("((: (lambda x x) (-> * *)) zero)","N",false);  
+    ("((: (lambda x zero) (-> * N)) N)","N",true);
+    ("((: (lambda x (lambda y (x y))) (-> (-> N N) (-> N N))) (lambda x (succ x)) zero)","N",true);
+    ("((: (lambda x (lambda y (x y))) (-> (-> N N) (-> N N))) (lambda x x) N)","N",false);
+    
+    (* tests des entiers *)
     ("zero","N",true);
     ("(succ zero)","N",true);
-    ("(lambda x N)","(-> N *)",true);
     ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (succ x))) zero)","N",true); 
+    ("(succ N)","N",false);
+    ("(succ (succ zero))","N",true);
+    ("(succ (succ zero))","*",false);
+    ("(iter (lambda x N) (succ (succ N)) (lambda n (lambda x (succ x))) zero)","N",false); 
+
+    
+    (* tests des booléens *)
+    
+    (test1y,"*",true);
     (testcheck4x,"*",true); 
+
+    (eq, "(pi A * (-> A (-> A *)))",true); 
+
     ("(vec N (succ (succ zero)))","*",true);
     ("(dnil N)","(vec N zero)",true);			      
     ("(dnil zero)","(vec N zero)",false);
@@ -48,7 +95,7 @@ let inputs =
     ("(dcons zero (dcons zero (dcons zero (dnil N))))","(vec B (succ (succ (succ zero))))",false);
     ("(dcons zero (dnil N))","(vec N (succ (succ zero)))",false);
     ("(dcons zero (dcons zero (dcons zero (dnil N))))","(vec N (succ (succ zero)))",false);
-    ("(lambda x ?)","(-> * *)",false);								      
+    ("(lambda x ?)","(-> * *)",true);								      
 										   ("(id N zero (succ zero))","*",true);
    ("(refl zero)","(id N zero zero)",true);				
    ("(+ (succ (succ zero)) (succ (succ zero)))","N",true);
@@ -71,4 +118,4 @@ let inputs =
     
 let tests = List.map (fun (term,chek, res) -> term >:: fun ctxt -> assert_equal (res_debug(check [] (read term) (big_step_eval_inTm (read chek) []) "")) res) inputs 
 
-let ltests = List.map (fun (term,chek,res) -> term >:: fun ctxt -> assert_equal (lcheck [] (big_step_eval_inTm (read chek) []) (read term)) res) inputs 
+(* let ltests = List.map (fun (term,chek,res) -> term >:: fun ctxt -> assert_equal (lcheck [] (big_step_eval_inTm (read chek) []) (read term)) res) inputs *)
