@@ -161,8 +161,8 @@ let rec parse_term env t =
       | Sexp.Atom "zero" -> Zero
       | Sexp.Atom "N" -> Nat 
       | Sexp.Atom "B" -> Bool 
-      | Sexp.Atom "false" -> True
-      | Sexp.Atom "true" -> False
+      | Sexp.Atom "true" -> True
+      | Sexp.Atom "false" -> False
       | Sexp.Atom "?" -> What
       | Sexp.List [Sexp.Atom "succ"; n] -> 
 	 Succ(parse_term env n)

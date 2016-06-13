@@ -79,7 +79,20 @@ let inputs =
 
     
     (* tests des booléens *)
-    
+    ("B","*",true);
+    ("true","B",true);
+    ("false","B",true);
+    ("true","N",false);
+    ("false","N",false);
+    ("(ifte (lambda x B) true false true)","B",true);
+    ("(ifte (lambda x N) true zero (succ zero))","N",true);
+    ("(ifte (lambda x B) true false true)","N",false);
+    ("(ifte (lambda x B) zero false true)","B",false);
+    ("(ifte (lambda x zero) true false true)","B",false);
+    ("(ifte (lambda x B) true false zero)","B",false);
+    ("(ifte (lambda x B) true zero false)","B",false);
+
+
     (test1y,"*",true);
     (testcheck4x,"*",true); 
 

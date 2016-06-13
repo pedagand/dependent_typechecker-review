@@ -37,6 +37,10 @@ let inputs
 	Inv(P1(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))));
        ("(iter (lambda x x) zero (lambda x (succ x)) zero)",
 	Inv(Iter(Abs(Global "x",Inv(BVar 0)),Zero,Abs(Global "x",Succ(Inv(BVar 0))),Zero)));
+       ("B",Bool);
+       ("true",True);
+       ("false",False);
+       ("(ifte (lambda x B) true true false)",Inv(Ifte(Abs(Global"x",Bool),True,True,False))); 
        ("(list N)",List(Nat));
        ("(nil N)", Nil(Nat));
        ("(cons N zero (nil N))",(Cons(Nat,Zero,Nil(Nat))));
