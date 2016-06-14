@@ -76,6 +76,7 @@ let inputs =
     ("(p0 (: (true , zero) (sig n B N)))","N",false);
     ("(p0 (: (zero , false) (sig n N B)))","B",false);
     ("(p0 (: (true , false) (sig n B B)))","N",false);
+    ("(p1 (: ((succ zero),(dcons zero (dnil N))) (sig n N (vec N n))))","(vec N zero)",false);
 
 
     (* tests synthèse Ann *)
