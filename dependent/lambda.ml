@@ -47,7 +47,8 @@ type inTm =
   | Bool
   | True 
   | False	
-(*=End *)		 
+(*=End *)
+  | Sig of name * inTm * inTm 		 
 and exTm = 
 (*=End *)
 (*=exTm *) 
@@ -77,6 +78,7 @@ type value =
 (*=value_pi_star *)
   | VStar 
   | VPi of value * (value -> value)
+  | VSig of value * (value -> value)
 (*=End *)
 (*=Value_Nat *)
   | VNat
@@ -194,6 +196,17 @@ let rec parse_term env t =
 	   (fun var b -> Pi(var,(parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env) s),b))
 	   (List.map (fun x -> Global(x)) vars)
 	   (parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env) t)
+      | Sexp.List [Sexp.Atom "sig"; Sexp.Atom var ;a;b] ->
+	 Sig(Global(var),(parse_term env a),(parse_term (Global(var)::env) b))
+      | Sexp.List [Sexp.Atom "sig"; Sexp.List vars;a;b] ->
+	 let vars = List.map (function 
+			       | Sexp.Atom v -> v 
+			       | _ -> failwith "Parser sig invalide variable") vars
+	 in 
+	 List.fold_right 
+	   (fun var b -> Sig(var,(parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env) a),b))
+	   (List.map (fun x -> Global(x)) vars)
+	   (parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env ) t)
       | Sexp.List [a;Sexp.Atom ",";b] -> 
 	 Pair((parse_term env a),(parse_term env b))
       | Sexp.List [a;Sexp.Atom "X";b] -> 
@@ -254,6 +267,8 @@ let rec pretty_print_inTm t l =
   | Inv (x) ->  pretty_print_exTm x l
   | Pi (Global(str),s,t) -> "(pi " ^ str ^ " " ^ pretty_print_inTm s l ^ " " ^ pretty_print_inTm t (str :: l) ^ ")"
   | Pi (_,s,t) -> failwith "Pretty print Pi first arg must be a global"
+  | Sig(Global(str),a,b) -> "(sig " ^ str ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm b (str :: l) ^ ")"
+  | Sig(_,a,b) -> failwith "Pretty print Sig first arg must be a global"
   | Star -> "*"
   | Succ n -> "(succ " ^ pretty_print_inTm n l ^ ")"
   | Zero -> "zero"
@@ -301,6 +316,7 @@ let rec substitution_inTm t tsub var =
   | Star -> Star
   | Pi(v,x,y) -> Pi(v,(substitution_inTm x tsub var),(substitution_inTm y tsub (var+1)))
   (*=End *)
+  | Sig(x,a,b) -> Sig(x,(substitution_inTm a tsub var),(substitution_inTm b tsub (var+1)))
   | Zero -> Zero 
   | Succ n -> Succ(substitution_inTm n tsub var)
   | Nat -> Nat
@@ -354,6 +370,9 @@ let rec big_step_eval_inTm t envi =
      VPi ((big_step_eval_inTm x envi),
 	  (function arg -> (big_step_eval_inTm y (arg :: envi))))
 (*=End *)
+  | Sig (x,a,b) -> 
+     VSig ((big_step_eval_inTm a envi),
+	   (function arg -> (big_step_eval_inTm b (arg :: envi))))
 (*=big_step_nat *) 
   | Nat -> VNat
   | Zero -> VZero
@@ -441,6 +460,12 @@ let rec value_to_inTm i v =
 		     (value_to_inTm (i+1) (f(vfree(Quote i)))))
 		end
 (*=End *)
+  | VSig(x,f) -> let var = gensym () in 
+		 begin 
+		   Sig(Global(var),
+		       (value_to_inTm i x),
+		       (value_to_inTm (i+1) (f(vfree(Quote i)))))
+		 end 
   | VStar -> Star
   | VNat -> Nat
   | VZero -> Zero

@@ -20,6 +20,8 @@ let inputs =
     ((Cross(Inv(FVar (Global "x")),Inv(FVar (Global "y")))),"(x X y)");
     (Inv(P0(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))),"(p0 (: (a , b) (N X N)))");
     (Inv(P1(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))),"(p1 (: (a , b) (N X N)))");
+    (Sig(Global "x",Nat,Nat),"(sig x N N)");
+    (Sig(Global "x",Nat,Inv(BVar 0)),"(sig x N x)");
     (Cons(Nat,Zero,Nil(Nat)),"(cons N zero (nil N))");
     (List(Nat),"(list N)");
     (Nil(Nat),"(nil N)");

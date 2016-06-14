@@ -15,6 +15,7 @@ let test_sub_inTm4 test_ctxt = assert_equal
 let inputs = 
   [("(lambda x (x 0))",(FVar (Global "y")),"(lambda x (y 0))");
    ("(pi x * (pi y x *))",(FVar (Global "x1")),"(pi x * (pi y x1 *))");
+   ("(sig x * (sig y x *))",(FVar (Global "x1")),"(sig x * (sig y x1 *))");
    ("(lambda x (succ x))",(FVar (Global "x1")),"(lambda x (succ x1))");
    ("(pi P (-> A *) (-> (P a) (P b)))",(FVar (Global "x1")),
     "(pi P (-> A *) (-> (x1 a) (x1 b)))"); 

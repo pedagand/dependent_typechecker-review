@@ -27,6 +27,8 @@ let inputs
        ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (succ x))) zero)",Inv(Iter(Abs(Global "x",Nat),Succ(Succ Zero),Abs(Global "n",Abs(Global "x",Succ (Inv (BVar 0)))),Zero)));
        ("(pi P (-> A *) (-> (P a) (P b)))", 
 	Pi(Global "P",Pi(Global "NO",Inv(FVar (Global "A")),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(FVar (Global"a")))),Inv(Appl(BVar 1,Inv(FVar (Global"b")))))));
+       ("(sig x N N)",Sig(Global "x",Nat,Nat));
+       ("(sig x N x)",Sig(Global "x",Nat,Inv(BVar 0)));
        ("(lambda A (lambda a (lambda b (pi P (-> A *) (-> (P a) (P b))))))",
 	Abs(Global "A",Abs(Global "a",Abs(Global "b",(Pi(Global "P",Pi(Global "NO",Inv(BVar 2),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(BVar 2))),Inv(Appl(BVar 1,Inv(BVar 2))))))))));
        ("(a X b)",Cross(Inv(FVar (Global "a")),Inv(FVar (Global"b"))));
