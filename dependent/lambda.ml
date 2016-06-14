@@ -7,6 +7,8 @@ open Sexplib
   #require "oUnit";;
   #use "lambda.ml";;
 *)
+(* j'ai mis un neutral pour les projections je pense que c'est normale vu que si l'on tente de réduire une projection appliquée à une
+variable il faut pouvoir la mettre en 'attente' *)
 
 type name =
   | Global of string 
@@ -79,6 +81,7 @@ type value =
   | VStar 
   | VPi of value * (value -> value)
   | VSig of value * (value -> value)
+  | VPair of value * value
 (*=End *)
 (*=Value_Nat *)
   | VNat
@@ -96,7 +99,7 @@ type value =
   | VDCons of value * value 
 (*=End *)
   | VId of value * value * value 
-  | VRefl of value
+  | VRefl of value 
 and neutral = 
   | NFree of name 
   | NApp of neutral * value 
@@ -104,6 +107,8 @@ and neutral =
   | NIfte of value * value * value * value
 (*=neutral_fold *)
   | NDFold of value * value * value * value * value * value 
+  | NP0 of value 
+  | NP1 of value 
 (*=End *)
   | NTrans of value * value * value * value * value * value  
 
@@ -390,7 +395,8 @@ let rec big_step_eval_inTm t envi =
 (*=End *)
   | Id(gA,a,b) -> VId((big_step_eval_inTm gA envi),(big_step_eval_inTm a envi),(big_step_eval_inTm b envi))
   | Refl(a) -> VRefl(big_step_eval_inTm a envi)
-  | _ -> failwith "a faire plus tard"
+  | Pair(x,y) -> VPair((big_step_eval_inTm x envi),(big_step_eval_inTm y envi))
+  | _ -> failwith "later"
 and vapp v = 
   match v with 
   | ((VLam f),v) -> f v
@@ -432,7 +438,19 @@ and big_step_eval_exTm t envi =
 				 (big_step_eval_inTm c envi),
 				 (big_step_eval_inTm tHen envi),
 				 (big_step_eval_inTm eLse envi))
-(*=End *)
+  (*=End *)
+  | P0(p) -> let eval_p = big_step_eval_exTm p envi in
+     begin 
+       match eval_p with 
+       | VPair(x,y) -> x
+       | _ -> VNeutral(NP0(eval_p))
+     end 
+  | P1(p) -> let eval_p = big_step_eval_exTm p envi in
+     begin 
+       match eval_p with 
+       | VPair(x,y) -> y
+       | _ -> VNeutral(NP1(eval_p))
+     end        
   | DFold(alpha,p,n,xs,f,a) -> vfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm p envi),
 				      (big_step_eval_inTm n envi),(big_step_eval_inTm xs envi),
 				      (big_step_eval_inTm f envi),(big_step_eval_inTm a envi))				      
@@ -466,6 +484,7 @@ let rec value_to_inTm i v =
 		       (value_to_inTm i x),
 		       (value_to_inTm (i+1) (f(vfree(Quote i)))))
 		 end 
+  | VPair(x,y) -> Pair((value_to_inTm i x),(value_to_inTm i y))
   | VStar -> Star
   | VNat -> Nat
   | VZero -> Zero
@@ -488,6 +507,9 @@ and neutral_to_exTm i v =
   | NIfte(p,c,tHen,eLse) -> Ifte((value_to_inTm i p),(value_to_inTm i c),(value_to_inTm i tHen),(value_to_inTm i eLse))
   | NTrans(gA,p,a,b,q,x) -> Trans((value_to_inTm i gA),(value_to_inTm i p),(value_to_inTm i a),
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
+  (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
+  | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
+  | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
 
 
 
@@ -591,6 +613,13 @@ let rec lcheck contexte ty inT =
        | _ -> false
      end
   (*=End *)
+  | Pair(x,y) -> 
+     begin 
+       match ty with 
+       | VSig(a,b) -> lcheck contexte a x &&
+			  lcheck contexte (b (big_step_eval_inTm x [])) y 
+       | _ -> false
+     end 
   (*=check_nat *)
   | Nat -> ty = VStar
   | Zero -> ty = VNat
@@ -834,7 +863,6 @@ test le retour de la synthèse *)
      begin
        match ty with 
        | VSig(a,b) -> 
-	  let freshVar = gensym () in 
 	  let check_x = check contexte x a (pretty_print_inTm inT [] ^ ";"^ steps) in
 	  let check_y = check (*pas sur a 100% de ne rien mettre dans le contexte ici à réfléchir*)
 			  contexte y (b (big_step_eval_inTm x [])) (pretty_print_inTm inT [] ^ ";"^ steps) in 
@@ -918,7 +946,25 @@ and synth contexte exT steps =
   | BVar x -> create_retSynth (create_report false (contexte_to_string contexte) steps "BVar : not possible during type checking") VStar
   | FVar x -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
 (*=End *)
-(*=synth_ann *) 
+  | P0(x) -> let synth_x = synth contexte x (pretty_print_exTm exT [] ^ ";" ^ steps) in 
+	     if res_debug_synth synth_x
+	     then
+	       begin
+		 match ret_debug_synth synth_x with 
+		 | VSig(a,b) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") a
+		 | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : has to be applied to a pair") VStar
+	       end 
+	     else create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : synth of elem don't work") VStar
+  | P1(x) -> let synth_x = synth contexte x (pretty_print_exTm exT [] ^ ";" ^ steps) in 
+	     if res_debug_synth synth_x
+	     then
+	       begin
+		 match ret_debug_synth synth_x with 
+		 | VSig(a,b) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (b (big_step_eval_exTm (P0(x)) []))
+		 | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : has to be applied to a pair") VStar
+	       end 
+	     else create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : synth of elem don't work") VStar
+  (*=synth_ann *) 
   | Ann(x,t) -> let ret = check contexte t VStar (pretty_print_exTm exT [] ^ ";"^ steps) in 
 		let eval_t = big_step_eval_inTm t [] in
 		if res_debug(ret)
@@ -933,6 +979,8 @@ and synth contexte exT steps =
 (*=synth_app *) 
   | Appl(f,s) -> 
      let synth_f = synth contexte f (pretty_print_exTm exT [] ^ ";"^ steps) in 
+     if res_debug_synth synth_f 
+     then
      begin
        match ret_debug_synth synth_f with 
        | VPi(s_pi,fu) -> if res_debug(check contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
@@ -940,6 +988,7 @@ and synth contexte exT steps =
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : s is not of type S") VStar
        | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : f is not of type Pi") VStar
      end
+     else create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : synth of f goes wrong") VStar
 (*=End *) 
   | Iter(p,n,f,a) -> let big_p = big_step_eval_inTm p [] in
 		     let big_n = big_step_eval_inTm n [] in 
@@ -1069,10 +1118,7 @@ and synth contexte exT steps =
 				 end
 			       else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: a must be of type gA") VStar 
 			     end
-			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar 
-    
-			       
-  | _ -> failwith "HAHAHAHAHAHAHA"
+			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
 
 
 

@@ -57,11 +57,25 @@ let inputs =
     ("((succ zero),(dcons zero (dnil N)))","(sig n N (vec N (succ zero)))",true);
     ("((succ zero),(dcons true (dnil B)))","(sig n N (vec B (succ zero)))",true);
     ("((succ zero),(dcons zero (dnil N)))","(sig n N (vec N n))",true);
+    ("(true , false)","(sig a B B)",true);  (* be carefull with spaces because of the lisp syntaxe *)
 
 
+    ("(true , zero)","(sig a B B)",false);
     ("((succ zero),(dcons true (dnil N)))","(sig n N (vec B (succ zero)))",false);
     ("((succ zero),(dcons true (dnil B)))","(sig n N (vec B (succ (succ (zero)))))",false);
+    ("((succ (succ zero)),(dcons zero (dnil N)))","(sig n N (vec N n))",false);
     ("((succ zero),(dcons zero (dnil N)))","(sig n N (vec N zero))",false);
+
+    (* tests de synthèse sur les projections *)
+    ("(p0 (: (true , false) (sig n B B)))","B",true);
+    ("(p1 (: (true , zero) (sig n B N)))","N",true);
+    ("(p0 (: ((succ zero),(dcons zero (dnil N))) (sig n N (vec N (succ zero)))))","N",true);
+    ("(p1 (: ((succ zero),(dcons zero (dnil N))) (sig n N (vec N (succ zero)))))","(vec N (succ zero))",true);
+    ("(p1 (: ((succ zero),(dcons zero (dnil N))) (sig n N (vec N n))))","(vec N (succ zero))",true);
+
+    ("(p0 (: (true , zero) (sig n B N)))","N",false);
+    ("(p0 (: (zero , false) (sig n N B)))","B",false);
+    ("(p0 (: (true , false) (sig n B B)))","N",false);
 
 
     (* tests synthèse Ann *)
@@ -72,6 +86,9 @@ let inputs =
     ("(lambda x (: x *))","(-> N N)",false);
     ("(lambda x (: x N))","(-> * *)",false);
     ("(lambda x (: x N))","(-> * N)",false);
+    ("(: (true , false) (sig n B B))","(sig n B B)",true);
+    ("(: (true , false) (sig n N B))","(sig n B B)",false);
+    ("(: (true , false) (sig n B B))","(sig n N B)",false);
     
     
     (* tests synthèse application *)

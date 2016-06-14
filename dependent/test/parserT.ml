@@ -29,6 +29,7 @@ let inputs
 	Pi(Global "P",Pi(Global "NO",Inv(FVar (Global "A")),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(FVar (Global"a")))),Inv(Appl(BVar 1,Inv(FVar (Global"b")))))));
        ("(sig x N N)",Sig(Global "x",Nat,Nat));
        ("(sig x N x)",Sig(Global "x",Nat,Inv(BVar 0)));
+       ("(p0 (: (true , false) (sig n B B)))",Inv(P0(Ann(Pair(True,False),Sig(Global"n",Bool,Bool)))));
        ("(lambda A (lambda a (lambda b (pi P (-> A *) (-> (P a) (P b))))))",
 	Abs(Global "A",Abs(Global "a",Abs(Global "b",(Pi(Global "P",Pi(Global "NO",Inv(BVar 2),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(BVar 2))),Inv(Appl(BVar 1,Inv(BVar 2))))))))));
        ("(a X b)",Cross(Inv(FVar (Global "a")),Inv(FVar (Global"b"))));
