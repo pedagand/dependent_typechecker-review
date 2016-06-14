@@ -43,6 +43,25 @@ let inputs =
     ("(pi x N (pi y N x))","*",false); 
     ("(pi A * (pi B (pi x A *) *))","*",true); 
 
+    (* tests de vérification Sig *)
+    ("(sig x * *)","*",true);
+    ("(sig x * *)","N",false); 
+    ("(sig y N N)","*",true);
+    ("(sig x * x)","*",true);
+    ("(sig x (lambda y y) *)","*",false);
+    ("(sig x N (pi y N N))","*",true); 
+    ("(sig x N (pi y N x))","*",false); 
+    ("(sig A * (pi B (pi x A *) *))","*",true); 
+    
+    (* tests de vérification des Paires *)
+    ("((succ zero),(dcons zero (dnil N)))","(sig n N (vec N (succ zero)))",true);
+    ("((succ zero),(dcons true (dnil B)))","(sig n N (vec B (succ zero)))",true);
+    ("((succ zero),(dcons zero (dnil N)))","(sig n N (vec N n))",true);
+
+
+    ("((succ zero),(dcons true (dnil N)))","(sig n N (vec B (succ zero)))",false);
+    ("((succ zero),(dcons true (dnil B)))","(sig n N (vec B (succ (succ (zero)))))",false);
+    ("((succ zero),(dcons zero (dnil N)))","(sig n N (vec N zero))",false);
 
 
     (* tests synthèse Ann *)
@@ -91,6 +110,7 @@ let inputs =
     ("(ifte (lambda x zero) true false true)","B",false);
     ("(ifte (lambda x B) true false zero)","B",false);
     ("(ifte (lambda x B) true zero false)","B",false);
+
 
 
     (test1y,"*",true);

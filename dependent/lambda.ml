@@ -495,6 +495,7 @@ let rec equal_inTm t1 t2 =
   match (t1,t2) with 
   | (Abs(_,x1),Abs(_,x2)) -> equal_inTm x1 x2
   | (Pi(_,x1,y1),Pi(_,x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (Sig(_,x1,y1),Sig(_,x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | (Star,Star) -> true 
   | (Zero,Zero) -> true 
   | (Succ(n1),Succ(n2)) -> equal_inTm n1 n2
@@ -574,10 +575,21 @@ let rec lcheck contexte ty inT =
 		  lcheck contexte VStar s 
 		  && lcheck (((Global freshVar),
 			      (big_step_eval_inTm s []))::contexte)
-		    VStar
-		    (substitution_inTm t (FVar(Global(freshVar))) 0)
+			    VStar
+			    (substitution_inTm t (FVar(Global(freshVar))) 0)
        | _ -> false
      end 
+  | Sig (x,a,b) -> 
+     begin
+       match ty with 
+       | VStar -> let freshVar = gensym () in 
+		  lcheck contexte VStar a 
+		  && lcheck (((Global freshVar),
+			      (big_step_eval_inTm a []))::contexte)
+			    VStar
+			    (substitution_inTm b (FVar(Global(freshVar))) 0)
+       | _ -> false
+     end
   (*=End *)
   (*=check_nat *)
   | Nat -> ty = VStar
@@ -773,6 +785,15 @@ test le retour de la synthèse *)
 		  else create_report false (contexte_to_string contexte) steps "Pi : S is not of type Star"
        | _ -> create_report false (contexte_to_string contexte) steps "Pi : ty must be of type Star"
      end 
+  |Sig(v,s,t) -> 
+    begin 
+      match ty with 
+      | VStar -> let freshVar = gensym () in 
+		 if res_debug(check contexte s VStar (pretty_print_inTm inT [] ^ ";"^ steps))
+		 then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar (pretty_print_inTm inT [] ^ ";"^ steps)
+		 else create_report false (contexte_to_string contexte) steps "Sig : A is not of type Star"
+      | _ -> create_report false (contexte_to_string contexte) steps "Sig : ty must be of type Star"
+    end 
   | Nat -> 
      begin 
        match ty with
@@ -808,6 +829,25 @@ test le retour de la synthèse *)
        match ty with 
        | VBool -> create_report true (contexte_to_string contexte) steps "No"
        | _ -> create_report false (contexte_to_string contexte) steps "False: ty must VBool"
+     end 
+  | Pair(x,y) -> 
+     begin
+       match ty with 
+       | VSig(a,b) -> 
+	  let freshVar = gensym () in 
+	  let check_x = check contexte x a (pretty_print_inTm inT [] ^ ";"^ steps) in
+	  let check_y = check (*pas sur a 100% de ne rien mettre dans le contexte ici à réfléchir*)
+			  contexte y (b (big_step_eval_inTm x [])) (pretty_print_inTm inT [] ^ ";"^ steps) in 
+	  if res_debug(check_x) 
+	  then
+	    begin 
+	      if res_debug(check_y) 
+	      then create_report true (contexte_to_string contexte) steps "No"
+	      else create_report false (contexte_to_string contexte) steps "Pair: element y of the pair as the wrong type"
+	    end 
+	  else create_report false (contexte_to_string contexte) steps "Pair: element x of the pair as the wrong type"
+	  
+       | _ -> create_report false (contexte_to_string contexte) steps "Pair: ty must VSig"
      end 
   | Vec(alpha,n) -> 
      begin        
