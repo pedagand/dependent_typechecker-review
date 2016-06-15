@@ -9,5 +9,8 @@ nat: nat.ml
 test.native: test.ml
 	ocamlbuild -use-ocamlfind test.native
 
+interface.native: interface.ml
+	ocamlbuild -use-ocamlfind interface.native
+
 clean: 
 	ocamlbuild -clean
