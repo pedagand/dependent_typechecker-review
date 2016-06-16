@@ -11,25 +11,18 @@ open Sexplib
 
 
 
- 
+(* J'ai oublié le plus important dans la requete c'est la tactique....... il faut que je modifie les fonctions en fonction*) 
 type request = 
   | R_goal of goal
   | R_environment of environment
   | R_terme of inTm
+  | R_tactique of string (* a méditer demain mais je pense que string c'est le mieux comme ça je fais des fonctions séparées *)
+		    (* ou alors petite idée je peux mettre le type des tactiques (c'est à dire goal -> goal) et comme ça directement depuis
+le parseur je peux detecté quelle est la tactique et donc crée un élément du type R_tactique(avec une fct a l'intérieur) *)
   | Request of request * request * request
 
-(* Type d'arbre implémenté avec zipper *)
-type tree = 
-  | Item of goal
-  | Section of tree list
 
-type path = 
-  | Top 
-  | Node of tree list * path * tree list 
-
-type location = 
- | Loc of tree * path
-
+(* ------------------------------Parsing and pretty printing fonctions------------------------ *)
 
 let rec parse_env str = 
   match str with 
@@ -76,6 +69,18 @@ and pretty_print_global gl =
 			   pretty_print_env e ^ ") " ^ 
 			     pretty_print_inTm t [] ^ ")"  
   | _ -> failwith "You can't print something else than a request"
+
+
+
+
+(* ----------------------------Le main du serveur---------------------------*)
+(* Ca va etre une fonction qui prend une string en entrée qui fait ensuite appelle aux différentes fonctions afin d'obtenir un type request
+bien formé.
+Une fois celui ci crée, il faut maintenant *)
+
+
+
+
  
 
 
