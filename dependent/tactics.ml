@@ -21,5 +21,30 @@ le serveur gardant en mémoire une grosse base de donées de théorèmes qu'il a
 dans sa base si il trouve quelque chose correspondant à ta requete, et si il ne l'a pas et que tu 
 arrive à la résoudre il la rajoutera. *)
 
+(* pour l'instant je pense représenté les tactiques avec des fonctions et non pas un type par contre il faut que ces fonctions soient toutes
+du meme type, c'est à dire goal -> goal *)
+
+(* 
+type request = 
+  | R_goal of goal
+  | R_environment of environment
+  | R_terme of inTm
+  | Request of request * request * request
+ *)
+
+
+(* Types nécéssaires à la création du moteur *)
+type goal = 
+  | Goal of inTm
+
+type hypothesis =
+  | Couple of string * inTm 
+			 
+type environment =
+  | Env of hypothesis list
+		       
+let () = Printf.printf ""
+
+
 
 

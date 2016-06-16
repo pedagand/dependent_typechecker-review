@@ -401,12 +401,12 @@ let rec big_step_eval_inTm t envi =
   | Id(gA,a,b) -> VId((big_step_eval_inTm gA envi),(big_step_eval_inTm a envi),(big_step_eval_inTm b envi))
   | Refl(a) -> VRefl(big_step_eval_inTm a envi)
   | Pair(x,y) -> VPair((big_step_eval_inTm x envi),(big_step_eval_inTm y envi))
-  | _ -> failwith "later"
+  | _ -> failwith "manque list Nill et Cons" 
 and vapp v = 
   match v with 
   | ((VLam f),v) -> f v
   | ((VNeutral n),v) -> VNeutral(NApp(n,v))
-  | _ -> failwith "must not append" 
+  | _ -> failwith "must not append"  
 (*=vitter *)
 and vitter (p,n,f,a) =
   match n,f with
@@ -459,7 +459,7 @@ and big_step_eval_exTm t envi =
   | DFold(alpha,p,n,xs,f,a) -> vfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm p envi),
 				      (big_step_eval_inTm n envi),(big_step_eval_inTm xs envi),
 				      (big_step_eval_inTm f envi),(big_step_eval_inTm a envi))				      
-  | _ -> failwith "a faire Trans"			    
+  | _ -> failwith "il manque trans" 
 
 let boundfree i n = 
   match n with 

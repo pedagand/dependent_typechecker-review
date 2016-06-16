@@ -14,5 +14,8 @@ interface.native: interface.ml
 
 tactics.native: tactics.ml
 	ocamlbuild -use-ocamlfind tactics.native
+
+serveur.native: serveur.ml
+	ocamlbuild -use-ocamlfind serveur.native
 clean: 
 	ocamlbuild -clean
