@@ -129,6 +129,11 @@ let create_report s c e er=
 let create_retSynth d v = 
   RetSynth(d,v)
 
+let extract_context_report rep = 
+  match rep with 
+   | Report(Success(s),Contexte(c),Steps(e),Error(er)) -> c
+   | _ -> failwith "Report don't have a good shape"
+
 let print_report r = 
   match r with 
   | Report(Success(s),Contexte(c),Steps(e),Error(er)) -> 
@@ -905,9 +910,7 @@ test le retour de la synthèse *)
        | _ -> create_report false (contexte_to_string contexte) steps "DCons : ty must be a VVec"
      end
   (*=check_what *)
-  | What -> create_report true (contexte_to_string contexte) steps
-     ("What : we try to push this terme " ^
-	 (pretty_print_inTm (value_to_inTm 0 ty)  []))
+  | What -> create_report true (contexte_to_string contexte) steps ("(contexte " ^ (contexte_to_string contexte) ^ ")(type " ^ (pretty_print_inTm inT []) ^ ")")
   (*=End *)
   | Id(gA,a,b) -> let check_gA = check contexte gA VStar (pretty_print_inTm inT [] ^ ";"^ steps) in 		  
 		  let eval_gA = big_step_eval_inTm gA [] in 

@@ -12,5 +12,7 @@ test.native: test.ml
 interface.native: interface.ml
 	ocamlbuild -use-ocamlfind interface.native
 
+tactics.native: tactics.ml
+	ocamlbuild -use-ocamlfind tactics.native
 clean: 
 	ocamlbuild -clean
