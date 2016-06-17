@@ -12,7 +12,8 @@ let suite =
 (*	    ; "test equal" >::: TestEqual.tests*)
 	    ; "test big_step">::: TestBig_step.tests  
 	    ; "test lib" >::: Lib.tests
-	    ; "test serveur" >::: TestServeur.tests_read_request
+	    ; "test serveur read" >::: TestServeur.tests_read_request
+	    ; "test serveur print" >::: TestServeur.tests_print_request
 	    ]
 
 let () =
