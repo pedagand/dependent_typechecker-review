@@ -7,9 +7,23 @@ open Lambda
   #use "interface.ml";;
 *)
 
+(* Au final pour que ce soit réellement une architecture rest il serait 
+judicieux que le client n'ai aucune informations quand à la représentation
+concrète des termes ect.. il ne devrait manipuler que des chaines de caractères
+et recevoir de nouvelles chaines *)
+
+type goal_c = 
+  {
+    theoreme : string;
+    preuve : string;
+    hypo : string;
+    validate : bool;
+  }
+
+
 (* this is a tree with zipper structure for better navigation in the proof *)
 type tree = 
-  | Item of inTm 
+  | Item of goal_c
   | Section of tree list
 
 type path = 
@@ -19,6 +33,7 @@ type path =
 type location = 
  | Proof of tree * path
 
+			 
 let go_left (Proof(t,p)) =
   match p with 
   | Top -> failwith "fin de l'arbre"
@@ -44,6 +59,51 @@ let go_down (Proof(t,p)) =
 
 
 
+
+(* 
+type goal_c = 
+  {
+    theoreme : string;
+    preuve : string;
+    hypo : string;
+    validate : bool;
+  }
+ *)
+
+(* -------------------Fonctions pour manipuler la structure de goal_c --------------*)
+let init_goal_c = {theoreme = ""; preuve = ""; hypo = ""; validate = false }
+
+let concat_goal_theoreme g str = {theoreme = g.theoreme ^ str; preuve = g.preuve; hypo = g.hypo; validate = g.validate }
+let concat_goal_preuve g str = {theoreme = g.theoreme; preuve = g.preuve ^ str; hypo = g.hypo; validate = g.validate }
+let concat_goal_hypo g str = {theoreme = g.theoreme; preuve = g.preuve; hypo = g.hypo  ^ str; validate = g.validate }
+let validate_goal_hypo g = {theoreme = g.theoreme; preuve = g.preuve; hypo = g.hypo; validate = true } 
+let unvalidate_goal_hypo g = {theoreme = g.theoreme; preuve = g.preuve; hypo = g.hypo; validate = false } 
+
+let pretty_print_goal_c g = 
+  g.hypo ^ "\n==========" ^ g.theoreme ^ " |- " ^ g.preuve
+
+let create_request g tact var = 
+  "((goal " ^ g.theoreme ^ ") (env (" ^ g.hypo ^ ") " ^ g.preuve ^ " " ^ tact ^ " " ^ var ")"
+
+
+
+
+
+
+
+(* fonctions simulant une requete réseau *)
+let send_to_serv str = 
+  Serveur.main str
+
+
+(* ça reprend tout bien c'est pas mal *)
+let receive_answer = 
+  let file = open_in "reponse_serv.txt" in 
+  input_line file
+  
+		   
+
+(* passage en mode impératif afin d'initialiser l'interface pour que cela soit beau *)
 (* message de présentation *)
 
 let () = Printf.printf "\n\n-------------------------------\n"; 
@@ -52,26 +112,33 @@ let () = Printf.printf "\n\n-------------------------------\n";
 	 Printf.printf "\n\n Entrer un type à prouver:     \n"
 
 (*lecture de la preuve *)
-let type_to_proove = read_line ()
+
+
+let type_to_proove = read (read_line ())			       
+
+
 
 
 
 let rec main finish =
   match finish with
-  | 1 -> let () = Printf.printf "\nput your next tactique\n"  in
+  | "lol" -> let () = Printf.printf "\nput your next tactique\n"  in
      let tactic = read_line () in
 	 let () = Printf.printf "%s" tactic in
 	 (* ici j'appliquerai la tactique *)
 	 if true 
-	 then main 1
-	 else main 0
+	 then main "lol"
+	 else main "l"
   | _ -> ()
 
+
+(* a faire en rentrant de la pause, implémenter l'ensemble des fonctions du papier zipper j'en aurais besoin et commencer a bien faire 
+le main du client *)
   
 
 
 
-let () = main 1
+let () = main "lol"
 
 
 

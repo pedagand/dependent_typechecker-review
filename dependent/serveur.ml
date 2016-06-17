@@ -99,6 +99,14 @@ Une fois celui ci crée, il faut maintenant *)
 (* main du serveur qui prend en entrée une chaine de caractère correspondant à une requete non parsé *)
 (* Celui ci parse la requete et commence par identifier la tactique utilisée, il effectue ensuite l'appel de celle ci qui va retourner 
 un terme *)
+(* parfait ça écrase le contenue a chaque fois c'est ce qu'il fallait  et ça
+supprime meme si la chaine de caractère d'avant était plus longue *)
+let send_answer_to_client str = 
+  let file = open_out "reponse_serv.txt" in 
+  output_string file str;
+  close_out file;;
+
+		     
 let main no_parse_req = 
   let req = read_request no_parse_req in
   match req with 
@@ -108,13 +116,14 @@ let main no_parse_req =
      begin 
        match res with 
        | (Goal(a_g),Env(a_e),a_terme) -> 
-	  create_answer (Goal(a_g)) (Env(a_e)) a_terme
+	  send_answer_to_client(create_answer (Goal(a_g)) (Env(a_e)) a_terme)
      end
   | _ -> failwith "impossible case" 
 
 
+
 (* let () = Printf.printf "\n%s\n" (main "((goal (-> N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)") *)
-let () = Printf.printf "%s\n%s" (pretty_print_global (Request(R_goal(Goal(Pi(Global"NO",Nat,Nat))),R_environment(Env([Couple("a",Nat);Couple("b",Bool)])),R_terme(Abs(Global"x",Inv(BVar 0))),R_tactic("intro"),R_var("lol")))) ("((goal (pi NO N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)")
+(* let () = Printf.printf "%s\n%s" (pretty_print_global (Request(R_goal(Goal(Pi(Global"NO",Nat,Nat))),R_environment(Env([Couple("a",Nat);Couple("b",Bool)])),R_terme(Abs(Global"x",Inv(BVar 0))),R_tactic("intro"),R_var("lol")))) ("((goal (pi NO N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)") *)
 
 
  

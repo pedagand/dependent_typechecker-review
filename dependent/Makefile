@@ -19,3 +19,4 @@ serveur.native: serveur.ml
 	ocamlbuild -use-ocamlfind serveur.native
 clean: 
 	ocamlbuild -clean
+	rm reponse_serv.txt 
