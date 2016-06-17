@@ -146,8 +146,11 @@ let inputs =
     ("(dcons zero (dcons zero (dcons zero (dnil N))))","(vec B (succ (succ (succ zero))))",false);
     ("(dcons zero (dnil N))","(vec N (succ (succ zero)))",false);
     ("(dcons zero (dcons zero (dcons zero (dnil N))))","(vec N (succ (succ zero)))",false);
-    ("(lambda x ?)","(-> * *)",true);								      
-										   ("(id N zero (succ zero))","*",true);
+    ("(lambda x (? lol))","(-> * *)",true);
+    ("(lambda x (lambda y (? lol)))","(-> * (-> * *))",true);
+    ("(lambda x (lambda y (? lol)))","(-> * *)",false);
+    
+    ("(id N zero (succ zero))","*",true);
    ("(refl zero)","(id N zero zero)",true);				
    ("(+ (succ (succ zero)) (succ (succ zero)))","N",true);
    ("(dfold N (lambda n (lambda xs N)) (succ zero) (dcons zero (dnil N)) (lambda n (lambda xs (lambda a (lambda x (succ a))))) zero)","N",true); 

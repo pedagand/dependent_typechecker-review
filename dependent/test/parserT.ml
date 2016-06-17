@@ -51,8 +51,8 @@ let inputs
        ("(dnil N)",DNil(Nat));
        ("(dcons zero (dnil N))",DCons(Zero,DNil(Nat)));
        ("(dfold alpha P m xs f a)",Inv(DFold(Inv(FVar(Global "alpha")),Inv(FVar(Global "P")),Inv(FVar(Global "m")),Inv(FVar(Global "xs")),Inv(FVar(Global "f")),Inv(FVar(Global "a")))));
-       ("?",What);      
-       ("(lambda x ?)",Abs(Global("x"),What));
+       ("(? lol)",What("lol"));      
+       ("(lambda x (? lol))",Abs(Global("x"),What("lol")));
        ("(id N zero (succ zero))", Id(Nat,Zero,Succ(Zero)));
        ("(refl zero)",Refl(Zero));
        ("(trans N N N N N N)",Inv(Trans(Nat,Nat,Nat,Nat,Nat,Nat)));

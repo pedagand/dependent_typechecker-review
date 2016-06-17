@@ -30,8 +30,8 @@ let inputs =
     (DNil(Nat),"(dnil N)");
     (Inv(DFold(Nat,Nat,Nat,Nat,Nat,Nat)),"(dfold N N N N N N)");
     (Vec(Nat,Succ(Zero)),"(vec N (succ zero))");
-    (What,"?");
-    (Abs(Global"x",What),"(lambda x ?)");
+    (What("lol"),"(? lol)");
+    (Abs(Global"x",What("lol")),"(lambda x (? lol))");
     (Id(Nat,Zero,Succ(Zero)),"(id N zero (succ zero))");
     (Refl(Zero),"(refl zero)");
     (Inv(Trans(Nat,Nat,Nat,Nat,Nat,Nat)),"(trans N N N N N N)");

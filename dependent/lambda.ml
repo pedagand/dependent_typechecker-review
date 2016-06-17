@@ -40,7 +40,7 @@ type inTm =
   | DCons of inTm * inTm 
   (*=End *)
   (*=what *)      
-  | What
+  | What of string
   (*=End *)
   | Id of inTm * inTm * inTm
   | Refl (* TODO: remove *) of inTm 
@@ -175,7 +175,7 @@ let rec parse_term env t =
       | Sexp.Atom "B" -> Bool 
       | Sexp.Atom "true" -> True
       | Sexp.Atom "false" -> False
-      | Sexp.Atom "?" -> What
+      | Sexp.List [Sexp.Atom "?";Sexp.Atom a] -> What a
       | Sexp.List [Sexp.Atom "succ"; n] -> 
 	 Succ(parse_term env n)
       | Sexp.List [Sexp.Atom "id";gA;a;b] -> 
@@ -294,7 +294,7 @@ let rec pretty_print_inTm t l =
   | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm n l ^ ")"
   | DNil(alpha) -> "(dnil " ^ pretty_print_inTm alpha l ^ ")"
   | DCons(a,xs) -> "(dcons " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
-  | What -> "?"
+  | What(s)-> "(? " ^ s ^ ")"
   | Id(bA,a,b) -> "(id " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm b l ^ ")"
   | Refl(a) -> "(refl " ^ pretty_print_inTm a l ^ ")"
 and pretty_print_exTm t l =
@@ -341,7 +341,7 @@ let rec substitution_inTm t tsub var =
   | Vec(alpha,n) -> Vec((substitution_inTm alpha tsub var),(substitution_inTm n tsub var))
   | DNil(alpha) -> DNil(substitution_inTm alpha tsub var)
   | DCons(a,xs) -> DCons((substitution_inTm a tsub var),(substitution_inTm a tsub var))
-  | What -> What
+  | What(a) -> What(a)
   | Id(gA,a,b) -> Id((substitution_inTm gA tsub var),(substitution_inTm a tsub var),(substitution_inTm b tsub var))
   | Refl(a) -> Refl(substitution_inTm a tsub var)
 (*=substitution_exTm *)
@@ -533,7 +533,7 @@ let rec equal_inTm t1 t2 =
   | (Inv(x1),Inv(x2)) -> equal_exTm x1 x2
   | (Pair(x1,y1),Pair(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | (Cross(x1,y1),Cross(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false 
-  | (What,What) -> true
+  | (What(a),What(b)) -> true
   | (Vec(x1,y1),Vec(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | (DNil x1,DNil x2) -> equal_inTm x1 x2 
   | (DCons(x1,y1),DCons(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
@@ -664,7 +664,7 @@ let rec lcheck contexte ty inT =
        | _ -> false
      end 
 (*=End *)
-  | What -> false 
+  | What(a) -> false 
 (*=check_id *)
   | Id(gA,a,b) ->
      let eval_gA = big_step_eval_inTm gA [] in
@@ -910,7 +910,7 @@ test le retour de la synthèse *)
        | _ -> create_report false (contexte_to_string contexte) steps "DCons : ty must be a VVec"
      end
   (*=check_what *)
-  | What -> create_report true (contexte_to_string contexte) steps ("(contexte " ^ (contexte_to_string contexte) ^ ")(type " ^ (pretty_print_inTm inT []) ^ ")")
+  | What(a) -> create_report true (contexte_to_string contexte) steps ("(contexte " ^ (contexte_to_string contexte) ^ ")(type " ^ (pretty_print_inTm inT []) ^ ")")
   (*=End *)
   | Id(gA,a,b) -> let check_gA = check contexte gA VStar (pretty_print_inTm inT [] ^ ";"^ steps) in 		  
 		  let eval_gA = big_step_eval_inTm gA [] in 

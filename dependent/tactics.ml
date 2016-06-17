@@ -49,12 +49,14 @@ let () = Printf.printf ""
 
 (* le type de base des tactiques est ((hyp * go * term * string) -> (hyp * go * term) *)
 
+
+
 let intro env go (term : inTm) (var : string) = 
   match (env,go,term,var) with 
   | (Env(x),Goal(g),t,v) -> 
      begin 
      match g with 
-     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What))
+     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What(gensym ())))
      | _ -> failwith "intro must be applied with" 
      end
 

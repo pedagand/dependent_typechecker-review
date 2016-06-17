@@ -21,6 +21,7 @@ type request =
 le parseur je peux detecté quelle est la tactique et donc crée un élément du type R_tactique(avec une fct a l'intérieur) *)
   | R_var of string (* nom de variable au cas ou la tactique aurait besoin de crée une variable *)
   | Request of request * request * request * request * request
+  | R_result of bool
   | Answer of request * request * request
 
 
@@ -49,7 +50,12 @@ and parse_global str =
 	    R_terme(parse_term [] t),
 	    R_tactic(tac),
 	    R_var(var))     
+  | Sexp.List[Sexp.Atom "check";ty;te] -> 
+     R_result(res_debug(check [] (parse_term [] te) (big_step_eval_inTm (parse_term [] ty) []) ""))
   | _ -> failwith "parse_global request don't have a good shape" 
+
+
+(* let () = parse_global "((goal (-> N N)) (env ()) intro x)" *)
 
 let read_request str = parse_global (Sexp.of_string str)
 
@@ -118,6 +124,7 @@ let main no_parse_req =
        | (Goal(a_g),Env(a_e),a_terme) -> 
 	  send_answer_to_client(create_answer (Goal(a_g)) (Env(a_e)) a_terme)
      end
+  | R_result(x) -> send_answer_to_client(if x then "true" else "false")
   | _ -> failwith "impossible case" 
 
 
