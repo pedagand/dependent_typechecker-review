@@ -1,5 +1,5 @@
 open Lambda 
-open Tactics
+open Tactics 
 open Sexplib
 
 (*
@@ -26,7 +26,7 @@ le parseur je peux detecté quelle est la tactique et donc crée un élément du
 
 
 (* ------------------------------Parsing and pretty printing fonctions------------------------ *)
-
+ 
 let rec parse_env str = 
   match str with 
   | Sexp.List [Sexp.Atom "env"; Sexp.List l] -> 
@@ -53,6 +53,8 @@ and parse_global str =
   | Sexp.List[Sexp.Atom "check";ty;te] -> 
      R_result(res_debug(check [] (parse_term [] te) (big_step_eval_inTm (parse_term [] ty) []) ""))
   | _ -> failwith "parse_global request don't have a good shape" 
+
+
 
 
 (* let () = parse_global "((goal (-> N N)) (env ()) intro x)" *)
@@ -112,16 +114,14 @@ un terme *)
 (* parfait ça écrase le contenue a chaque fois c'est ce qu'il fallait  et ça
 supprime meme si la chaine de caractère d'avant était plus longue *)
  let send_answer_to_client str = 
-   let () = Printf.printf "\n-------------%s---------------\n" str in
    let file = open_out "reponse_serv.txt" in 
    let () = output_string file str in 
    let () = flush file in 
    let () = close_out file in 
-   let () = Printf.printf "\n-------------transfert in file finish-----------\n" in
    let file = open_in "reponse_serv.txt" in 
    let res = input_line file in 
    let () = close_in file in 
-   let () = Printf.printf "contenu fichier %s" res in
+   let () = Printf.printf "contenu fichier de réponse %s" res in
    ()
  
   
