@@ -35,8 +35,9 @@ type request =
 
 (* Types nécéssaires à la création du moteur *)
 type goal = 
-  | Goal of inTm (* il faut que le goal soit une value étant donné que c'est le type et que l'on souhaite travailler avec des types 
+  | Goal of inTm (* il faut que le goal soit une value étant donné que c'est le type et que l'on souhaite travailler avec des types  
 de forme normale *)
+  | Vide
 
 type hypothesis =
   | Couple of string * inTm 
@@ -47,12 +48,12 @@ type environment =
 
 
 
-(* le type de base des tactiques est ((hyp * go * term * string) -> (hyp * go * term) *)
+(* le type de base des tactiques est ((hyp * go * term * string) ->  *)
 let rec env_to_liste env = 
   match env with 
-  | Env(Couple(str,elem)::[]) -> [(str,elem)]
+  | Env(Couple(str,elem)::[]) -> [(Global(str),(big_step_eval_inTm elem []))]
   | Env([]) -> []
-  | Env(Couple(str,elem)::suite) -> (str,elem) :: (env_to_liste (Env(suite)))
+  | Env(Couple(str,elem)::suite) -> (Global(str),(big_step_eval_inTm elem [])) :: (env_to_liste (Env(suite)))
 
 
 
@@ -64,6 +65,7 @@ let intro env go (term : inTm) (var : string) =
      | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What(gensym ())),false)
      | _ -> failwith ("intro : you can't intro something of the type " ^ pretty_print_inTm g [])
      end
+  | (Env(x),Vide,t,v) -> failwith "intro : goal must not be Vide" 
 
 
 
@@ -74,7 +76,9 @@ let axiome env go (term : inTm) (var : string) =
      begin 
        match (x,g) with 
        | ([],go) -> failwith "axiome : you can't axiome something when context is empty"
-       | (e,go) -> 
+       | (e,go) -> if (List.assoc (Global(v)) env_liste) = big_step_eval_inTm g [] 
+		   then (Vide,Env(x),Inv(FVar(Global(v))),true)
+		   else failwith "axiome : there is no variable you mentioned in the context with the good type"
      end 
-     
-
+  | (Env(x),Vide,t,v)-> failwith "axiome : goal must not be Vide" 
+ 

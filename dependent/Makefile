@@ -12,7 +12,7 @@ test.native: test.ml
 interface.native: interface.ml
 	ocamlbuild -use-ocamlfind interface.native
 	touch reponse_serv.txt 
-	echo lol > reponse_serv.txt
+	echo test > reponse_serv.txt
 	chmod 755 reponse_serv.txt
 
 tactics.native: tactics.ml

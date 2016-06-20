@@ -47,15 +47,20 @@ let send_to_serv str =
 
 (* problème à régler, si le fichier de texte à lire n'existe pas il n'éxécute pas le programme *)
 let receive_answer = 
-  let file = open_in "reponse_serv.txt" in 
-  input_line file
+  let file = open_in "reponse_serv.txt" in   
+  let res = input_line file in 
+  let () = close_in file in 
+  res
+		       
+	     
 
 (* il faut que je rajoute il champ de validation dans la réponse du serveur donc modifier cette fonction par la suite *)
 let parse_answer str= 
   match str with 
+  | Sexp.List[Sexp.Atom "validate"] -> init_view_arg "" "" "" true
   | Sexp.List[g;e;t;b] -> 
      init_view_arg (Sexp.to_string g) (Sexp.to_string t) (Sexp.to_string e) (if (Sexp.to_string b) = "true" then true else false)
-  | _ -> failwith ("pase_answer not good answer" ^ Sexp.to_string str)
+  | _ -> failwith ("pase_answer not good answer " ^ Sexp.to_string str)
      
   
 		   
@@ -81,7 +86,9 @@ let rec main current_view : view=
   let () = Printf.printf "\nput a name for the variable\n"  in
   let var = read_line () in 
   let request = create_request current_view tactic var in 
+  let () = Printf.printf "\nsend the request to the serv \n" in
   let () = send_to_serv request in
+  let () = Printf.printf "\nfinish to send request start to parse : %s \n" receive_answer in
   let answer = parse_answer (Sexp.of_string receive_answer) in
   if answer.validate
   then answer
