@@ -31,17 +31,17 @@ let rec parse_env str =
   match str with 
   | Sexp.List [Sexp.Atom "env"; Sexp.List l] -> 
      List.map create_hypo_couple l
-  | _ -> failwith "Request doesn't have the good shape"
+  | _ -> failwith "parse_env Request doesn't have the good shape"
 and create_hypo_couple str = 
   match str with 
   | Sexp.List[Sexp.Atom a; Sexp.Atom "," ;t] -> 
      Couple(a,(parse_term [] t))
-  | _ -> failwith "Request doesn't have the good shape"
+  | _ -> failwith "create_hypo Request doesn't have the good shape"
 and parse_goal str = 
   match str with 
   | Sexp.List[Sexp.Atom "goal";l] ->
      parse_term [] l
-  | _ -> failwith "Request doesn't have the good shape"
+  | _ -> failwith "parse_goal Request doesn't have the good shape"
 and parse_global str = 
   match str with 
   | Sexp.List[g;e;t;Sexp.Atom tac;Sexp.Atom var] -> 
@@ -86,15 +86,17 @@ and pretty_print_global gl =
 let find_tactic str = 
   match str with 
   | "intro" -> intro
+  | "axiome" -> axiome
   | _ -> failwith "tactic unknow"
 
 
 
-let create_answer go env t = 
+let create_answer go env t res = 
+  let res_string = if res then "true" else "false" in 
   match (go,env,t) with
   | (Goal(g),Env(e),term) -> "((goal " ^ pretty_print_goal (Goal(g)) 
 			     ^ ") (env (" ^ pretty_print_env (Env(e)) 
-			     ^ ")) " ^ pretty_print_inTm term []^ ")"
+			     ^ ")) " ^ pretty_print_inTm term []^ " " ^ res_string ^ ")"
 
 (* ----------------------------Le main du serveur---------------------------*)
 (* Ca va etre une fonction qui prend une string en entrée qui fait ensuite appelle aux différentes fonctions afin d'obtenir un type request
@@ -108,6 +110,7 @@ un terme *)
 (* parfait ça écrase le contenue a chaque fois c'est ce qu'il fallait  et ça
 supprime meme si la chaine de caractère d'avant était plus longue *)
 let send_answer_to_client str = 
+  let () = Printf.printf "-------------%s---------------" str in
   let file = open_out "reponse_serv.txt" in 
   output_string file str;
   close_out file;;
@@ -121,8 +124,8 @@ let main no_parse_req =
      let res = tact e g t var in 
      begin 
        match res with 
-       | (Goal(a_g),Env(a_e),a_terme) -> 
-	  send_answer_to_client(create_answer (Goal(a_g)) (Env(a_e)) a_terme)
+       | (Goal(a_g),Env(a_e),a_terme,res_bool) -> 
+	  send_answer_to_client(create_answer (Goal(a_g)) (Env(a_e)) a_terme res_bool)
      end
   | R_result(x) -> send_answer_to_client(if x then "true" else "false")
   | _ -> failwith "impossible case" 

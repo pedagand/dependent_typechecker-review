@@ -53,9 +53,9 @@ let receive_answer =
 (* il faut que je rajoute il champ de validation dans la réponse du serveur donc modifier cette fonction par la suite *)
 let parse_answer str= 
   match str with 
-  | Sexp.List[g;e;t] -> 
-     init_view_arg (Sexp.to_string g) (Sexp.to_string t) (Sexp.to_string e) false      
-  | _ -> failwith "not good answer" 
+  | Sexp.List[g;e;t;b] -> 
+     init_view_arg (Sexp.to_string g) (Sexp.to_string t) (Sexp.to_string e) (if (Sexp.to_string b) = "true" then true else false)
+  | _ -> failwith ("pase_answer not good answer" ^ Sexp.to_string str)
      
   
 		   

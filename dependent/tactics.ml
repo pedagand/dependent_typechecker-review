@@ -44,10 +44,15 @@ type hypothesis =
 type environment =
   | Env of hypothesis list
 		       
-let () = Printf.printf ""
+
 
 
 (* le type de base des tactiques est ((hyp * go * term * string) -> (hyp * go * term) *)
+let rec env_to_liste env = 
+  match env with 
+  | Env(Couple(str,elem)::[]) -> [(str,elem)]
+  | Env([]) -> []
+  | Env(Couple(str,elem)::suite) -> (str,elem) :: (env_to_liste (Env(suite)))
 
 
 
@@ -56,8 +61,20 @@ let intro env go (term : inTm) (var : string) =
   | (Env(x),Goal(g),t,v) -> 
      begin 
      match g with 
-     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What(gensym ())))
-     | _ -> failwith "intro must be applied with" 
+     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What(gensym ())),false)
+     | _ -> failwith ("intro : you can't intro something of the type " ^ pretty_print_inTm g [])
      end
 
+
+
+let axiome env go (term : inTm) (var : string) = 
+  match (env,go,term,var) with 
+  | (Env(x),Goal(g),t,v) -> 
+     let env_liste = env_to_liste (Env(x)) in
+     begin 
+       match (x,g) with 
+       | ([],go) -> failwith "axiome : you can't axiome something when context is empty"
+       | (e,go) -> 
+     end 
+     
 
