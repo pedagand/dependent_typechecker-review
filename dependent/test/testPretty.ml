@@ -23,7 +23,7 @@ let inputs =
     (Sig(Global "x",Nat,Nat),"(sig x N N)");
     (Sig(Global "x",Nat,Inv(BVar 0)),"(sig x N x)");
     (Cons(Nat,Zero,Nil(Nat)),"(cons N zero (nil N))");
-    (List(Nat),"(list N)");
+    (Liste(Nat),"(liste N)");
     (Nil(Nat),"(nil N)");
     (Inv(DFold(Inv(FVar(Global "alpha")),Inv(FVar(Global "P")),Inv(FVar(Global "m")),Inv(FVar(Global "xs")),Inv(FVar(Global "f")),Inv(FVar(Global "a")))),"(dfold alpha P m xs f a)");
     (DCons(Zero,DNil(Nat)),"(dcons zero (dnil N))");

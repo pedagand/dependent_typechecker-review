@@ -7,7 +7,7 @@ open Sexplib
   #require "oUnit";;
   #use "lambda.ml";;
 *)
-(* j'ai mis un neutral pour les projections je pense que c'est normale vu que si l'on tente de réduire une projection appliquée à une
+(* Je n'ai pas encore fait ce qui suit mais il faut le faire c'est important : j'ai mis un neutral pour les projections je pense que c'est normale vu que si l'on tente de réduire une projection appliquée à une
 variable il faut pouvoir la mettre en 'attente' *)
 
 type name =
@@ -30,8 +30,7 @@ type inTm =
   | Nat
 (*=End *)
   | Pair of inTm * inTm 
-  | Cross of inTm * inTm
-  | List of inTm 
+  | Liste of inTm 
   | Nil of inTm 
   | Cons of inTm * inTm * inTm 
 (*=terme_vector *)
@@ -68,6 +67,7 @@ and exTm =
 (*=terme_dfold *)
   | DFold of inTm * inTm * inTm * inTm * inTm * inTm 
 (*=End *)
+  | Fold of inTm * inTm * inTm * inTm 
 (*=terme_ifte *)
   | Ifte of inTm * inTm * inTm * inTm 
 (*=End *)
@@ -98,6 +98,11 @@ type value =
   | VDNil of value
   | VDCons of value * value 
 (*=End *)
+(*=Value_liste *)
+  | VListe of value 
+  | VNil of value 
+  | VCons of value * value * value 
+(*=End *)
   | VId of value * value * value 
   | VRefl of value 
 and neutral = 
@@ -107,8 +112,9 @@ and neutral =
   | NIfte of value * value * value * value
 (*=neutral_fold *)
   | NDFold of value * value * value * value * value * value 
-  | NP0 of value 
-  | NP1 of value 
+  | NP0 of value
+  | NP1 of value
+  | NFold of value * value * value * value
 (*=End *)
   | NTrans of value * value * value * value * value * value  
 
@@ -219,10 +225,8 @@ let rec parse_term env t =
 	   (parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env ) t)
       | Sexp.List [a;Sexp.Atom ",";b] -> 
 	 Pair((parse_term env a),(parse_term env b))
-      | Sexp.List [a;Sexp.Atom "X";b] -> 
-	 Cross((parse_term env a),(parse_term env b))
-      | Sexp.List [Sexp.Atom "list";alpha] -> 
-	 List(parse_term env alpha)
+      | Sexp.List [Sexp.Atom "liste";alpha] -> 
+	 Liste(parse_term env alpha)
       | Sexp.List [Sexp.Atom "nil";alpha] -> 
 	 Nil(parse_term env alpha)
       | Sexp.List [Sexp.Atom "cons";alpha; a; xs] -> 
@@ -261,6 +265,8 @@ and parse_exTm env t =
   | Sexp.Atom v -> lookup_var env 0 (Global(v))
   | Sexp.List [Sexp.Atom "ifte"; p;c;tHen;eLse] ->
      Ifte((parse_term env p),(parse_term env c),(parse_term env tHen),(parse_term env eLse))
+  | Sexp.List [Sexp.Atom "fold";a_t;xs;f;a] -> 
+     Fold((parse_term env a_t),(parse_term env xs),(parse_term env f),(parse_term env a))
   | Sexp.List (f::args) -> 
      List.fold_left 
        (fun x y -> Appl(x, y))
@@ -287,8 +293,7 @@ let rec pretty_print_inTm t l =
   | True -> "true"
   | False -> "false"
   | Pair(a,b) -> "(" ^ pretty_print_inTm a l ^ " , " ^ pretty_print_inTm b l ^ ")"
-  | Cross(a,b) -> "(" ^ pretty_print_inTm a l ^ " X " ^ pretty_print_inTm b l ^ ")"
-  | List(alpha) -> "(list " ^ pretty_print_inTm alpha l ^ ")"
+  | Liste(alpha) -> "(liste " ^ pretty_print_inTm alpha l ^ ")"
   | Nil(alpha) -> "(nil " ^ pretty_print_inTm alpha l ^ ")"
   | Cons(alpha,a,xs) -> "(cons " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
   | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm n l ^ ")"
@@ -317,7 +322,8 @@ and pretty_print_exTm t l =
 				 " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
   | Trans(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm bA l ^ " " ^pretty_print_inTm p l ^ " " ^pretty_print_inTm a l ^ " " ^
 			     pretty_print_inTm b l ^ " " ^pretty_print_inTm q l ^ " " ^pretty_print_inTm x l ^ ")"
-
+  | Fold(bA,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm xs l ^ "  " ^ pretty_print_inTm f l ^ " " ^
+			 pretty_print_inTm a l ^ ")"
 (*=substitution_inTm *)
 let rec substitution_inTm t tsub var = 
   match t with 
@@ -334,8 +340,7 @@ let rec substitution_inTm t tsub var =
   | True -> True 
   | False -> False 
   | Pair(x,y) -> Pair((substitution_inTm x tsub var),(substitution_inTm y tsub var))
-  | Cross(x,y) -> Cross((substitution_inTm x tsub var),(substitution_inTm y tsub var))
-  | List(alpha) -> List(substitution_inTm alpha tsub var)
+  | Liste(alpha) -> Liste(substitution_inTm alpha tsub var)
   | Nil(alpha) -> Nil(substitution_inTm alpha tsub var)
   | Cons(alpha,a,xs) -> Cons((substitution_inTm alpha tsub var),(substitution_inTm a tsub var),(substitution_inTm xs tsub var))
   | Vec(alpha,n) -> Vec((substitution_inTm alpha tsub var),(substitution_inTm n tsub var))
@@ -361,6 +366,8 @@ and substitution_exTm  t tsub var =
 				     (substitution_inTm xs tsub var),(substitution_inTm f tsub var),(substitution_inTm a tsub var))
   | Trans(gA,p,a,b,q,x) -> Trans((substitution_inTm gA tsub var),(substitution_inTm p tsub var),(substitution_inTm a tsub var),
 				 (substitution_inTm b tsub var),(substitution_inTm q tsub var),(substitution_inTm x tsub var))
+  | Fold(gA,xs,f,a) -> Fold((substitution_inTm gA tsub var),(substitution_inTm xs tsub var),(substitution_inTm f tsub var),
+			    (substitution_inTm a tsub var))
 
 
 
@@ -401,12 +408,15 @@ let rec big_step_eval_inTm t envi =
   | Id(gA,a,b) -> VId((big_step_eval_inTm gA envi),(big_step_eval_inTm a envi),(big_step_eval_inTm b envi))
   | Refl(a) -> VRefl(big_step_eval_inTm a envi)
   | Pair(x,y) -> VPair((big_step_eval_inTm x envi),(big_step_eval_inTm y envi))
-  | _ -> failwith "manque list Nill et Cons" 
+  | Liste(a) -> VListe(big_step_eval_inTm a envi)
+  | Nil(a) -> VNil(big_step_eval_inTm a envi)
+  | Cons(alpha,xs,a) -> VCons((big_step_eval_inTm alpha envi),(big_step_eval_inTm xs envi),(big_step_eval_inTm a envi))
+  | What(a) -> failwith "do not put a hole in a type, it make no sense"  
 and vapp v = 
   match v with 
   | ((VLam f),v) -> f v
   | ((VNeutral n),v) -> VNeutral(NApp(n,v))
-  | _ -> failwith "must not append"  
+  | _ -> failwith "must not append"   
 (*=vitter *)
 and vitter (p,n,f,a) =
   match n,f with
@@ -415,10 +425,10 @@ and vitter (p,n,f,a) =
   | _ -> VNeutral(NIter(p,n,f,a))
 (*=End *)
 (*=vfold *) 
-and vfold(alpha,p,n,xs,f,a) = 
+and vdfold(alpha,p,n,xs,f,a) = 
   match xs,f,n with
   | (VDNil(alphi),VLam fu,VZero) -> a
-  | (VDCons(elem,y),VLam fu,VSucc(ni)) -> vapp(vapp(vapp(fu n,xs),elem),vfold(alpha,p,ni,y,f,a))
+  | (VDCons(elem,y),VLam fu,VSucc(ni)) -> vapp(vapp(vapp(fu n,xs),elem),vdfold(alpha,p,ni,y,f,a))
   | _ -> VNeutral(NDFold(alpha,p,n,xs,f,a))
 (*=End *)
 and vifte(p,c,tHen,eLse) = 
@@ -426,6 +436,11 @@ and vifte(p,c,tHen,eLse) =
   | VTrue -> tHen 
   | VFalse -> eLse 
   | _ -> VNeutral(NIfte(p,c,tHen,eLse))
+and vfold(alpha,xs,f,a) = 
+  match xs,f with 
+  | (VNil(alphi),VLam fu) -> a 
+  | (VCons(alphi,elem,suite),VLam fu) -> vapp(vapp((fu xs),elem),vfold(alpha,suite,f,a))
+  | _ -> VNeutral(NFold(alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
   | Ann(x,_) -> big_step_eval_inTm x envi 
@@ -456,9 +471,11 @@ and big_step_eval_exTm t envi =
        | VPair(x,y) -> y
        | _ -> VNeutral(NP1(eval_p))
      end        
-  | DFold(alpha,p,n,xs,f,a) -> vfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm p envi),
+  | DFold(alpha,p,n,xs,f,a) -> vdfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm p envi),
 				      (big_step_eval_inTm n envi),(big_step_eval_inTm xs envi),
 				      (big_step_eval_inTm f envi),(big_step_eval_inTm a envi))				      
+  | Fold(alpha,xs,f,a) -> vfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm xs envi),
+				(big_step_eval_inTm f envi),(big_step_eval_inTm a envi))
   | _ -> failwith "il manque trans" 
 
 let boundfree i n = 
@@ -502,6 +519,9 @@ let rec value_to_inTm i v =
   | VDCons(a,xs) -> DCons((value_to_inTm i a),(value_to_inTm i xs)) 
   | VId(gA,a,b) -> Id((value_to_inTm i gA),(value_to_inTm i a),(value_to_inTm i b))
   | VRefl(a) -> Refl(value_to_inTm i a) 
+  | VListe(a) -> Liste(value_to_inTm i a)
+  | VNil(a) -> Nil(value_to_inTm i a)
+  | VCons(alpha,a,xs) -> Cons((value_to_inTm i alpha),(value_to_inTm i a),(value_to_inTm i xs)) 
 and neutral_to_exTm i v = 
   match v with 
   | NFree x -> boundfree i x
@@ -515,6 +535,7 @@ and neutral_to_exTm i v =
   (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
   | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
   | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
+  | NFold(alpha,xs,f,a) -> Fold((value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
 
 
@@ -532,12 +553,16 @@ let rec equal_inTm t1 t2 =
   | (False,False) -> true 
   | (Inv(x1),Inv(x2)) -> equal_exTm x1 x2
   | (Pair(x1,y1),Pair(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
-  | (Cross(x1,y1),Cross(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false 
   | (What(a),What(b)) -> true
   | (Vec(x1,y1),Vec(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
   | (DNil x1,DNil x2) -> equal_inTm x1 x2 
   | (DCons(x1,y1),DCons(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
-  | _ -> false
+  | (Id(x1,y1,z1),Id(x2,y2,z2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2
+  | (Refl(a),Refl(b)) -> equal_inTm a b 
+  | (Liste(a),Liste(b))-> equal_inTm a b
+  | (Nil(a),Nil(b)) -> equal_inTm a b 
+  | (Cons(x1,y1,z1),Cons(x2,y2,z2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2				  
+  | _ -> false 
 and equal_exTm t1 t2 = 
   match (t1,t2) with 
   | (Ann(x1,y1),Ann(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
@@ -555,14 +580,13 @@ and equal_exTm t1 t2 =
 								     then (if equal_inTm xs1 xs2 then (if equal_inTm f1 f2 
 												       then equal_inTm a1 a2 else false)
 													else false) 
-												     else false) else false) else false) else false
-												       
-									    
-														       
+												     else false) else false) 
+												       else false) else false
+  | (Fold(alpha1,p1,n1,xs1),Fold(alpha2,p2,n2,xs2)) -> equal_inTm alpha1 alpha2 && equal_inTm p1 p2 && 
+							 equal_inTm n1 n2 && equal_inTm xs1 xs2  
   | _ -> false
-
-
-
+							 
+															      
 (*=check_head *)      
 let rec lcheck contexte ty inT =
   match inT with
@@ -889,7 +913,7 @@ test le retour de la synthèse *)
 		  if res_debug(check_alpha) 
 		  then check contexte n VNat (pretty_print_inTm inT [] ^ ";"^ steps)
 		  else create_report false (contexte_to_string contexte) steps "Vec : alpha must be of type star"
-       | _ -> create_report false (contexte_to_string contexte) steps "Vec : ty must be VStar"
+       | _ -> create_report false (contexte_to_string contexte) steps "Vec : ty must be VStar" 
      end
   | DNil(alpha) -> 
      begin
@@ -942,7 +966,7 @@ test le retour de la synthèse *)
 			  else create_report false (contexte_to_string contexte) steps "Refl : a and ta must be equal"	       
        | _ -> create_report false (contexte_to_string contexte) steps "Refl : ty must be of type Id"
      end
-  | _ -> failwith "HEHEHEHEHE"
+  | _ -> failwith "to be continue" 
 (*=synth_var *) 
 and synth contexte exT steps =
   match exT with 
@@ -1122,7 +1146,7 @@ and synth contexte exT steps =
 			       else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: a must be of type gA") VStar 
 			     end
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
-
+  | _ -> failwith "to be continue" 
 
 
 (* let () = Printf.printf "%s" (print_report (check [] (read "(lamba x x)") (big_step_eval_inTm (read "(-> * *)") []) "")) *)

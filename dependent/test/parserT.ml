@@ -44,7 +44,7 @@ let inputs
        ("true",True);
        ("false",False);
        ("(ifte (lambda x B) true true false)",Inv(Ifte(Abs(Global"x",Bool),True,True,False))); 
-       ("(list N)",List(Nat));
+       ("(liste N)",Liste(Nat));
        ("(nil N)", Nil(Nat));
        ("(cons N zero (nil N))",(Cons(Nat,Zero,Nil(Nat))));
        ("(vec N (succ zero))",Vec(Nat,Succ(Zero)));
