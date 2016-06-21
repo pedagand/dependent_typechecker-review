@@ -12,7 +12,8 @@ let inputs =
   ("(dfold N (lambda n (lambda xs N)) (succ (succ zero)) (dcons (succ zero) (dcons (succ (succ zero)) (dnil N))) (lambda n (lambda xs (lambda a (lambda x (+ a x))))) zero)","(succ (succ (succ zero)))");
   ("(ifte (lambda x B) true true false)","true");
   ("(ifte (lambda x B) false true false)","false");
-  
+  ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)",
+   "(succ (succ zero))");
 ]
 
 
