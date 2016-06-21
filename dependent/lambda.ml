@@ -439,7 +439,7 @@ and vifte(p,c,tHen,eLse) =
 and vfold(p,alpha,xs,f,a) = 
   match xs,f with 
   | (VNil(alphi),VLam fu) -> a 
-  | (VCons(elem,suite),VLam fu) -> vapp(vapp((fu xs),elem),vfold(p,alpha,suite,f,a))
+  | (VCons(elem,suite),VLam fu) -> vapp(vapp((fu elem),xs),vfold(p,alpha,suite,f,a))
   | _ -> VNeutral(NFold(p,alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
@@ -1188,7 +1188,7 @@ and synth contexte exT steps =
 		      Pi(Global"xs",Liste(alpha),			 
 			 Pi(Global"NO",Inv(Appl(Appl(Ann(p,type_p),alpha),Inv(BVar 0))),
 			    Inv(Appl(Appl(Ann(p,type_p),alpha),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
-     let check_f = check contexte xs (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
+     let check_f = check contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
      let check_a = check contexte a (big_step_eval_inTm alpha []) (pretty_print_exTm exT [] ^ ";") in 
      if res_debug check_alpha 
      then
@@ -1216,6 +1216,4 @@ and synth contexte exT steps =
 
 
 (* let () = Printf.printf "%s" (print_report (check [] (read "(lamba x x)") (big_step_eval_inTm (read "(-> * *)") []) "")) *)
-
-
 

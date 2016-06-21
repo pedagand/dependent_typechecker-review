@@ -140,7 +140,8 @@ let inputs =
     ("(cons zero (nil N))","(liste N)",true);
     ("(cons true (nil B))","(liste B)",true);
     ("(cons zero (cons (succ zero) (nil N)))","(liste N)",true);
-
+    ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",true);
+    
     ("(liste zero)","*",false);
     ("(liste N)","N",false);
     ("(nil N)","(liste B)",false);
@@ -152,6 +153,10 @@ let inputs =
     ("(cons zero N)","(liste N)",false);
     ("(cons zero (cons true (nil N)))","(liste N)",false);    
     ("(cons zero (cons zero (nil B)))","(liste N)",false);    
+    ("(fold (lambda x (lambda y B)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",false);
+    ("(fold (lambda x (lambda y N)) B (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",false);
+    ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) true)","N",false);
+    ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) true)","N",false);
     
     
 
