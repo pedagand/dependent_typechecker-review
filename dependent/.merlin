@@ -2,5 +2,7 @@ PKG sexplib
 PKG oUnit
 S .
 S test
+S clientDir
 B _build
 B _build/test
+B _build/clientDir

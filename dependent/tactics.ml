@@ -37,6 +37,7 @@ type request =
 type goal = 
   | Goal of inTm (* il faut que le goal soit une value étant donné que c'est le type et que l'on souhaite travailler avec des types  
 de forme normale *)
+  | Goals of goal list
   | Vide
 
 type hypothesis =
@@ -65,7 +66,7 @@ let intro env go (term : inTm) (var : string) =
      | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What(gensym ())),false)
      | _ -> failwith ("intro : you can't intro something of the type " ^ pretty_print_inTm g [])
      end
-  | (Env(x),Vide,t,v) -> failwith "intro : goal must not be Vide" 
+  | _ -> failwith "intro : intro is not call with good args" 
 
 
 
@@ -80,5 +81,21 @@ let axiome env go (term : inTm) (var : string) =
 		   then (Vide,Env(x),Inv(FVar(Global(v))),true)
 		   else failwith "axiome : there is no variable you mentioned in the context with the good type"
      end 
-  | (Env(x),Vide,t,v)-> failwith "axiome : goal must not be Vide" 
- 
+  | _ -> failwith "axiome : is not call with good args"  
+
+
+(* pour cette stratégie je vais avoir besoin de crée un type de réponse particulière qui permet d'indiquer au client qu'il à plusieurs 
+goal à satisfaires à la suite *)
+(* let construct env go (term : inTm) (var : string) = 
+  match (env,go,term,var) with 
+     | (Env(x),Goal(g),t,v) -> 
+	begin 
+	  match 
+	end 
+     | (Env(x),Vide,t,v) -> failwith "construct : goal must not be Vide"  *)
+    
+(* réfléxions avant la pause *)
+(* Enfaite j'ai un type view sur le client et justement je devrais faire un arbre de view, quand une view est terminée alors elle contient
+le terme qu'il faut mettre à cet endroit. Etant donné que dans l'arbre tous les goals présent dans une meme section signifie que ce sont 
+différents goal mais pour construire le meme terme, et grace au curseur on va pouvoir se déplacer dans les différentes view. 
+Ca va etre la version 2.0 du client. *)

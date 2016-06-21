@@ -7,8 +7,9 @@ open Lambda
 let inputs = 
 [
   ("((: (lambda x x) (-> N N)) y)","y");
-  ("(iter P zero (lambda x (succ x)) zero)","zero");
-  ("(iter P (succ (succ (succ zero))) (lambda n (lambda x (succ x))) zero)","(succ (succ (succ zero)))"); 
+  ("(iter (lambda x N) zero (lambda n (lambda x (succ x))) zero)","zero");
+  ("(iter (lambda x N) (succ (succ (succ zero))) (lambda n (lambda x (succ x))) zero)","(succ (succ (succ zero)))"); 
+
   ("(dfold N (lambda n (lambda xs N)) (succ (succ zero)) (dcons (succ zero) (dcons (succ (succ zero)) (dnil N))) (lambda n (lambda xs (lambda a (lambda x (+ a x))))) zero)","(succ (succ (succ zero)))");
   ("(ifte (lambda x B) true true false)","true");
   ("(ifte (lambda x B) false true false)","false");

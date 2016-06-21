@@ -20,6 +20,9 @@ tactics.native: tactics.ml
 
 serveur.native: serveur.ml
 	ocamlbuild -use-ocamlfind serveur.native
+
+client.native: client.ml
+	ocamlbuild -use-ocamlfind client.native
 clean: 
 	ocamlbuild -clean
 	rm reponse_serv.txt 

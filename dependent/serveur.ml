@@ -75,6 +75,8 @@ and pretty_print_goal g =
   match g with 
   | Goal x -> pretty_print_inTm x []
   | Vide -> ""
+  | Goals(Goal(x)::suite) -> pretty_print_inTm x [] ^ " " ^ pretty_print_goal (Goals(suite))
+  | _ -> ""
 and pretty_print_global gl = 
   match gl with  
   | Request (R_goal(g),R_environment(e),R_terme(t),R_tactic(tac),R_var(var)) -> 
@@ -100,7 +102,11 @@ let create_answer go env t res =
   | (Goal(g),Env(e),term) -> "((goal " ^ pretty_print_goal (Goal(g)) 
 			     ^ ") (env (" ^ pretty_print_env (Env(e)) 
 			     ^ ")) " ^ pretty_print_inTm term []^ " " ^ res_string ^ ")"
+  | (Goals(g),Env(e),term) -> "((goals " ^ pretty_print_goal (Goals(g))
+			      ^ ") (env (" ^ pretty_print_env (Env(e)) 
+			      ^ ")) " ^ pretty_print_inTm term []^ " " ^ res_string ^ ")"
   | (Vide,Env(e),term) -> "(validate)"
+ 
 
 (* ----------------------------Le main du serveur---------------------------*)
 (* Ca va etre une fonction qui prend une string en entrée qui fait ensuite appelle aux différentes fonctions afin d'obtenir un type request
@@ -136,6 +142,8 @@ let main no_parse_req =
        match res with 
        | (Goal(a_g),Env(a_e),a_terme,res_bool) -> 
 	  send_answer_to_client(create_answer (Goal(a_g)) (Env(a_e)) a_terme res_bool)
+       | (Goals(a_g),Env(a_e),a_terme,res_bool) -> 
+	  send_answer_to_client(create_answer (Goals(a_g)) (Env(a_e)) a_terme res_bool)
        | (Vide,Env(a_e),a_terme,res_bool) -> send_answer_to_client(create_answer Vide (Env(a_e)) a_terme res_bool)
      end
   | R_result(x) -> send_answer_to_client(if x then "true" else "false")

@@ -1,2 +1,3 @@
 true: package(oUnit), package(sexplib)
 "test": include
+"clientDir": include
