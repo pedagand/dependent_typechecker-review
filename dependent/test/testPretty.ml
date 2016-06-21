@@ -17,12 +17,9 @@ let inputs =
     ((Succ(Succ(Zero))),"(succ (succ zero))");
     ((Inv(Iter(Nat,Nat,Nat,Nat))),"(iter N N N N)");
     ((Pair(Inv(FVar (Global "x")),Inv(FVar (Global "y")))),"(x , y)");
-    ((Cross(Inv(FVar (Global "x")),Inv(FVar (Global "y")))),"(x X y)");
-    (Inv(P0(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))),"(p0 (: (a , b) (N X N)))");
-    (Inv(P1(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))),"(p1 (: (a , b) (N X N)))");
     (Sig(Global "x",Nat,Nat),"(sig x N N)");
     (Sig(Global "x",Nat,Inv(BVar 0)),"(sig x N x)");
-    (Cons(Nat,Zero,Nil(Nat)),"(cons N zero (nil N))");
+    (Cons(Zero,Nil(Nat)),"(cons zero (nil N))");
     (Liste(Nat),"(liste N)");
     (Nil(Nat),"(nil N)");
     (Inv(DFold(Inv(FVar(Global "alpha")),Inv(FVar(Global "P")),Inv(FVar(Global "m")),Inv(FVar(Global "xs")),Inv(FVar(Global "f")),Inv(FVar(Global "a")))),"(dfold alpha P m xs f a)");

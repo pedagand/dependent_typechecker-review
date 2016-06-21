@@ -32,12 +32,7 @@ let inputs
        ("(p0 (: (true , false) (sig n B B)))",Inv(P0(Ann(Pair(True,False),Sig(Global"n",Bool,Bool)))));
        ("(lambda A (lambda a (lambda b (pi P (-> A *) (-> (P a) (P b))))))",
 	Abs(Global "A",Abs(Global "a",Abs(Global "b",(Pi(Global "P",Pi(Global "NO",Inv(BVar 2),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(BVar 2))),Inv(Appl(BVar 1,Inv(BVar 2))))))))));
-       ("(a X b)",Cross(Inv(FVar (Global "a")),Inv(FVar (Global"b"))));
        ("(a , b)",Pair(Inv(FVar (Global "a")),Inv(FVar (Global"b"))));
-       ("(p0 (: (a , b) (N X N)))", 
-	Inv(P0(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))));
-       ("(p1 (: (a , b) (N X N)))", 
-	Inv(P1(Ann(Pair(Inv(FVar (Global "a")),Inv(FVar (Global "b"))),Cross(Nat,Nat)))));
        ("(iter (lambda x x) zero (lambda x (succ x)) zero)",
 	Inv(Iter(Abs(Global "x",Inv(BVar 0)),Zero,Abs(Global "x",Succ(Inv(BVar 0))),Zero)));
        ("B",Bool);
@@ -46,7 +41,7 @@ let inputs
        ("(ifte (lambda x B) true true false)",Inv(Ifte(Abs(Global"x",Bool),True,True,False))); 
        ("(liste N)",Liste(Nat));
        ("(nil N)", Nil(Nat));
-       ("(cons N zero (nil N))",(Cons(Nat,Zero,Nil(Nat))));
+       ("(cons zero (nil N))",(Cons(Zero,Nil(Nat))));
        ("(vec N (succ zero))",Vec(Nat,Succ(Zero)));
        ("(dnil N)",DNil(Nat));
        ("(dcons zero (dnil N))",DCons(Zero,DNil(Nat)));

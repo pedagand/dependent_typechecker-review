@@ -32,7 +32,7 @@ type inTm =
   | Pair of inTm * inTm 
   | Liste of inTm 
   | Nil of inTm 
-  | Cons of inTm * inTm * inTm 
+  | Cons of inTm * inTm 
 (*=terme_vector *)
   | Vec of inTm * inTm
   | DNil of inTm
@@ -101,7 +101,7 @@ type value =
 (*=Value_liste *)
   | VListe of value 
   | VNil of value 
-  | VCons of value * value * value 
+  | VCons of value * value 
 (*=End *)
   | VId of value * value * value 
   | VRefl of value 
@@ -229,8 +229,8 @@ let rec parse_term env t =
 	 Liste(parse_term env alpha)
       | Sexp.List [Sexp.Atom "nil";alpha] -> 
 	 Nil(parse_term env alpha)
-      | Sexp.List [Sexp.Atom "cons";alpha; a; xs] -> 
-	 Cons((parse_term env alpha),(parse_term env a),(parse_term env xs))
+      | Sexp.List [Sexp.Atom "cons"; a; xs] -> 
+	 Cons((parse_term env a),(parse_term env xs))
       | Sexp.List [Sexp.Atom "vec";alpha; n] -> 
 	 Vec((parse_term env alpha),(parse_term env n))
       | Sexp.List [Sexp.Atom "dnil";alpha] -> 
@@ -295,7 +295,7 @@ let rec pretty_print_inTm t l =
   | Pair(a,b) -> "(" ^ pretty_print_inTm a l ^ " , " ^ pretty_print_inTm b l ^ ")"
   | Liste(alpha) -> "(liste " ^ pretty_print_inTm alpha l ^ ")"
   | Nil(alpha) -> "(nil " ^ pretty_print_inTm alpha l ^ ")"
-  | Cons(alpha,a,xs) -> "(cons " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
+  | Cons(a,xs) -> "(cons " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
   | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm n l ^ ")"
   | DNil(alpha) -> "(dnil " ^ pretty_print_inTm alpha l ^ ")"
   | DCons(a,xs) -> "(dcons " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
@@ -342,7 +342,7 @@ let rec substitution_inTm t tsub var =
   | Pair(x,y) -> Pair((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   | Liste(alpha) -> Liste(substitution_inTm alpha tsub var)
   | Nil(alpha) -> Nil(substitution_inTm alpha tsub var)
-  | Cons(alpha,a,xs) -> Cons((substitution_inTm alpha tsub var),(substitution_inTm a tsub var),(substitution_inTm xs tsub var))
+  | Cons(a,xs) -> Cons((substitution_inTm a tsub var),(substitution_inTm xs tsub var))
   | Vec(alpha,n) -> Vec((substitution_inTm alpha tsub var),(substitution_inTm n tsub var))
   | DNil(alpha) -> DNil(substitution_inTm alpha tsub var)
   | DCons(a,xs) -> DCons((substitution_inTm a tsub var),(substitution_inTm a tsub var))
@@ -410,7 +410,7 @@ let rec big_step_eval_inTm t envi =
   | Pair(x,y) -> VPair((big_step_eval_inTm x envi),(big_step_eval_inTm y envi))
   | Liste(a) -> VListe(big_step_eval_inTm a envi)
   | Nil(a) -> VNil(big_step_eval_inTm a envi)
-  | Cons(alpha,xs,a) -> VCons((big_step_eval_inTm alpha envi),(big_step_eval_inTm xs envi),(big_step_eval_inTm a envi))
+  | Cons(xs,a) -> VCons((big_step_eval_inTm xs envi),(big_step_eval_inTm a envi))
   | What(a) -> failwith "do not put a hole in a type, it make no sense"  
 and vapp v = 
   match v with 
@@ -439,7 +439,7 @@ and vifte(p,c,tHen,eLse) =
 and vfold(alpha,xs,f,a) = 
   match xs,f with 
   | (VNil(alphi),VLam fu) -> a 
-  | (VCons(alphi,elem,suite),VLam fu) -> vapp(vapp((fu xs),elem),vfold(alpha,suite,f,a))
+  | (VCons(elem,suite),VLam fu) -> vapp(vapp((fu xs),elem),vfold(alpha,suite,f,a))
   | _ -> VNeutral(NFold(alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
@@ -521,7 +521,7 @@ let rec value_to_inTm i v =
   | VRefl(a) -> Refl(value_to_inTm i a) 
   | VListe(a) -> Liste(value_to_inTm i a)
   | VNil(a) -> Nil(value_to_inTm i a)
-  | VCons(alpha,a,xs) -> Cons((value_to_inTm i alpha),(value_to_inTm i a),(value_to_inTm i xs)) 
+  | VCons(a,xs) -> Cons((value_to_inTm i a),(value_to_inTm i xs)) 
 and neutral_to_exTm i v = 
   match v with 
   | NFree x -> boundfree i x
@@ -561,7 +561,7 @@ let rec equal_inTm t1 t2 =
   | (Refl(a),Refl(b)) -> equal_inTm a b 
   | (Liste(a),Liste(b))-> equal_inTm a b
   | (Nil(a),Nil(b)) -> equal_inTm a b 
-  | (Cons(x1,y1,z1),Cons(x2,y2,z2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2				  
+  | (Cons(y1,z1),Cons(y2,z2)) -> equal_inTm y1 y2 && equal_inTm z1 z2				  
   | _ -> false 
 and equal_exTm t1 t2 = 
   match (t1,t2) with 
@@ -966,7 +966,39 @@ test le retour de la synthèse *)
 			  else create_report false (contexte_to_string contexte) steps "Refl : a and ta must be equal"	       
        | _ -> create_report false (contexte_to_string contexte) steps "Refl : ty must be of type Id"
      end
-  | _ -> failwith "to be continue" 
+  | Liste(alpha) -> 
+     begin 
+       match ty with 
+       | VStar -> let check_alpha = check contexte alpha VStar (pretty_print_inTm inT [] ^ ";"^ steps) in
+		  if res_debug(check_alpha) 
+		  then create_report true (contexte_to_string contexte) steps "NO"
+		  else create_report false (contexte_to_string contexte) steps "Liste : alpha seems to not be of type Star"
+       | _ -> create_report false (contexte_to_string contexte) steps "Liste : ty must be VStar" 
+     end
+  | Nil(alpha) -> 
+     begin 
+       match ty with 
+       | VListe(alpha_liste) -> if equal_inTm (value_to_inTm 0 (big_step_eval_inTm alpha [])) 
+					    (value_to_inTm 0 alpha_liste)
+				then create_report true (contexte_to_string contexte) steps "NO"
+				else create_report false (contexte_to_string contexte) steps "Nil : the 2 alpha seems to not be the same"
+       | _ -> create_report false (contexte_to_string contexte) steps "Nil : ty must be VListe"       
+     end
+  | Cons(a,xs) -> 
+     begin 
+       match ty with 
+       | VListe(alpha_liste) -> let check_a = check contexte a alpha_liste (pretty_print_inTm inT [] ^ ";"^ steps) in
+				let check_xs = check contexte xs (VListe(alpha_liste)) (pretty_print_inTm inT [] ^ ";"^ steps) in
+				if res_debug(check_a) 
+				then 
+				  begin 
+				    if res_debug(check_xs)
+				    then create_report true (contexte_to_string contexte) steps "NO"
+				    else create_report false (contexte_to_string contexte) steps "Cons : xs is not of type Liste(alpha)"
+				  end
+				else create_report false (contexte_to_string contexte) steps "Cons : a is not of type alpha"
+       | _ -> create_report false (contexte_to_string contexte) steps "Cons : ty must be VListe(alpha)"
+     end 
 (*=synth_var *) 
 and synth contexte exT steps =
   match exT with 
