@@ -47,6 +47,12 @@ let go_down (Loc(t,p)) = match t with
   | Section(t1::trees) -> Loc(t1,Node([],p,trees))
   | _ -> failwith "down of empty"
 
+let get_current (Loc(i,p)) = 
+  match i with 
+  | Item(x) -> x
+  | Section(Item(x) :: reste) -> x
+  | _ -> failwith "get_current : must not append" 
+
 let change (Loc(_,p)) t = Loc(t,p)
 
 let insert_right (Loc(t,p)) r = match p with
