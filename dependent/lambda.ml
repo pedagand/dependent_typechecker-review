@@ -67,7 +67,7 @@ and exTm =
 (*=terme_dfold *)
   | DFold of inTm * inTm * inTm * inTm * inTm * inTm 
 (*=End *)
-  | Fold of inTm * inTm * inTm * inTm 
+  | Fold of inTm * inTm * inTm * inTm * inTm 
 (*=terme_ifte *)
   | Ifte of inTm * inTm * inTm * inTm 
 (*=End *)
@@ -114,7 +114,7 @@ and neutral =
   | NDFold of value * value * value * value * value * value 
   | NP0 of value
   | NP1 of value
-  | NFold of value * value * value * value
+  | NFold of value * value * value * value * value
 (*=End *)
   | NTrans of value * value * value * value * value * value  
 
@@ -265,8 +265,8 @@ and parse_exTm env t =
   | Sexp.Atom v -> lookup_var env 0 (Global(v))
   | Sexp.List [Sexp.Atom "ifte"; p;c;tHen;eLse] ->
      Ifte((parse_term env p),(parse_term env c),(parse_term env tHen),(parse_term env eLse))
-  | Sexp.List [Sexp.Atom "fold";a_t;xs;f;a] -> 
-     Fold((parse_term env a_t),(parse_term env xs),(parse_term env f),(parse_term env a))
+  | Sexp.List [Sexp.Atom "fold";a_t;alpha;xs;f;a] -> 
+     Fold((parse_term env a_t),(parse_term env alpha),(parse_term env xs),(parse_term env f),(parse_term env a))
   | Sexp.List (f::args) -> 
      List.fold_left 
        (fun x y -> Appl(x, y))
@@ -322,7 +322,7 @@ and pretty_print_exTm t l =
 				 " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
   | Trans(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm bA l ^ " " ^pretty_print_inTm p l ^ " " ^pretty_print_inTm a l ^ " " ^
 			     pretty_print_inTm b l ^ " " ^pretty_print_inTm q l ^ " " ^pretty_print_inTm x l ^ ")"
-  | Fold(bA,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm xs l ^ "  " ^ pretty_print_inTm f l ^ " " ^
+  | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm xs l ^ "  " ^ pretty_print_inTm f l ^ " " ^
 			 pretty_print_inTm a l ^ ")"
 (*=substitution_inTm *)
 let rec substitution_inTm t tsub var = 
@@ -366,7 +366,7 @@ and substitution_exTm  t tsub var =
 				     (substitution_inTm xs tsub var),(substitution_inTm f tsub var),(substitution_inTm a tsub var))
   | Trans(gA,p,a,b,q,x) -> Trans((substitution_inTm gA tsub var),(substitution_inTm p tsub var),(substitution_inTm a tsub var),
 				 (substitution_inTm b tsub var),(substitution_inTm q tsub var),(substitution_inTm x tsub var))
-  | Fold(gA,xs,f,a) -> Fold((substitution_inTm gA tsub var),(substitution_inTm xs tsub var),(substitution_inTm f tsub var),
+  | Fold(gA,alpha,xs,f,a) -> Fold((substitution_inTm gA tsub var),(substitution_inTm alpha tsub var),(substitution_inTm xs tsub var),(substitution_inTm f tsub var),
 			    (substitution_inTm a tsub var))
 
 
@@ -436,11 +436,11 @@ and vifte(p,c,tHen,eLse) =
   | VTrue -> tHen 
   | VFalse -> eLse 
   | _ -> VNeutral(NIfte(p,c,tHen,eLse))
-and vfold(alpha,xs,f,a) = 
+and vfold(p,alpha,xs,f,a) = 
   match xs,f with 
   | (VNil(alphi),VLam fu) -> a 
-  | (VCons(elem,suite),VLam fu) -> vapp(vapp((fu xs),elem),vfold(alpha,suite,f,a))
-  | _ -> VNeutral(NFold(alpha,xs,f,a))
+  | (VCons(elem,suite),VLam fu) -> vapp(vapp((fu xs),elem),vfold(p,alpha,suite,f,a))
+  | _ -> VNeutral(NFold(p,alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
   | Ann(x,_) -> big_step_eval_inTm x envi 
@@ -474,7 +474,7 @@ and big_step_eval_exTm t envi =
   | DFold(alpha,p,n,xs,f,a) -> vdfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm p envi),
 				      (big_step_eval_inTm n envi),(big_step_eval_inTm xs envi),
 				      (big_step_eval_inTm f envi),(big_step_eval_inTm a envi))				      
-  | Fold(alpha,xs,f,a) -> vfold((big_step_eval_inTm alpha envi),(big_step_eval_inTm xs envi),
+  | Fold(p,alpha,xs,f,a) -> vfold((big_step_eval_inTm p envi),(big_step_eval_inTm alpha envi),(big_step_eval_inTm xs envi),
 				(big_step_eval_inTm f envi),(big_step_eval_inTm a envi))
   | _ -> failwith "il manque trans" 
 
@@ -535,7 +535,7 @@ and neutral_to_exTm i v =
   (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
   | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
   | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
-  | NFold(alpha,xs,f,a) -> Fold((value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
+  | NFold(p,alpha,xs,f,a) -> Fold((value_to_inTm i p),(value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
 
 
@@ -582,8 +582,9 @@ and equal_exTm t1 t2 =
 													else false) 
 												     else false) else false) 
 												       else false) else false
-  | (Fold(alpha1,p1,n1,xs1),Fold(alpha2,p2,n2,xs2)) -> equal_inTm alpha1 alpha2 && equal_inTm p1 p2 && 
-							 equal_inTm n1 n2 && equal_inTm xs1 xs2  
+  | (Fold(p1,alpha1,xs1,f1,a1),Fold(p2,alpha2,xs2,f2,a2)) -> 
+     equal_inTm p1 p2 && equal_inTm alpha1 alpha2 && equal_inTm xs1 xs2 && 
+       equal_inTm f1 f2 && equal_inTm a1 a2  
   | _ -> false
 							 
 															      
@@ -1098,7 +1099,7 @@ and synth contexte exT steps =
 	 else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : c is not of type VBool") VStar     
        end  
      else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : p is not of type (-> B *)") VStar
-     
+     (* le check de f est nul parceque j'utilise pas les boundvar qui sont binde par les premier pi, A CHANGER *)
   | DFold(alpha,p,n,xs,f,a) -> let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in
 			       let type_p = (Pi(Global"n",Nat,(Pi(Global"xs",Vec(alpha,Inv(BVar 0)),Star)))) in 
 			       let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
@@ -1178,7 +1179,40 @@ and synth contexte exT steps =
 			       else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: a must be of type gA") VStar 
 			     end
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
-  | _ -> failwith "to be continue" 
+  | Fold(p,alpha,xs,f,a) -> 
+     let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
+     let type_p = (Pi(Global"a",alpha,(Pi(Global"xs",Liste(Inv(BVar 0)),Star)))) in 
+     let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
+     let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
+     let type_f = (Pi(Global"a",alpha,
+		      Pi(Global"xs",Liste(alpha),			 
+			 Pi(Global"NO",Inv(Appl(Appl(Ann(p,type_p),alpha),Inv(BVar 0))),
+			    Inv(Appl(Appl(Ann(p,type_p),alpha),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
+     let check_f = check contexte xs (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
+     let check_a = check contexte a (big_step_eval_inTm alpha []) (pretty_print_exTm exT [] ^ ";") in 
+     if res_debug check_alpha 
+     then
+       begin 
+	 if res_debug check_p
+	 then
+	   begin 
+	     if res_debug check_xs 
+	     then
+	       begin
+		 if res_debug check_f
+		 then
+		   begin 
+		     if res_debug check_a 
+		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),alpha),xs))) [])
+		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: a must be of type alpha") VStar
+		   end
+		 else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: f has the wrong type") VStar
+	       end
+	     else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: xs must be of type Liste(alpha)") VStar
+	   end
+	 else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: P has the wrong type") VStar
+       end 
+     else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: alpha must be of type Star") VStar
 
 
 (* let () = Printf.printf "%s" (print_report (check [] (read "(lamba x x)") (big_step_eval_inTm (read "(-> * *)") []) "")) *)
