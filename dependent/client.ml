@@ -101,7 +101,7 @@ let arbre = init_location (init_view_arg type_to_proove "(? init)" "" false)
 
 let rec main arbre =		
   if (get_current arbre).validate = true then main (go_up arbre) else 
-    let () = Printf.printf "\narbre : %s\n" (pretty_print_location(go_to_the_top arbre)) in
+(*    let () = Printf.printf "\narbre : %s\n" (pretty_print_location(go_to_the_top arbre)) in *)
     let () =  Printf.printf "\n%s\n" (pretty_print_view (get_current arbre)); 
 	    Printf.printf "\nput your next tactique or left,right,up,down to navigate throught the proof\n" in
   let tactic_or_navig = read_line () in 
@@ -110,6 +110,7 @@ let rec main arbre =
     | "right" -> let arbre = (go_right arbre) in main arbre
     | "up" -> let arbre = (go_up arbre) in main arbre 
     | "down" -> let arbre = (go_down arbre) in main arbre
+    | "print" -> let () = Printf.printf "\narbre : %s\n" (pretty_print_location(go_to_the_top arbre)) in main arbre
     | _ -> 
   let () = Printf.printf "\nput the options of your tactic (if no option type no)\n"  in
   let opt = read_line () in 
