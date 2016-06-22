@@ -20,14 +20,9 @@ let init_view = {goal = "()"; preuve = "()"; hypo = "()"; validate = false }
 let init_view_arg g p h v = {goal = g; preuve = p; hypo = h; validate = v }
 
 let init_location (first_view : view) = 
-  Loc(Item(first_view),Top)
+  Loc(Section(Item(first_view) :: []),(Node([],Top,[])))
 
 
-
-
-
-let pretty_print_view g = 
-  g.hypo ^ "\n==============\n" ^ g.goal ^ " |- " ^ g.preuve
 
 
 (* fonctions permettant la communication avec le serveur *)
@@ -75,6 +70,7 @@ let parse_answer str=
      List.map (function x -> init_view_arg x (pretty_print_inTm (parse_term [] t) [])
 					   (parse_answer_env e)
 					   (if (Sexp.to_string b) = "true" then true else false)) goals_liste
+  | Sexp.List[Sexp.Atom "validate"] -> (init_view_arg "" "" "" true) :: []
   | _ -> failwith ("\nparse_answer not good answer : " ^ Sexp.to_string str)
 
 
@@ -82,14 +78,14 @@ let parse_answer str=
 (* lorsque l'on insère une nouvelle sections de goals on la place tout à gauche (cela permet de descendre plus rapidement dans la preuve) *)
 let rec insert_answer_in_tree (Loc(t,p)) elem = 
   match p with
-    Top -> failwith "left of top"
+    Top -> failwith "insert_answer_in_tree : can't on top"
   | Node(l::left,up,right) -> insert_answer_in_tree (Loc(l,Node(left,up,t::right))) elem
-  | Node([],up,right) -> insert_left (Loc(t,p)) elem
+  | Node([],up,right) -> insert_down (Loc(t,p)) elem
 
 
 (* transforme une liste de view en une section pour insérer dans l'arbre *)
 let liste_view_to_section lst = 
-  List.map (fun x -> Item(x)) lst 
+  Section(List.map (fun x -> Item(x)) lst)
 
 
 (* ------------------------------Debut du main du programme-------------------------- *)
@@ -100,22 +96,25 @@ let () = Printf.printf "\n\n-------------------------------\n";
 	 Printf.printf "\n\n Entrer un théorème à prouver     \n"
 let type_to_proove = read_line ()
 
-let arbre = ref (init_location (init_view_arg type_to_proove "(? init)" "" false))
+let arbre = init_location (init_view_arg type_to_proove "(? init)" "" false)
 
-let rec main  =		
-  let () = Printf.printf "\n%s\n" (pretty_print_view (get_current !arbre));
-	   Printf.printf "\nput your next tactique or left,right,up,down to navigate throught the proof\n" in
+
+let rec main arbre =		
+  if (get_current arbre).validate = true then main (go_up arbre) else 
+    let () = Printf.printf "\narbre : %s\n" (pretty_print_location(go_to_the_top arbre)) in
+    let () =  Printf.printf "\n%s\n" (pretty_print_view (get_current arbre)); 
+	    Printf.printf "\nput your next tactique or left,right,up,down to navigate throught the proof\n" in
   let tactic_or_navig = read_line () in 
     match tactic_or_navig with
-    | "left" -> let () = arbre := go_left (!arbre) in main
-    | "right" -> let () = arbre := go_right (!arbre) in main
-    | "up" -> let () = arbre := go_up (!arbre) in main 
-    | "down" -> let () = arbre := go_down (!arbre) in main 
+    | "left" -> let arbre = (go_left arbre) in main arbre 
+    | "right" -> let arbre = (go_right arbre) in main arbre
+    | "up" -> let arbre = (go_up arbre) in main arbre 
+    | "down" -> let arbre = (go_down arbre) in main arbre
     | _ -> 
   let () = Printf.printf "\nput the options of your tactic (if no option type no)\n"  in
   let opt = read_line () in 
-  let request = create_request (get_current !arbre) tactic_or_navig opt in 
-  let () = send_to_serv request in
+  let request = create_request (get_current arbre) tactic_or_navig opt in  
+  let () = send_to_serv request in 
   let receive_answer = 
     begin 
       let file = open_in "reponse_serv.txt" in   
@@ -123,21 +122,9 @@ let rec main  =
       let () = close_in file in 
       res
     end in 
-  failwith
- (* let ()  = arbre := (parse_answer (Sexp.of_string receive_answer)) in )*)
-  
+  let () = Printf.printf "\nréponse reçu : %s\n" (receive_answer) in
+  let new_arbre = insert_answer_in_tree arbre (liste_view_to_section(parse_answer (Sexp.of_string receive_answer))) in   
+  main (go_down new_arbre)
 
 
-				
-
-
-
-
-
-
-
-
-
-
-
-
+let () = main arbre
