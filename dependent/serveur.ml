@@ -56,7 +56,7 @@ and parse_global str =
 	     R_environment(Env(parse_env e)),
 	    R_terme(parse_term [] t),
 	    R_tactic(tac),
-	    R_vars(List.map (fun x -> match x with Sexp.Atom y -> y | _ -> failwith "bad format") vars))   
+	    R_vars(List.map (fun x -> match x with Sexp.Atom y -> y | y -> pretty_print_inTm (parse_term [] y) []) vars))   
   | Sexp.List[Sexp.Atom "check";ty;te] -> 
      R_result(res_debug(check [] (parse_term [] te) (big_step_eval_inTm (parse_term [] ty) []) ""))
   | _ -> failwith "parse_global request don't have a good shape" 
@@ -111,8 +111,8 @@ let create_answer go env t res =
   | (Goal(g),Env(e),term) -> "((goal " ^ pretty_print_goal (Goal(g)) 
 			     ^ ") (env (" ^ pretty_print_env (Env(e)) 
 			     ^ ")) " ^ pretty_print_inTm term []^ " " ^ res_string ^ ")"
-  | (Goals(g),Env(e),term) -> "((goals " ^ pretty_print_goal (Goals(g))
-			      ^ ") (env (" ^ pretty_print_env (Env(e)) 
+  | (Goals(g),Env(e),term) -> "((goals (" ^ pretty_print_goal (Goals(g))
+			      ^ ")) (env (" ^ pretty_print_env (Env(e)) 
 			      ^ ")) " ^ pretty_print_inTm term []^ " " ^ res_string ^ ")"
   | (Vide,Env(e),term) -> "(validate " ^ pretty_print_inTm term [] ^ ")"
  

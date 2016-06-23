@@ -111,6 +111,8 @@ let string_to_exTm str counter =
 (*   | "Appl" -> Appl(What(string_of_int(counter)),What(string_of_int(counter + 1))) *)
   | "Iter" -> Iter(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2))
 		   ,What(string_of_int(counter + 3)))
+  | "Ifte" -> Ifte(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2)),
+		   What(string_of_int(counter + 3)))
   | _ -> failwith "string_to_exTm not finished"
 (*  | Trans(x,y,z,c,a,b) -> Trans((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
 			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),

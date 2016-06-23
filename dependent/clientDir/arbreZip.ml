@@ -35,12 +35,12 @@ type location = Loc of tree * path
 
 let go_left (Loc(t,p)) = 
   match p with
-    Top -> failwith "left of top"
+    Top -> (Loc(t,p))
   | Node(l::left,up,right) -> Loc(l,Node(left,up,t::right))
   | Node([],up,right) -> (Loc(t,p))
 
 let go_right (Loc(t,p)) = match p with
-    Top -> failwith "right of top"
+    Top -> (Loc(t,p))
   | Node(left,up,r::right) -> Loc(r,Node(t::left,up,right))
   | Node(left,up,[]) -> (Loc(t,p))
 
