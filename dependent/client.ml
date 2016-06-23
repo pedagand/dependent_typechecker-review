@@ -69,7 +69,7 @@ let parse_answer str=
      List.map (function x -> init_view_arg x (pretty_print_inTm (parse_term [] t) [])
 					   (parse_answer_env e)
 					   (if (Sexp.to_string b) = "true" then true else false)) goals_liste
-  | Sexp.List[Sexp.Atom "validate"] -> (init_view_arg "" "" "" true) :: []
+  | Sexp.List[Sexp.Atom "validate";t] -> (init_view_arg "" (pretty_print_inTm (parse_term [] t) []) "" true) :: []
   | _ -> failwith ("\nparse_answer not good answer : " ^ Sexp.to_string str)
 
 
@@ -87,6 +87,16 @@ let liste_view_to_section lst =
   Section(List.map (fun x -> Item(x)) lst)
 
 
+(* fonctions permettant de gérer les statégies différentes *)
+let differente_strat strat = 
+  match strat with 
+  | "split_ifte" -> let () = Printf.printf "With split ifte you need a predicate of type B -> *\n" in 
+		    let pred = read_line () in 
+		    pred 
+  | _ -> "" 
+
+
+
 (* ------------------------------Debut du main du programme-------------------------- *)
 
 let () = Printf.printf "\n\n-------------------------------\n"; 
@@ -99,33 +109,53 @@ let arbre = init_location (init_view_arg type_to_proove "(? init)" "" false)
 
 
 let rec main arbre =		
-  if (get_current arbre).validate = true then main (go_up arbre) else 
-(*    let () = Printf.printf "\narbre : %s\n" (pretty_print_location(go_to_the_top arbre)) in *)
+  if check_if_section_validate(go_full_left arbre)
+  then let () = Printf.printf "\nterme final : %s \n " (get_current arbre).preuve  in main (go_up arbre)
+  else 
+    (* on va vérifier que l'on est pas positionné sur une section, si l'on est sur une section on demande au mec de choisir quelle preuve il veut utiliser *)
+    let section_or_item = 
+      begin match arbre with 
+	    | (Loc(Item(x),p)) -> false 
+	    | (Loc(Section(x),p)) -> true
+	end in 
+    if section_or_item
+    then  let () = Printf.printf "\n%s\n" (pretty_print_section arbre 0) in 
+	 let () = Printf.printf "Now choose wich goal to focus\n" in 
+	 let n_goal = int_of_string(read_line ()) in	  
+	 main (go_down (do_n_shifting n_goal "right" (go_full_left arbre)))
+    else
     let () =  Printf.printf "\n%s\n" (pretty_print_view (get_current arbre)); 
 	    Printf.printf "\nput your next tactique or left,right,up,down to navigate throught the proof\n" in
   let tactic_or_navig = read_line () in 
     match tactic_or_navig with
     | "left" -> let arbre = (go_left arbre) in main arbre 
     | "right" -> let arbre = (go_right arbre) in main arbre
-    | "up" -> let arbre = (go_up arbre) in main arbre 
-    | "down" -> let arbre = (go_down arbre) in main arbre
+    | "up" -> let arbre = (go_back_proof arbre) in main arbre 
+    | "down" -> let arbre = (go_down_proof arbre) in main arbre
     | "print" -> let () = Printf.printf "\narbre :\n  %s\n" (pretty_print_location(go_to_the_top arbre)) in main arbre
     | _ -> 
-  let () = Printf.printf "\nput the options of your tactic (if no option type no)\n"  in
-  let opt = read_line () in 
-  let request = create_request (get_current arbre) tactic_or_navig opt in  
-  let () = Printf.printf "\nrequest : %s\n" request in
-  let () = send_to_serv request in 
-  let receive_answer = 
-    begin 
-      let file = open_in "reponse_serv.txt" in   
-      let res = input_line file in 
-      let () = close_in file in 
-      res
-    end in 
-  let () = Printf.printf "\nréponse reçu : %s\n" (receive_answer) in
-  let new_arbre = insert_answer_in_tree arbre (liste_view_to_section(parse_answer (Sexp.of_string receive_answer))) in   
-  main (go_down (go_left new_arbre))
-
-
-let () = main arbre
+       let options = differente_strat tactic_or_navig in 
+       let () = Printf.printf "\nput the options of your tactic (if no options press enter)\n"  in
+       let opt = read_line () in 
+       let opt_for_request = if options = ""
+			     then opt
+			     else 
+			       begin
+				 if opt = "" then options else "(" ^ opt ^ " " ^ options ^ ")"
+			       end in 
+       let request = create_request (get_current arbre) tactic_or_navig opt_for_request  in  
+       let () = Printf.printf "\nrequest : %s\n" request in
+       let () = send_to_serv request in 
+       let receive_answer = 
+	 begin 
+	   let file = open_in "reponse_serv.txt" in   
+	   let res = input_line file in 
+	   let () = close_in file in 
+	   res
+	 end in 
+       let () = Printf.printf "\nréponse reçu : %s\n" (receive_answer) in
+       let new_arbre = insert_answer_in_tree arbre (liste_view_to_section(parse_answer (Sexp.of_string receive_answer))) in   
+       main (go_down (go_left new_arbre))
+	    
+	    
+let x = main arbre

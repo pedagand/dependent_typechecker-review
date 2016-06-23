@@ -19,7 +19,8 @@ type request =
   | R_tactic of string (* a méditer demain mais je pense que string c'est le mieux comme ça je fais des fonctions séparées *)
 		    (* ou alors petite idée je peux mettre le type des tactiques (c'est à dire goal -> goal) et comme ça directement depuis
 le parseur je peux detecté quelle est la tactique et donc crée un élément du type R_tactique(avec une fct a l'intérieur) *)
-  | R_var of string (* nom de variable au cas ou la tactique aurait besoin de crée une variable *)
+ (* nom de variable au cas ou la tactique aurait besoin de crée une variable *)
+  | R_vars of string list
   | Request of request * request * request * request * request
   | R_result of bool
   | Answer of request * request * request
@@ -44,12 +45,18 @@ and parse_goal str =
   | _ -> failwith "parse_goal Request doesn't have the good shape"
 and parse_global str = 
   match str with 
-  | Sexp.List[g;e;t;Sexp.Atom tac;Sexp.Atom var] -> 
+  | Sexp.List[g;e;t;Sexp.Atom tac ;Sexp.Atom var] -> 
      Request(R_goal(Goal(parse_goal g)),
-	    R_environment(Env(parse_env e)),
+	     R_environment(Env(parse_env e)),
+	     R_terme(parse_term [] t),
+	     R_tactic(tac),
+	     R_vars([var]))   	    
+  | Sexp.List[g;e;t;Sexp.Atom tac ;Sexp.List vars] -> 
+     Request(R_goal(Goal(parse_goal g)),
+	     R_environment(Env(parse_env e)),
 	    R_terme(parse_term [] t),
 	    R_tactic(tac),
-	    R_var(var))     
+	    R_vars(List.map (fun x -> match x with Sexp.Atom y -> y | _ -> failwith "bad format") vars))   
   | Sexp.List[Sexp.Atom "check";ty;te] -> 
      R_result(res_debug(check [] (parse_term [] te) (big_step_eval_inTm (parse_term [] ty) []) ""))
   | _ -> failwith "parse_global request don't have a good shape" 
@@ -75,16 +82,17 @@ and pretty_print_goal g =
   match g with 
   | Goal x -> pretty_print_inTm x []
   | Vide -> ""
+  | Goals(Goal(x)::[]) -> pretty_print_inTm x []
   | Goals(Goal(x)::suite) -> pretty_print_inTm x [] ^ " " ^ pretty_print_goal (Goals(suite))
   | _ -> ""
 and pretty_print_global gl = 
   match gl with  
-  | Request (R_goal(g),R_environment(e),R_terme(t),R_tactic(tac),R_var(var)) -> 
+  | Request (R_goal(g),R_environment(e),R_terme(t),R_tactic(tac),R_vars(var)) -> 
      "((goal " ^ 
        pretty_print_goal g ^ ") (env (" ^ 
 	 pretty_print_env e ^ ")) " ^ 
 	   pretty_print_inTm t [] ^ " " ^
-	     tac ^ " " ^ var ^ ")"
+	     tac ^ " " ^ (List.fold_right (fun x y -> x ^ " " ^ y) var "") ^ ")"
   | _ -> failwith "You can't print something else than a request"
 
 
@@ -92,6 +100,7 @@ let find_tactic str =
   match str with 
   | "intro" -> intro
   | "axiome" -> axiome 
+  | "split_ifte" -> split_ifte
   | _ -> failwith ("tactic " ^ str ^ "unknow")
 
 
@@ -105,7 +114,7 @@ let create_answer go env t res =
   | (Goals(g),Env(e),term) -> "((goals " ^ pretty_print_goal (Goals(g))
 			      ^ ") (env (" ^ pretty_print_env (Env(e)) 
 			      ^ ")) " ^ pretty_print_inTm term []^ " " ^ res_string ^ ")"
-  | (Vide,Env(e),term) -> "(validate)"
+  | (Vide,Env(e),term) -> "(validate " ^ pretty_print_inTm term [] ^ ")"
  
 
 (* ----------------------------Le main du serveur---------------------------*)
@@ -135,7 +144,7 @@ supprime meme si la chaine de caractère d'avant était plus longue *)
 let main no_parse_req = 
   let req = read_request no_parse_req in
   match req with 
-  | Request (R_goal(g),R_environment(e),R_terme(t),R_tactic(tac),R_var(var)) -> 
+  | Request (R_goal(g),R_environment(e),R_terme(t),R_tactic(tac),R_vars(var)) -> 
      let tact = find_tactic tac in 
      let res = tact e g t var in 
      begin 

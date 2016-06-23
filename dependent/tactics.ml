@@ -103,8 +103,60 @@ and insert_in_whole_exTm term term_insert str=
 			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str))
   
 
+(* counter est une variable permettant de donner le nom du trou crée *)
+let string_to_exTm str counter = 
+  (* let generate_var = Global(gensym ()) in *)
+  match str with 
+  | "Ann" ->  Ann(What(string_of_int(counter)),What(string_of_int(counter + 1)))
+(*   | "Appl" -> Appl(What(string_of_int(counter)),What(string_of_int(counter + 1))) *)
+  | "Iter" -> Iter(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2))
+		   ,What(string_of_int(counter + 3)))
+  | _ -> failwith "string_to_exTm not finished"
+(*  | Trans(x,y,z,c,a,b) -> Trans((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
+			  (insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
+  | P0(x) -> P0(insert_in_whole_exTm x term_insert str)
+  | P1(x) -> P1(insert_in_whole_exTm x term_insert str)
+  | DFold(x,y,z,c,a,b) -> DFold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
+				(insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
+  | Fold(x,y,z,c,a) -> Fold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
+				(insert_in_whole_inTm a term_insert str))
+  | Ifte(x,y,z,c) -> Ifte((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str)) *)
+let string_to_inTm str counter= 
+  let generate_var = Global(gensym ()) in
+  match str with 
+  | "What" -> What(string_of_int(counter))
+  | "Abs"-> Abs(generate_var,What(string_of_int(counter + 1)))
+  | "Pi" -> Pi(generate_var,What(string_of_int(counter)),What(string_of_int(counter)))
+  | "Star" -> Star
+  | "Zero" -> Zero
+  | "Succ" -> Succ(What(string_of_int(counter))) 
+  | "Nat" -> Nat
+  | "Bool" -> Bool
+  | "True" -> True 
+  | "False" -> False
+  | "Pair" -> Pair(What(string_of_int(counter)),What(string_of_int(counter + 1)))
+  | "Liste" -> Liste(What(string_of_int(counter)))
+  | "Nil" -> Nil(What(string_of_int(counter)))
+  | "Cons" -> Cons(What(string_of_int(counter)),What(string_of_int(counter + 1)))
+  | "Vec" -> Vec(What(string_of_int(counter)),What(string_of_int(counter + 1)))
+  | "DNil" -> DNil(What(string_of_int(counter)))
+  | "DCons" -> DCons(What(string_of_int(counter)),What(string_of_int(counter + 1)))
+  | "Id" -> Id(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2)))
+  | "Refl" -> Refl(What(string_of_int(counter)))
+  | "Sig" -> Sig(generate_var,What(string_of_int(counter)),What(string_of_int(counter + 1)))
+  | _ -> failwith "string_to_inTm : still inv not done" 
+(* faire les wholes pour la synthèse qui fonctionneront différement des autres *)
 
-let intro env go (term : inTm) (var : string) = 
+
+
+let intro env go (term : inTm) v = 
+  match v with 
+  |(var::[]) -> 
+     begin 
   match (env,go,term,var) with 
   | (Env(x),Goal(g),t,v) -> 
      begin 
@@ -113,10 +165,14 @@ let intro env go (term : inTm) (var : string) =
      | _ -> failwith ("intro : you can't intro something of the type " ^ pretty_print_inTm g [])
      end
   | _ -> failwith "intro : intro is not call with good args" 
+     end 
+  |_ -> failwith "intro : you give too much arguments to intro"
 
 
-
-let axiome env go (term : inTm) (var : string) = 
+let axiome env go (term : inTm) v = 
+  match v with 
+  | (var :: []) -> 
+     begin 
   match (env,go,term,var) with 
   | (Env(x),Goal(g),t,v) -> 
      let env_liste = env_to_liste (Env(x)) in
@@ -128,6 +184,35 @@ let axiome env go (term : inTm) (var : string) =
 		   else failwith "axiome : there is no variable you mentioned in the context with the good type"
      end 
   | _ -> failwith "axiome : is not call with good args"  
+     end
+  | _ -> failwith "axiome : you give too much arg to the function, only one needed" 
+
+
+(* faire attention le jours ou je refait le client essayer de fussionner toutes les fonctions de split d'un coup *)
+let split_ifte env go (term : inTm) vars  = 
+  match (env,go,term,vars) with 
+  | (Env(x),Goal(g),t,v) -> 
+     begin 
+       match vars with
+       | (n_terme :: predicat :: []) -> 
+	  begin
+	    match string_to_exTm n_terme 0 with	
+	    | Ifte(p,n,f,a) -> let pred = read predicat in 
+			       let first_goal = Bool in 
+			       let second_goal = (value_to_inTm 0 
+								  (big_step_eval_inTm 
+								     (Inv(Appl(Ann(pred,Pi(Global"No",Bool,Star)),True))) [])) in
+			       let third_goal = (value_to_inTm 0 
+								 (big_step_eval_inTm 
+								    (Inv(Appl(Ann(pred,Pi(Global"No",Bool,Star)),False))) []))  in
+			       (Goals([Goal(first_goal);Goal(second_goal);Goal(third_goal)]),Env(x),
+				(insert_in_whole_inTm term (Inv((Ifte(pred,What("1"),What("2"),What("3")))))  ""),false)
+			       
+	    | _ -> failwith "split : not finish yet" 
+	  end
+       | _ -> failwith "split : list can't be empty or with more than 2 elements" 	 
+     end
+  | _ -> failwith "split : it's not good"  
 
 
 (* pour cette stratégie je vais avoir besoin de crée un type de réponse particulière qui permet d'indiquer au client qu'il à plusieurs 
