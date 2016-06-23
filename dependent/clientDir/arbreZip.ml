@@ -51,6 +51,7 @@ let go_down (Loc(t,p)) = match t with
   | Section(t1::trees) -> Loc(t1,Node([],p,trees))
   | _ -> (Loc(t,p))
 
+
 let get_current (Loc(i,p)) = 
   match i with 
   | Item(x) -> x
@@ -89,9 +90,9 @@ let rec pretty_print_location (Loc(t,p)) =
   match p with
   | Top -> pretty_print_tree t 
   | Node(left,up,r::right) -> pretty_print_tree t ^ pretty_print_location (go_right ((Loc(t,p))))
-  | Node(left,up,[]) -> pretty_print_tree t ^ "\n" ^ pretty_print_location (go_down ((Loc(t,p))))
+  | Node(left,up,[]) -> pretty_print_tree t ^ "\n\n" ^ pretty_print_location (go_down ((Loc(t,p))))
 and pretty_print_tree t = 
   match t with 
-  | Item(x) -> "Item (" ^ pretty_print_view x ^ ")"
-  | Section(x::suite) ->  "Section (" ^ pretty_print_tree x ^ pretty_print_tree (Section(suite)) ^ ")"
+  | Item(x) -> pretty_print_view x
+  | Section(x::suite) -> pretty_print_tree x ^ pretty_print_tree (Section(suite)) 
   | _ -> ""

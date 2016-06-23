@@ -56,6 +56,52 @@ let rec env_to_liste env =
   | Env([]) -> []
   | Env(Couple(str,elem)::suite) -> (Global(str),(big_step_eval_inTm elem [])) :: (env_to_liste (Env(suite)))
 
+(* fonction a améliorer quand j'aurais ajouter dans la requete la possibilité de choisir quel trou remplir *)
+let rec insert_in_whole_inTm term term_insert str= 
+  match term with
+  | What(x) -> term_insert
+  | Abs(x,y) -> Abs(x,insert_in_whole_inTm y term_insert str)
+  | Inv(x) -> Inv(insert_in_whole_exTm x term_insert str)
+  | Pi(x,y,z) -> Pi(x,(insert_in_whole_inTm y term_insert str),(insert_in_whole_inTm z term_insert str))
+  | Star -> Star
+  | Zero -> Zero
+  | Succ x -> insert_in_whole_inTm x term_insert str 
+  | Nat -> Nat
+  | Bool -> Bool
+  | True -> True 
+  | False -> False
+  | Pair(x,y) -> Pair((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
+  | Liste x -> Liste(insert_in_whole_inTm x term_insert str)
+  | Nil x -> Nil(insert_in_whole_inTm x term_insert str)
+  | Cons(x,y) -> Cons((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
+  | Vec(x,y) -> Vec((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
+  | DNil(x) -> DNil(insert_in_whole_inTm x term_insert str)
+  | DCons(x,y) -> DCons((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
+  | Id(x,y,z) -> Id((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),(insert_in_whole_inTm z term_insert str))
+  | Refl(x) -> Refl(insert_in_whole_inTm x term_insert str)
+  | Sig(x,y,z) -> Sig(x,(insert_in_whole_inTm y term_insert str),(insert_in_whole_inTm z term_insert str))
+and insert_in_whole_exTm term term_insert str= 
+  match term with 
+  | Ann(x,y) ->  Ann((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
+  | Appl(x,y) -> Appl((insert_in_whole_exTm x term_insert str),(insert_in_whole_inTm y term_insert str))
+  | BVar x -> BVar x
+  | FVar x -> FVar x 
+  | Iter(x,y,z,c) -> Iter((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str))
+  | Trans(x,y,z,c,a,b) -> Trans((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
+			  (insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
+  | P0(x) -> P0(insert_in_whole_exTm x term_insert str)
+  | P1(x) -> P1(insert_in_whole_exTm x term_insert str)
+  | DFold(x,y,z,c,a,b) -> DFold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
+				(insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
+  | Fold(x,y,z,c,a) -> Fold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
+				(insert_in_whole_inTm a term_insert str))
+  | Ifte(x,y,z,c) -> Ifte((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
+			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str))
+  
 
 
 let intro env go (term : inTm) (var : string) = 
@@ -63,7 +109,7 @@ let intro env go (term : inTm) (var : string) =
   | (Env(x),Goal(g),t,v) -> 
      begin 
      match g with 
-     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),Abs(Global(var),What(gensym ())),false)
+     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),(insert_in_whole_inTm term (Abs(Global(var),What(gensym ()))) "")  ,false)
      | _ -> failwith ("intro : you can't intro something of the type " ^ pretty_print_inTm g [])
      end
   | _ -> failwith "intro : intro is not call with good args" 
@@ -78,7 +124,7 @@ let axiome env go (term : inTm) (var : string) =
        match (x,g) with 
        | ([],go) -> failwith "axiome : you can't axiome something when context is empty"
        | (e,go) -> if (List.assoc (Global(v)) env_liste) = big_step_eval_inTm g [] 
-		   then (Vide,Env(x),Inv(FVar(Global(v))),true)
+		   then (Vide,Env(x),(insert_in_whole_inTm term (Inv(FVar(Global(v)))) ""),true)
 		   else failwith "axiome : there is no variable you mentioned in the context with the good type"
      end 
   | _ -> failwith "axiome : is not call with good args"  
