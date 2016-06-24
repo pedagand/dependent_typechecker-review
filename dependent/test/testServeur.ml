@@ -9,12 +9,12 @@ let compare_term a b =
 
 let inputs_read = 
 [
-  ("((goal (-> N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)",(Request(R_goal(Goal(Pi(Global"NO",Nat,Nat))),R_environment(Env([Couple("a",Nat);Couple("b",Bool)])),R_terme(Abs(Global"x",Inv(BVar 0))),R_tactic("intro"),R_var("lol")))) 
+(*  ("((goal (-> N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)",(Request(R_goal(Goal(Pi(Global"NO",Nat,Nat))),R_environment(Env([Couple("a",Nat);Couple("b",Bool)])),R_terme(Abs(Global"x",Inv(BVar 0))),R_tactic("intro"),R_var("lol")))) *)
 ]
 
 let inputs_print = 
 [
-  ((Request(R_goal(Goal(Pi(Global"NO",Nat,Nat))),R_environment(Env([Couple("a",Nat);Couple("b",Bool)])),R_terme(Abs(Global"x",Inv(BVar 0))),R_tactic("intro"),R_var("lol"))),"((goal (pi NO N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)") 
+(*  ((Request(R_goal(Goal(Pi(Global"NO",Nat,Nat))),R_environment(Env([Couple("a",Nat);Couple("b",Bool)])),R_terme(Abs(Global"x",Inv(BVar 0))),R_tactic("intro"),R_var("lol"))),"((goal (pi NO N N)) (env ((a , N) (b , B))) (lambda x x) intro lol)") *)
 ]
 
 let tests_read_request  

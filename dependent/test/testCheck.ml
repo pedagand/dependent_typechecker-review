@@ -109,9 +109,17 @@ let inputs =
     ("zero","N",true);
     ("(succ zero)","N",true);
     ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (succ x))) zero)","N",true); 
+    ("(succ (succ zero))","N",true);
+    ("(iter (lambda x N) (succ zero) (lambda n (lambda x (+ (succ (succ zero)) x))) zero)","N",true);
+    ("(+ (succ (succ zero)) (succ zero))","N",true);
+    ("(mult (succ (succ zero)) (succ zero))","N",true);
+
+
     ("(succ N)","N",false);
     ("(succ (succ zero))","N",true);
     ("(succ (succ zero))","*",false);
+    ("(mult (succ (succ zero)) true)","N",false);
+    ("(+ (succ (succ zero)) true)","N",false);
     ("(iter (lambda x N) (succ (succ N)) (lambda n (lambda x (succ x))) zero)","N",false); 
 
     
