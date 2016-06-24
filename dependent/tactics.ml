@@ -1,234 +1,65 @@
+open Zipper
 open Lambda
-
-(*
-  To load in the OCaml toplevel:
-  #use "topfind";;
-  #require "sexplib";;
-  #use "tactics.ml";;
-*)
+open Sexplib
 
 
-(* En gros pour que ce soit compatible avec le délire des API REST, ce que je vais faire, 
-l'utilisateur il à l'ensemble de sa preuve, il peut naviguer dedans, et quand il veut appliquer 
-une stratégie, il suffit d'envoyer l'ensemble des informations suivantes au serveur, le type (goal
-subgoal) en cour, les hypothèses et le nom de la tactique que l'on désire, le client reçoit ensuite
-le résultat générer par le type checker... 
-Et donc au final tout ce qui est déplacement au sein de la preuve c'est en locale et on intéroge par
-requete le type checker.
-Petite idée, avec cette mise en place cela permettrait de crée une stratégie super puissante, 
-le serveur gardant en mémoire une grosse base de donées de théorèmes qu'il a prouvés, tu met 
-"finditforme" et après (meme si ça prend du temps, c'est la solution de parresse) le serveur cherche
-dans sa base si il trouve quelque chose correspondant à ta requete, et si il ne l'a pas et que tu 
-arrive à la résoudre il la rajoutera. *)
+(* permet de crée un type à partir du type donné par l'utilisateur *)
+let rec create_uper_type typ = 
+  match typ with 
+  | Pi(n,s,t) -> Pi(n,s,(create_uper_type t))
+  | Nat -> Star
+  | _ -> failwith "create_uper_type : only for pi at the moment"
 
-(* pour l'instant je pense représenté les tactiques avec des fonctions et non pas un type par contre il faut que ces fonctions soient toutes
-du meme type, c'est à dire goal -> goal *)
+(* permet à partir d'un type ainsi que du return du type initial de crée un terme *)
+let rec create_uper_terme typ return = 
+  match typ with 
+  | Pi(n,s,t) -> Abs(n,create_uper_terme t return)
+  | Star -> return
+  | _ -> failwith "create_uper_terme : it's good enought"
 
-(* 
-type request = 
-  | R_goal of goal
-  | R_environment of environment
-  | R_terme of inTm
-  | Request of request * request * request
- *)
+(* permet de parcourir un pi type jusqu'au bout afin d'en connaitre le type de retour *)
+let rec find_return_type typ = 
+  match typ with 
+  | Pi(n,s,t) -> find_return_type t 
+  | x -> x
 
+(* fonction prenant un argument un type et son nom . Celle ci retourne une location avec le uper_type générer en haut de 
+l'arbre et le curseur sur un noeud donné en entrée *)
+let init_definition typ name = 
+  let return = find_return_type typ in 
+  let new_type = create_uper_type typ in 
+  let new_term = create_uper_terme typ return in
+  let new_name = String.uppercase name in 
+  Definition(new_name,Complete(new_type,new_term))
+  
+let parse_definition def = 
+  match def with 
+  | Sexp.List[Sexp.Atom name;terme] -> 
+     Definition(name,Incomplete((parse_term [] terme),Hole_inTm(0)))
+  | _ -> failwith "parse_definition : it seem's that your def is not good"
 
-(* Types nécéssaires à la création du moteur *)
-type goal = 
-  | Goal of inTm (* il faut que le goal soit une value étant donné que c'est le type et que l'on souhaite travailler avec des types  
-de forme normale *)
-  | Goals of goal list
-  | Vide
-
-type hypothesis =
-  | Couple of string * inTm 
-			 
-type environment =
-  | Env of hypothesis list
-		       
-
-
-
-(* le type de base des tactiques est ((hyp * go * term * string) ->  *)
-let rec env_to_liste env = 
-  match env with 
-  | Env(Couple(str,elem)::[]) -> [(Global(str),(big_step_eval_inTm elem []))]
-  | Env([]) -> []
-  | Env(Couple(str,elem)::suite) -> (Global(str),(big_step_eval_inTm elem [])) :: (env_to_liste (Env(suite)))
-
-(* fonction a améliorer quand j'aurais ajouter dans la requete la possibilité de choisir quel trou remplir *)
-let rec insert_in_whole_inTm term term_insert str= 
-  match term with
-  | What(x) -> term_insert
-  | Abs(x,y) -> Abs(x,insert_in_whole_inTm y term_insert str)
-  | Inv(x) -> Inv(insert_in_whole_exTm x term_insert str)
-  | Pi(x,y,z) -> Pi(x,(insert_in_whole_inTm y term_insert str),(insert_in_whole_inTm z term_insert str))
-  | Star -> Star
-  | Zero -> Zero
-  | Succ x -> insert_in_whole_inTm x term_insert str 
-  | Nat -> Nat
-  | Bool -> Bool
-  | True -> True 
-  | False -> False
-  | Pair(x,y) -> Pair((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
-  | Liste x -> Liste(insert_in_whole_inTm x term_insert str)
-  | Nil x -> Nil(insert_in_whole_inTm x term_insert str)
-  | Cons(x,y) -> Cons((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
-  | Vec(x,y) -> Vec((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
-  | DNil(x) -> DNil(insert_in_whole_inTm x term_insert str)
-  | DCons(x,y) -> DCons((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
-  | Id(x,y,z) -> Id((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),(insert_in_whole_inTm z term_insert str))
-  | Refl(x) -> Refl(insert_in_whole_inTm x term_insert str)
-  | Sig(x,y,z) -> Sig(x,(insert_in_whole_inTm y term_insert str),(insert_in_whole_inTm z term_insert str))
-and insert_in_whole_exTm term term_insert str= 
-  match term with 
-  | Ann(x,y) ->  Ann((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str))
-  | Appl(x,y) -> Appl((insert_in_whole_exTm x term_insert str),(insert_in_whole_inTm y term_insert str))
-  | BVar x -> BVar x
-  | FVar x -> FVar x 
-  | Iter(x,y,z,c) -> Iter((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str))
-  | Trans(x,y,z,c,a,b) -> Trans((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
-			  (insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
-  | P0(x) -> P0(insert_in_whole_exTm x term_insert str)
-  | P1(x) -> P1(insert_in_whole_exTm x term_insert str)
-  | DFold(x,y,z,c,a,b) -> DFold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
-				(insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
-  | Fold(x,y,z,c,a) -> Fold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
-				(insert_in_whole_inTm a term_insert str))
-  | Ifte(x,y,z,c) -> Ifte((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str))
+let procedure_start_definition = 
+  let () = Printf.printf "\n\nEntrer une nouvelle définition à prouver : \n" in 
+  let typ_not_parsed = read_line () in
+  let second_def = parse_definition (Sexp.of_string typ_not_parsed) in
+  match second_def with 
+  | Definition(name,Incomplete(typ,terme)) -> 
+     let first_def = init_definition typ name in
+     failwith "lol"
+  | _ -> failwith "lol"
   
 
-(* counter est une variable permettant de donner le nom du trou crée *)
-let string_to_exTm str counter = 
-  (* let generate_var = Global(gensym ()) in *)
-  match str with 
-  | "Ann" ->  Ann(What(string_of_int(counter)),What(string_of_int(counter + 1)))
-(*   | "Appl" -> Appl(What(string_of_int(counter)),What(string_of_int(counter + 1))) *)
-  | "Iter" -> Iter(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2))
-		   ,What(string_of_int(counter + 3)))
-  | "Ifte" -> Ifte(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2)),
-		   What(string_of_int(counter + 3)))
-  | _ -> failwith "string_to_exTm not finished"
-(*  | Trans(x,y,z,c,a,b) -> Trans((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
-			  (insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
-  | P0(x) -> P0(insert_in_whole_exTm x term_insert str)
-  | P1(x) -> P1(insert_in_whole_exTm x term_insert str)
-  | DFold(x,y,z,c,a,b) -> DFold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
-				(insert_in_whole_inTm a term_insert str),(insert_in_whole_inTm b term_insert str))
-  | Fold(x,y,z,c,a) -> Fold((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-				(insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str),
-				(insert_in_whole_inTm a term_insert str))
-  | Ifte(x,y,z,c) -> Ifte((insert_in_whole_inTm x term_insert str),(insert_in_whole_inTm y term_insert str),
-			  (insert_in_whole_inTm z term_insert str),(insert_in_whole_inTm c term_insert str)) *)
-let string_to_inTm str counter= 
-  let generate_var = Global(gensym ()) in
-  match str with 
-  | "What" -> What(string_of_int(counter))
-  | "Abs"-> Abs(generate_var,What(string_of_int(counter + 1)))
-  | "Pi" -> Pi(generate_var,What(string_of_int(counter)),What(string_of_int(counter)))
-  | "Star" -> Star
-  | "Zero" -> Zero
-  | "Succ" -> Succ(What(string_of_int(counter))) 
-  | "Nat" -> Nat
-  | "Bool" -> Bool
-  | "True" -> True 
-  | "False" -> False
-  | "Pair" -> Pair(What(string_of_int(counter)),What(string_of_int(counter + 1)))
-  | "Liste" -> Liste(What(string_of_int(counter)))
-  | "Nil" -> Nil(What(string_of_int(counter)))
-  | "Cons" -> Cons(What(string_of_int(counter)),What(string_of_int(counter + 1)))
-  | "Vec" -> Vec(What(string_of_int(counter)),What(string_of_int(counter + 1)))
-  | "DNil" -> DNil(What(string_of_int(counter)))
-  | "DCons" -> DCons(What(string_of_int(counter)),What(string_of_int(counter + 1)))
-  | "Id" -> Id(What(string_of_int(counter)),What(string_of_int(counter + 1)),What(string_of_int(counter + 2)))
-  | "Refl" -> Refl(What(string_of_int(counter)))
-  | "Sig" -> Sig(generate_var,What(string_of_int(counter)),What(string_of_int(counter + 1)))
-  | _ -> failwith "string_to_inTm : still inv not done" 
-(* faire les wholes pour la synthèse qui fonctionneront différement des autres *)
+let rec main (Loc(t,p)) = 
+  match p with 
+  | Top -> Loc(procedure_start_definition,Top)
+  
+  
 
 
+(*let intro (Loc(t,p)) = 
+  let () = Printf.printf "\n Please put a name for the variable : \n" in 
+  let variable = read_line () in *)
+  
+			 
+	   
 
-let intro env go (term : inTm) v = 
-  match v with 
-  |(var::[]) -> 
-     begin 
-  match (env,go,term,var) with 
-  | (Env(x),Goal(g),t,v) -> 
-     begin 
-     match g with 
-     | Pi(n,s,t) -> (Goal(t),Env(Couple(var,s)::x),(insert_in_whole_inTm term (Abs(Global(var),What(gensym ()))) "")  ,false)
-     | _ -> failwith ("intro : you can't intro something of the type " ^ pretty_print_inTm g [])
-     end
-  | _ -> failwith "intro : intro is not call with good args" 
-     end 
-  |_ -> failwith "intro : you give too much arguments to intro"
-
-
-let axiome env go (term : inTm) v = 
-  match v with 
-  | (var :: []) -> 
-     begin 
-  match (env,go,term,var) with 
-  | (Env(x),Goal(g),t,v) -> 
-     let env_liste = env_to_liste (Env(x)) in
-     begin 
-       match (x,g) with 
-       | ([],go) -> failwith "axiome : you can't axiome something when context is empty"
-       | (e,go) -> if (List.assoc (Global(v)) env_liste) = big_step_eval_inTm g [] 
-		   then (Vide,Env(x),(insert_in_whole_inTm term (Inv(FVar(Global(v)))) ""),true)
-		   else failwith "axiome : there is no variable you mentioned in the context with the good type"
-     end 
-  | _ -> failwith "axiome : is not call with good args"  
-     end
-  | _ -> failwith "axiome : you give too much arg to the function, only one needed" 
-
-
-(* faire attention le jours ou je refait le client essayer de fussionner toutes les fonctions de split d'un coup *)
-let split_ifte env go (term : inTm) vars  = 
-  match (env,go,term,vars) with 
-  | (Env(x),Goal(g),t,v) -> 
-     begin 
-       match vars with
-       | (n_terme :: predicat :: []) -> 
-	  begin
-	    match string_to_exTm n_terme 0 with	
-	    | Ifte(p,n,f,a) -> let pred = read predicat in 
-			       let first_goal = Bool in 
-			       let second_goal = (value_to_inTm 0 
-								  (big_step_eval_inTm 
-								     (Inv(Appl(Ann(pred,Pi(Global"No",Bool,Star)),True))) [])) in
-			       let third_goal = (value_to_inTm 0 
-								 (big_step_eval_inTm 
-								    (Inv(Appl(Ann(pred,Pi(Global"No",Bool,Star)),False))) []))  in
-			       (Goals([Goal(first_goal);Goal(second_goal);Goal(third_goal)]),Env(x),
-				(insert_in_whole_inTm term (Inv((Ifte(pred,What("1"),What("2"),What("3")))))  ""),false)
-			       
-	    | _ -> failwith "split : not finish yet" 
-	  end
-       | _ -> failwith "split : list can't be empty or with more than 2 elements" 	 
-     end
-  | _ -> failwith "split : it's not good"  
-
-
-(* pour cette stratégie je vais avoir besoin de crée un type de réponse particulière qui permet d'indiquer au client qu'il à plusieurs 
-goal à satisfaires à la suite *)
-(* let construct env go (term : inTm) (var : string) = 
-  match (env,go,term,var) with 
-     | (Env(x),Goal(g),t,v) -> 
-	begin 
-	  match 
-	end 
-     | (Env(x),Vide,t,v) -> failwith "construct : goal must not be Vide"  *)
-    
-(* réfléxions avant la pause *)
-(* Enfaite j'ai un type view sur le client et justement je devrais faire un arbre de view, quand une view est terminée alors elle contient
-le terme qu'il faut mettre à cet endroit. Etant donné que dans l'arbre tous les goals présent dans une meme section signifie que ce sont 
-différents goal mais pour construire le meme terme, et grace au curseur on va pouvoir se déplacer dans les différentes view. 
-Ca va etre la version 2.0 du client. *)

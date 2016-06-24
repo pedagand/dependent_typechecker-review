@@ -21,6 +21,9 @@ tactics.native: tactics.ml
 serveur.native: serveur.ml
 	ocamlbuild -use-ocamlfind serveur.native
 
+zipper.native: zipper.ml
+	ocamlbuild -use-ocamlfind zipper.native
+
 client.native: client.ml
 	ocamlbuild -use-ocamlfind client.native
 	touch reponse_serv.txt 

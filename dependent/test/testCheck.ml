@@ -152,7 +152,10 @@ let inputs =
     ("(cons true (nil B))","(liste B)",true);
     ("(cons zero (cons (succ zero) (nil N)))","(liste N)",true);
     ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",true);
-    
+    ("(fold (lambda x (lambda y N)) N (cons zero (cons zero (cons zero (nil N)))) (lambda a (lambda xs (lambda no (+ (succ zero) no)))) zero)",
+     "N",true);
+
+
     ("(liste zero)","*",false);
     ("(liste N)","N",false);
     ("(nil N)","(liste B)",false);

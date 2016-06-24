@@ -25,7 +25,10 @@ let inputs =
   ("(pow (succ (succ zero)) zero)","(succ zero)");
   ("(pow (succ (succ zero)) (succ zero))","(succ (succ zero))");
   ("(pow (succ (succ zero)) (succ (succ (succ zero))))","(succ (succ (succ (succ (succ (succ (succ (succ zero))))))))");
-  
+  ("(pow (number 2) (number 10))","(number 1024)");
+
+
+
 
 
   ("(dfold N (lambda n (lambda xs N)) (succ (succ zero)) (dcons (succ zero) (dcons (succ (succ zero)) (dnil N))) (lambda n (lambda xs (lambda a (lambda x (+ a x))))) zero)","(succ (succ (succ zero)))");
@@ -33,6 +36,13 @@ let inputs =
   ("(ifte (lambda x B) false true false)","false");
   ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)",
    "(succ (succ zero))");
+  ("(fold (lambda x (lambda y N)) N (cons zero (cons zero (cons zero (nil N)))) (lambda a (lambda xs (lambda no (+ (succ zero) no)))) zero)",
+   "(number 3)");
+  (* list lenght *)
+  ("(fold (lambda x (lambda y N)) N (cons zero (cons zero (cons zero (cons zero (cons zero (nil N)))))) 
+    (lambda a (lambda xs (lambda no (+ (succ zero) no)))) zero)","(number 5)");
+  (* list concat *)
+(*  (fold (lambda a (lambda xs (list N))) (List N) (cons zero (cons zero)) (lambda a (lambda xs (lambda no (cons a no *)
 ]
 
 

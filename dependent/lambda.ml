@@ -1,5 +1,6 @@
 open Sexplib
 
+
 (*
   To load in the OCaml toplevel:
   #use "topfind";;
@@ -18,6 +19,7 @@ type name =
 (*=inTm_head *) 
 type inTm =
   (*=End *)
+  | Hole_inTm of int
   (*=inTm *)
   | Abs of name * inTm
   | Inv of exTm
@@ -52,6 +54,7 @@ type inTm =
   | Sig of name * inTm * inTm 		 
 and exTm = 
 (*=End *)
+  | Hole_exTm of int 
 (*=exTm *) 
   | Ann of inTm * inTm 
   | BVar of int 
@@ -172,6 +175,12 @@ let ret_debug_synth d =
   | RetSynth(Report(Success(s),c,e,er),y) -> y 
   | _ -> failwith "RetSynth don't have a good shape"
 
+    
+let rec parse_number entier = 
+  match entier with 
+  | 0 -> Zero
+  | n -> Succ(parse_number (n - 1))
+
 
 let rec parse_term env t = 
       match t with   
@@ -181,6 +190,8 @@ let rec parse_term env t =
       | Sexp.Atom "B" -> Bool 
       | Sexp.Atom "true" -> True
       | Sexp.Atom "false" -> False
+      | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
+	 Hole_inTm (int_of_string num)	 
       | Sexp.List [Sexp.Atom "?";Sexp.Atom a] -> What a
       | Sexp.List [Sexp.Atom "succ"; n] -> 
 	 Succ(parse_term env n)
@@ -247,6 +258,8 @@ let rec parse_term env t =
       | Sexp.List [Sexp.Atom "pow";n;a] -> 
 	 Inv(Appl(Appl(Ann((parse_term env (Sexp.of_string "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) a_plus (lambda ni_plus (lambda x_plus (mult n_plus x_plus))) (succ zero))))")),
 			   parse_term env (Sexp.of_string "(-> N (-> N N))")),(parse_term env n)),(parse_term env a)))
+      | Sexp.List [Sexp.Atom "number";Sexp.Atom a] -> 
+	 parse_number (int_of_string a)
       | _ -> Inv(parse_exTm env t)
 
 and parse_exTm env t = 
@@ -257,6 +270,8 @@ and parse_exTm env t =
     | _ :: env -> lookup_var env (n+1) v 
   in
   match t with 
+  | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
+     Hole_exTm (int_of_string num)
   | Sexp.List [Sexp.Atom "p0";x] ->
      P0(parse_exTm env x)
   | Sexp.List [Sexp.Atom "p1";x] ->
@@ -285,6 +300,7 @@ let read t = parse_term [] (Sexp.of_string t)
  
 let rec pretty_print_inTm t l = 
   match t with 
+  | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm x (str :: l) ^ ")"
   | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
   | Inv (x) ->  pretty_print_exTm x l
@@ -311,6 +327,7 @@ let rec pretty_print_inTm t l =
   | Refl(a) -> "(refl " ^ pretty_print_inTm a l ^ ")"
 and pretty_print_exTm t l =
   match t with 
+  | Hole_exTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Ann(x,y) ->  "(: " ^ pretty_print_inTm x l ^ " " ^ pretty_print_inTm y l ^ ")"
   | BVar(x) -> begin 
       try List.nth l x with 
@@ -334,6 +351,7 @@ and pretty_print_exTm t l =
 (*=substitution_inTm *)
 let rec substitution_inTm t tsub var = 
   match t with 
+  | Hole_inTm(x) -> Hole_inTm x
   | Inv x -> Inv(substitution_exTm x tsub var)
   | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
   | Star -> Star
@@ -359,6 +377,7 @@ let rec substitution_inTm t tsub var =
 (*=substitution_exTm *)
 and substitution_exTm  t tsub var = 
   match t with 
+  | Hole_exTm(x) -> Hole_exTm x
   | FVar x -> FVar x
   | BVar x when x = var -> tsub
   | BVar x -> BVar x
@@ -384,6 +403,7 @@ let vfree n = VNeutral(NFree n)
 let rec big_step_eval_inTm t envi = 
 (*=End *)
   match t with 
+  | Hole_inTm x -> failwith "You can't eval a Hole" 
 (*=big_step_inv *)
   | Inv(i) -> big_step_eval_exTm i envi
 (*=End *)
@@ -450,6 +470,7 @@ and vfold(p,alpha,xs,f,a) =
   | _ -> VNeutral(NFold(p,alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
+  | Hole_exTm x -> failwith "you can't eval a hole"
   | Ann(x,_) -> big_step_eval_inTm x envi 
   | FVar(v) -> vfree v 
   | BVar(v) -> List.nth envi v 
@@ -817,7 +838,8 @@ let rec contexte_to_string contexte =
 
      
 let rec check contexte inT ty steps = 
-  match inT with 
+  match inT with
+  | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
   | Abs(x,y) -> 
      begin  
        match ty with 
@@ -1010,6 +1032,7 @@ test le retour de la synthèse *)
 (*=synth_var *) 
 and synth contexte exT steps =
   match exT with 
+  | Hole_exTm x -> create_retSynth (create_report false (contexte_to_string contexte) steps "IT'S A HOLE") VStar
   | BVar x -> create_retSynth (create_report false (contexte_to_string contexte) steps "BVar : not possible during type checking") VStar
   | FVar x -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
 (*=End *)
@@ -1188,7 +1211,7 @@ and synth contexte exT steps =
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
   | Fold(p,alpha,xs,f,a) -> 
      let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
-     let type_p = (Pi(Global"a",alpha,(Pi(Global"xs",Liste(Inv(BVar 0)),Star)))) in 
+     let type_p = (Pi(Global"a",Star,(Pi(Global"xs",Liste(Inv(BVar 0)),Star)))) in 
      let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
      let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
      let type_f = (Pi(Global"a",alpha,

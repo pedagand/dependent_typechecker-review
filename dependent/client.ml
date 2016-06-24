@@ -66,7 +66,7 @@ let parse_answer str=
      li :: []
   | Sexp.List[Sexp.List[Sexp.Atom "goals";Sexp.List goals_l];e;t;b] -> 
      let goals_liste = List.map (function x -> (pretty_print_inTm (parse_term [] x) [])) goals_l in 
-     List.map (function x -> init_view_arg x (pretty_print_inTm (parse_term [] t) [])
+     List.map (function x -> init_view_arg x (pretty_print_inTm (What("1")) [])
 					   (parse_answer_env e)
 					   (if (Sexp.to_string b) = "true" then true else false)) goals_liste
   | Sexp.List[Sexp.Atom "validate";t] -> (init_view_arg "" (pretty_print_inTm (parse_term [] t) []) "" true) :: []

@@ -18,7 +18,7 @@ type view =
 
 
 let rec pretty_print_view g = 
-  g.hypo ^ "\n==============\n |- " ^ g.goal ^ " : " ^ g.preuve ^ "      "
+  "\n"^ g.hypo ^ "\n==============\n |- " ^ g.goal ^ " : " ^ g.preuve ^ "      "
 
 
 type tree =
