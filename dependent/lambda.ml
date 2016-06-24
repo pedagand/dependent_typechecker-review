@@ -244,7 +244,11 @@ let rec parse_term env t =
       | Sexp.List [Sexp.Atom "mult";n;a] -> 
 	 Inv(Appl(Appl(Ann((parse_term env (Sexp.of_string "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) n_plus (lambda ni_plus (lambda x_plus (+ a_plus x_plus))) zero)))")),
 			   parse_term env (Sexp.of_string "(-> N (-> N N))")),(parse_term env n)),(parse_term env a)))
+      | Sexp.List [Sexp.Atom "pow";n;a] -> 
+	 Inv(Appl(Appl(Ann((parse_term env (Sexp.of_string "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) a_plus (lambda ni_plus (lambda x_plus (mult n_plus x_plus))) (succ zero))))")),
+			   parse_term env (Sexp.of_string "(-> N (-> N N))")),(parse_term env n)),(parse_term env a)))
       | _ -> Inv(parse_exTm env t)
+
 and parse_exTm env t = 
   let rec lookup_var env n v
     = match env with

@@ -12,11 +12,20 @@ let inputs =
   ("(iter (lambda x N) (succ zero) (lambda n (lambda x (+ (succ (succ zero)) x))) zero)","(succ (succ zero))");
   ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (+ (succ (succ zero)) x))) zero)","(succ (succ (succ (succ zero))))");
   ("(iter (lambda x N) (succ (succ (succ zero))) (lambda n (lambda x (+ (succ (succ zero)) x))) zero)","(succ (succ (succ (succ (succ (succ zero))))))");
+  ("(iter (lambda x N) zero (lambda n (lambda x (mult (succ (succ zero)) x))) (succ zero))",
+   "(succ zero)");
+  ("(iter (lambda x N) (succ zero) (lambda n (lambda x (mult (succ (succ zero)) x))) (succ zero))",
+   "(succ (succ zero))");
+  ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (mult (succ (succ zero)) x))) (succ zero))",
+   "(succ (succ (succ (succ zero))))");
   ("(+ (succ (succ zero)) (succ zero))","(succ (succ (succ zero)))");
   ("(mult (succ (succ zero)) (succ zero))","(succ (succ zero))");
   ("(mult (succ (succ zero)) (succ (succ zero)))","(succ (succ (succ (succ zero))))");
   ("(mult (succ (succ (succ zero))) (succ (succ zero)))","(succ (succ (succ (succ (succ (succ zero))))))");
-
+  ("(pow (succ (succ zero)) zero)","(succ zero)");
+  ("(pow (succ (succ zero)) (succ zero))","(succ (succ zero))");
+  ("(pow (succ (succ zero)) (succ (succ (succ zero))))","(succ (succ (succ (succ (succ (succ (succ (succ zero))))))))");
+  
 
 
   ("(dfold N (lambda n (lambda xs N)) (succ (succ zero)) (dcons (succ zero) (dcons (succ (succ zero)) (dnil N))) (lambda n (lambda xs (lambda a (lambda x (+ a x))))) zero)","(succ (succ (succ zero)))");

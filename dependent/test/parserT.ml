@@ -55,6 +55,7 @@ let inputs
        ("(lambda (A a b q) (trans A (lambda (a b q) (id A b a)) a b q (lambda a (refl a))))", Nat); *)
        ("(+ (succ (succ zero)) (succ (succ zero)))", Inv(Appl(Appl(Ann((read "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) n_plus (lambda ni_plus (lambda x_plus (succ x_plus))) a_plus)))"),(read "(-> N (-> N N))")),(Succ(Succ Zero))),(Succ(Succ Zero)))));
        ("(mult (succ (succ zero)) (succ (succ zero)))", Inv(Appl(Appl(Ann((read "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) n_plus (lambda ni_plus (lambda x_plus (+ a_plus x_plus))) zero)))"),(read "(-> N (-> N N))")),(Succ(Succ Zero))),(Succ(Succ Zero)))));
+       ("(pow (succ (succ zero)) (succ (succ zero)))", Inv(Appl(Appl(Ann((read "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) a_plus (lambda ni_plus (lambda x_plus (mult n_plus x_plus))) (succ zero))))"),(read "(-> N (-> N N))")),(Succ(Succ Zero))),(Succ(Succ Zero)))));
        
       (* ( (pretty_print_inTm test1x []),(test1x)); *)
       (* (test1y),(test1x) ;*)]
