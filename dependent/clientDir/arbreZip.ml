@@ -125,7 +125,7 @@ let rec check_if_section_validate (Loc(i,p)) =
 let rec go_to_the_top (Loc(t,p)) = 
   match p with 
     Top -> (Loc(t,p))
-  | Node(left,up,right) -> go_to_the_top(Loc(Section((List.rev left) @ (t::right)),up))
+  | Node(left,up,right) -> go_to_the_top(Loc(Section((List.rev left) @ (t::right)),up)) 
 
 (* le i permet lors de l'affichage de numéroté les différentes view de la section *)
 let rec pretty_print_section (Loc(t,p)) i= 

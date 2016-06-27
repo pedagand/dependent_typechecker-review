@@ -297,6 +297,55 @@ and parse_exTm env t =
   | _ -> failwith "erreur de parsing" 
 
 let read t = parse_term [] (Sexp.of_string t)
+
+(* Fonction de remplacement des holes dans les termes *)
+let rec replace_hole_inTm terme tsub num = 
+  match terme with 
+  | Hole_inTm(x) -> if x = num then tsub else Hole_inTm(x)
+  | Inv x -> Inv(replace_hole_exTm x tsub num)
+  | Abs(x,y) -> Abs(x,(replace_hole_inTm y tsub (num)))
+  | Star -> Star
+  | Pi(v,x,y) -> Pi(v,(replace_hole_inTm x tsub num),(replace_hole_inTm y tsub (num)))
+  (*=End *)
+  | Sig(x,a,b) -> Sig(x,(replace_hole_inTm a tsub num),(replace_hole_inTm b tsub (num)))
+  | Zero -> Zero 
+  | Succ n -> Succ(replace_hole_inTm n tsub num)
+  | Nat -> Nat
+  | Bool -> Bool
+  | True -> True 
+  | False -> False 
+  | Pair(x,y) -> Pair((replace_hole_inTm x tsub num),(replace_hole_inTm y tsub num))
+  | Liste(alpha) -> Liste(replace_hole_inTm alpha tsub num)
+  | Nil(alpha) -> Nil(replace_hole_inTm alpha tsub num)
+  | Cons(a,xs) -> Cons((replace_hole_inTm a tsub num),(replace_hole_inTm xs tsub num))
+  | Vec(alpha,n) -> Vec((replace_hole_inTm alpha tsub num),(replace_hole_inTm n tsub num))
+  | DNil(alpha) -> DNil(replace_hole_inTm alpha tsub num)
+  | DCons(a,xs) -> DCons((replace_hole_inTm a tsub num),(replace_hole_inTm a tsub num))
+  | What(a) -> What(a)
+  | Id(gA,a,b) -> Id((replace_hole_inTm gA tsub num),(replace_hole_inTm a tsub num),(replace_hole_inTm b tsub num))
+  | Refl(a) -> Refl(replace_hole_inTm a tsub num)
+(*=replace_hole_exTm *)
+and replace_hole_exTm  terme tsub num = 
+  match terme with 
+    (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
+  | Hole_exTm(x) -> if x = num then Ann(tsub,Star) else Hole_exTm(x)
+  | FVar x -> FVar x
+  | BVar x -> BVar x
+  | Appl(x,y) -> Appl((replace_hole_exTm x tsub num),(replace_hole_inTm y tsub num))
+  | Ann(x,y) -> Ann((replace_hole_inTm x tsub num),(replace_hole_inTm y tsub num))
+  (*=End *)
+  | Iter(p,n,f,a) -> Iter((replace_hole_inTm p tsub num),(replace_hole_inTm n tsub num),(replace_hole_inTm f tsub num),(replace_hole_inTm a tsub num))
+  | Ifte(p,c,tHen,eLse) -> Ifte((replace_hole_inTm p tsub num),(replace_hole_inTm c tsub num),(replace_hole_inTm tHen tsub num),(replace_hole_inTm eLse tsub num))
+  | P0(x) -> P0(replace_hole_exTm x tsub num)
+  | P1(x) -> P1(replace_hole_exTm x tsub num)
+  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_hole_inTm alpha tsub num),(replace_hole_inTm p tsub num),(replace_hole_inTm n tsub num),
+				     (replace_hole_inTm xs tsub num),(replace_hole_inTm f tsub num),(replace_hole_inTm a tsub num))
+  | Trans(gA,p,a,b,q,x) -> Trans((replace_hole_inTm gA tsub num),(replace_hole_inTm p tsub num),(replace_hole_inTm a tsub num),
+				 (replace_hole_inTm b tsub num),(replace_hole_inTm q tsub num),(replace_hole_inTm x tsub num))
+  | Fold(gA,alpha,xs,f,a) -> Fold((replace_hole_inTm gA tsub num),(replace_hole_inTm alpha tsub num),(replace_hole_inTm xs tsub num),(replace_hole_inTm f tsub num),
+			    (replace_hole_inTm a tsub num))
+
+
  
 let rec pretty_print_inTm t l = 
   match t with 
