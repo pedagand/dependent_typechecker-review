@@ -122,6 +122,35 @@ let rec go_to_the_top (Loc(t,p)) =
   | _ -> go_up (Loc(t,p))
 
 
+(* Etant donné ma structuration de l'arbre, il me faut des fonctions testants si elles ne sont pas sur une variable, 
+car mettre le focus sur une variable ne sert à rien *)
+let rec proof_up (Loc(t,p)) = 
+  let arbre = go_up(Loc(t,p)) in
+  match arbre with 
+  | Loc(_,Top) -> (Loc(t,p))  
+  | Loc(Item(Variable(name,terme)),p) -> proof_up arbre
+  | Loc(Item(Definition(name,terme)),p) -> arbre
+  | Loc(Item(Intermediaire(name,terme)),p) -> arbre
+  | _ -> failwith ("proof up fail : (" ^  pretty_print_location arbre ^ ")")
+
+(* pour le down faire attention, ça il faut donner un numéro du nombre de lefts a faire, ce qui nécéssitera donc une fonction permettant
+de compter le nombre de fils *)
+let rec go_down_n_son (Loc(t,p)) n =  
+  match n with 
+  | 0 -> go_down (Loc(t,p))
+  | n -> go_down_n_son (Loc(t,p)) (n-1)
+
+
+
+
+
+
+
+
+
+
+
+
 (* -----------Fonctions de recherche --------------- *)
 
 (* Fonctions permettants de récupérer l'ensemble des définitions terminée à partir d'une position *)
@@ -147,11 +176,16 @@ let rec print_def env =
   | [] -> ""
   | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm typ [] ^ " : " ^ pretty_print_inTm terme []
 				 ^ ")" ^ print_def suite
-
+ 
 (* A TEEEEEEEEEEESSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTEEEEEEEEEERRRRRRRRR *)
 let get_and_print_def arbre = 
   let env = get_def arbre [] in 
   print_def env
+
+
+
+
+
 
 
 (* Fonctions permettants de crée une liste de paires (name,type) *)

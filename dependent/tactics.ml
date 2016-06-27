@@ -107,7 +107,12 @@ let choose_tactic () =
   let tactic  = read_line () in
   match tactic with 
   | "intro" -> intro
+  | "up" -> proof_up 
+  | "down" -> go_down
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
+
+
+  
 
 		  
   
