@@ -29,6 +29,10 @@ client.native: client.ml
 	touch reponse_serv.txt 
 	echo test > reponse_serv.txt
 	chmod 755 reponse_serv.txt
+
+main.native: main.ml
+	ocamlbuild -use-ocamlfind main.native
+
 clean: 
 	ocamlbuild -clean
 	rm reponse_serv.txt 

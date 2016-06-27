@@ -55,7 +55,7 @@ let procedure_start_definition arbre=
 
 
 (* ---------------- Routines de demande de saisies pour l'utilisateur ----------------------- *)
-let ask_variable_name = 
+let ask_variable_name ()= 
   let () = Printf.printf "\n Please Choose a name for the var, (you can press enter and it will try to find a name for the var\n" in
   let var = read_line () in var
   
@@ -67,34 +67,49 @@ let ask_variable_name =
 
 (* -------------- Ensemble des tactics ------------ *)
 let intro (Loc(t,p)) = 
-  let var = ask_variable_name in 
+  let var = ask_variable_name () in 
   let var = begin if var = "" 
 		  then failwith "Intro : Enter doesnt work" (* modifier afin de crée une variable *)
 		  else var 
 	    end in 
-  match t with 
+  let terme_and_type = begin 
+      match t with 
   | Item(Variable(name,terme)) -> failwith "intro : You can't intro something which is not a def"
   | Item(Definition(name,Incomplete(typ,terme))) -> 
-     let terme = replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1 in 
-     let arbre = replace_item (Loc(t,p)) Item(terme) in
-     let arbre = insert_right arbre (Section([terme])) in 
-	 failwith
-  | Item(Intermediaire(typ,terme)) -> failwith "don't know yet"
+     ((replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1),typ)
+  | Item(Intermediaire(typ,terme)) -> 
+     ((replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1),typ)
   | _ -> failwith "intro : this case is supposed to be impossible" 
-			    
-
+    end in 
+  let var_type = begin match terme_and_type with 
+		       | (_,Pi(x,s,t)) -> s
+		       | _ -> failwith "intro : you can't intro something which is not an intro" 
+		 end in 
+  let new_type = begin match terme_and_type with 
+		       | (_,Pi(x,s,t)) -> t
+		       | _ -> failwith "intro : you can't intro something which is not an intro"
+  end in 
+  let new_terme = begin match terme_and_type with 
+  | (terme,_) -> terme
+  end in 
+  let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
+  let new_var = Item(Variable(var,var_type)) in
+  let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
+  let new_son = Item(Intermediaire(new_type,Hole_inTm(1))) in 
+  go_down(go_right(insert_right arbre (Section([new_son]))))
+	       
+		    
   
-
-let rec main (Loc(t,p)) = 
-  let () = Printf.printf "Start the programme \n%s\n" (pretty_print_location (go_to_the_top(Loc(t,p)))) in
-  match p with 
-  | Node([],Top,[]) -> main (procedure_start_definition (Loc(t,p)))
-  | _ -> let () = Printf.printf "\nChoose a tactic \n" in
-	 () 
-
-
-let arbre = main (Loc(Section([]),Node([],Top,[])))
   
+(* --------------Fonctions de manipulation de tactiques ----------------- *)			    
+let choose_tactic () = 
+  let () = Printf.printf "\n Choisir une tactique \n" in
+  let tactic  = read_line () in
+  match tactic with 
+  | "intro" -> intro
+  | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
+
+		  
   
 
 
