@@ -323,8 +323,8 @@ Top -> failwith "delete of top"
 
 
 (* ----------------Fonctions d'écrasement ------------------ *)
-
-let rec push_to_the_max (Loc(t,p)) =   
+(* prend un noeud en cour, vérifie si celui ci est complétement bouché et le remonte dans le trou du dessus (le noeud en dessous  *)
+let verif_and_push_up_item (Loc(t,p)) =   
   let terme_type = 
     begin 
   match t with 
@@ -337,13 +337,26 @@ let rec push_to_the_max (Loc(t,p)) =
     begin 
       match terme_type with | (typ,terme) -> terme
     end in 
-  let typ = 
-    begin 
-      match terme_type with | (typ,terme) -> typ
-    end in 
   if check_if_hole_inTm terme 
   then 
-    failwith "a finir de toute urgence" 
+    (* ici petit up pour supprimer l'ensemble de la section *)
+    let arbre = delete (go_up (Loc(t,p))) in 
+    let arbre = proof_up arbre in
+    let () = Printf.printf "\n Quel est le trou à remplir ? \n" in 
+    let trou = int_of_string (read_line ()) in 
+    let terme_sup = begin 
+	match arbre with 
+	| Loc(Item(Intermediaire(typ,terme_sup)),p) -> (terme_sup,"inter",typ)
+	| Loc(Item(Definition(name,Incomplete(typ,terme_sup))),p) -> (terme_sup,name,typ)
+	| _ -> failwith "push_to_the_max : this kinds of things must not append"
+      end in 
+    let arbre = 
+      begin
+	match terme_sup with 
+	| (x,"inter",typ) -> replace_item arbre (Item(Intermediaire(replace_hole_inTm x terme trou,typ)))
+	| (x,name,typ) -> replace_item arbre (Item(Definition(name,Incomplete(replace_hole_inTm x terme trou,typ))))	       
+    end in 
+    arbre    
   else (Loc(t,p))
 
 

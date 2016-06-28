@@ -97,36 +97,26 @@ let intro (Loc(t,p)) =
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
   let new_son = Item(Intermediaire(new_type,Hole_inTm(1))) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
-(*
+
 let axiome (Loc(t,p)) = 
   let var = ask_variable_name () in   
   let env = get_env (Loc(t,p)) [] in 
   if is_in_env env var 
   then begin 
-    let terme = 
+    let new_arbre = 
       begin 
-      match t with 
-      | Item(Variable(name,terme)) -> failwith "axiome : You can't intro something which is not a def or intermediaire"
-      | Item(Definition(name,Incomplete(typ,terme))) -> 
-	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
-      | Item(Intermediaire(typ,terme)) -> 
-	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
+      match (Loc(t,p)) with 
+      | (Loc(Item(Variable(name,terme)),p)) -> failwith "axiome : You can't intro something which is not a def or intermediaire"
+      | (Loc(Item(Definition(name,Incomplete(typ,terme))),p)) -> 
+	 (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)))),p))
+      | (Loc(Item(Intermediaire(typ,terme)),p)) -> 
+	 (Loc(Item(Intermediaire(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1))),p))
       | _ -> failwith "axiome : this case is supposed to be impossible" 
       end in 
-    let arbre = (delete (Loc(t,p))) in 
-    let arbre = 
-      begin 	
-      match arbre with 
-      | Loc(Item(Variable(name,terme)),path) -> failwith "axiome : not possible that"
-      | Loc(Item(Definition(name,Incomplete(typ,terme))),path) -> 
-	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
-      | Loc(Item(Intermediaire(typ,terme)),path) -> 
-	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
-      | _ -> failwith "axiome : this case is supposed to be impossible" 
-      end in 
-    end
-  else failwith "axiome : the var you specifie is not in the environment" 
- *)       
+    verif_and_push_up_item new_arbre
+    end 
+  else (Loc(t,p))
+
 	       
 		
   
@@ -142,6 +132,7 @@ let choose_tactic () =
   | "left" -> go_left
   | "right" -> go_right
   | "print" -> print_to_screen_location
+  | "axiome" -> axiome
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
 
 
