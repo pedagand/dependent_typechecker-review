@@ -26,6 +26,7 @@ type path =
   | Node of tree list * path * tree list
   
 type location = Loc of tree * path
+
   
 (* -----------------Fonctions d'affichage-------------- *)
 let pretty_print_definition def = 
@@ -195,11 +196,14 @@ let rec print_def env =
   | [] -> ""
   | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm typ [] ^ " : " ^ pretty_print_inTm terme []
 				 ^ ")" ^ print_def suite
+
  
 (* A TEEEEEEEEEEESSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTEEEEEEEEEERRRRRRRRR *)
 let get_and_print_def arbre = 
   let env = get_def arbre [] in 
   print_def env
+
+
 
 
 

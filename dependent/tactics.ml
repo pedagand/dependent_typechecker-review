@@ -11,17 +11,36 @@ let rec create_uper_type typ =
   | _ -> failwith "create_uper_type : only for pi at the moment"
 
 (* permet à partir d'un type ainsi que du return du type initial de crée un terme *)
-let rec create_uper_terme typ return = 
+let rec modifie_return_terme typ return = 
   match typ with 
-  | Pi(n,s,t) -> Abs(n,create_uper_terme t return)
+  | Pi(n,s,t) -> Abs(n,modifie_return_terme t return)
   | Star -> return
   | _ -> failwith "create_uper_terme : Only for pi at the moment "
+
+let rec modifie_return_type typ return = 
+  match typ with
+  | Pi(n,s,t) -> Pi(n,s,(modifie_return_type t return))
+  | Nat -> return 
+  | _ -> failwith "modifie_return_type : mettre a jour la fonction au fur et à mesure pour quelle accepte tous les types"
+
 
 (* permet de parcourir un pi type jusqu'au bout afin d'en connaitre le type de retour *)
 let rec find_return_type typ = 
   match typ with 
   | Pi(n,s,t) -> find_return_type t 
   | x -> x
+
+
+
+(* permet de donner la liste des variables présentes dans le théorème *)
+let rec liste_me_var terme = 
+  match terme with 
+  | Pi(Global(name),s,t) -> name :: (liste_me_var t)
+  | _ -> []
+
+let create_upper_name name typ = 
+  (String.uppercase name) ^ "_" ^ (List.fold_right (fun x y -> x ^ "_" ^ y) (liste_me_var typ) "")
+
 
 (* fonction prenant un argument un type et son nom . Celle ci retourne une location avec le uper_type générer en haut de 
 l'arbre et le curseur sur un noeud donné en entrée *)
@@ -30,25 +49,31 @@ let init_definition typ name =
   let () = Printf.printf "\nreturn : %s" (pretty_print_inTm return []) in
   let new_typ = create_uper_type typ in 
   let () = Printf.printf "\nnew_type : %s" (pretty_print_inTm new_typ []) in
-  let new_term = create_uper_terme new_typ return in
+  let new_term = modifie_return_terme new_typ return in
   let () = Printf.printf "\nnew_term : %s" (pretty_print_inTm new_term []) in
-  let new_name = String.uppercase name in 
+  let new_name = create_upper_name name new_typ  in 
+  let () = Printf.printf "\nnew_name : %s\n" new_name in
   Definition(new_name,Complete(new_typ,new_term))
   
-let parse_definition def = 
+let parse_definition def refe = 
   match def with 
-  | Sexp.List[Sexp.Atom name;terme] -> 
-     Definition(name,Incomplete((parse_term [] terme),Hole_inTm(1)))
+  | Sexp.List[Sexp.Atom name;terme] -> let terme = parse_term [] terme in 
+     Definition(name,Incomplete(terme,Hole_inTm(1)))
   | _ -> failwith "parse_definition : it seem's that your def is not good"
 
 let procedure_start_definition arbre= 
   let () = Printf.printf "\n\nEntrer une nouvelle définition à prouver : \n" in 
   let typ_not_parsed = read_line () in
-  let second_def = parse_definition (Sexp.of_string typ_not_parsed) in
+  let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
   | Definition(name,Incomplete(typ,terme)) -> 
      let first_def = Section([Item(init_definition typ name)]) in          
      let arbre = (go_down(go_right(insert_right arbre first_def))) in 
+     let second_def = begin
+	 match second_def with 
+	 | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(modifie_return_type typ (Ref(create_upper_name name typ)),term))
+	 | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
+	 end in
      let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
      arbre
   | _ -> failwith "procedure_start_definition : something goes wrong during the creation of the definition"
@@ -117,6 +142,34 @@ let axiome (Loc(t,p)) =
     end 
   else (Loc(t,p))
 
+let check (Loc(t,p)) = 
+  let typ = begin 
+      match t with 
+      | Item(Definition(name,Incomplete(typ,terme))) -> typ
+      | _ -> failwith "check : you can't check something else than an incomplete definition" 
+    end in 
+  let terme = 
+    begin 
+      match t with 
+      | Item(Definition(name,Incomplete(typ,terme))) -> typ
+      | _ -> failwith "check : you can't check something else than an incomplete definition" 
+    end in 
+  let name = 
+    begin 
+      match t with 
+      | Item(Definition(name,Incomplete(typ,terme))) -> name
+      | _ -> failwith "check : you can't check something else than an incomplete definition" 
+    end in 
+  if check_if_no_hole_inTm terme 
+  then begin
+      let final_terme = replace_ref_inTm terme (get_def (Loc(t,p)) []) name in 
+      let res_check = res_debug(check [] final_terme (big_step_eval_inTm typ []) "") in 
+      if res_check 
+      then replace_item (Loc(t,p)) (Item(Definition(name,Complete(typ,final_terme))))
+      else (Loc(t,p))      
+    end
+  else failwith "check : you can't check if there are at least one hole in your term" 
+
 let verif (Loc(t,p)) = 
   verif_and_push_up_item (Loc(t,p))
 
@@ -138,6 +191,7 @@ let choose_tactic () =
   | "axiome" -> axiome
   | "verif" -> verif
   | "def" -> def
+  | "check" -> check
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
 
 

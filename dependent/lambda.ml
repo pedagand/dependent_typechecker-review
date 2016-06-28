@@ -347,6 +347,64 @@ and replace_hole_exTm  terme tsub num =
   | Fold(gA,alpha,xs,f,a) -> Fold((replace_hole_inTm gA tsub num),(replace_hole_inTm alpha tsub num),(replace_hole_inTm xs tsub num),(replace_hole_inTm f tsub num),
 			    (replace_hole_inTm a tsub num))
 
+(* prend en argument une liste de ref ainsi qu'un nom et retourne le terme associé au nom si celui ci existe *)
+let rec def_is_in_the_liste env name_to_find= 
+  match env with 
+  | [] -> failwith "def_is_in_the_liste : Dummy you call a ref wich is not present in the context ..... You can shut down your computer now" 
+  | (name,typ,terme) :: suite -> if name = name_to_find then terme else def_is_in_the_liste suite name_to_find
+
+(* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Ref on été modifiés 
+utilise is_in_the_list qui est une fonction dans le zipper *)
+let rec replace_ref_inTm terme liste_ref name = 
+  match terme with 
+  | Hole_inTm(x) -> failwith "replace_ref_inTm : you can't have a hole when you are replacing the ref" 
+  | Ref(x) -> begin 
+      let terme = def_is_in_the_liste liste_ref name in 
+      terme
+    end
+  | Inv x -> Inv(replace_ref_exTm x liste_ref name)
+  | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref (name)))
+  | Star -> Star
+  | Pi(v,x,y) -> Pi(v,(replace_ref_inTm x liste_ref name),(replace_ref_inTm y liste_ref (name)))
+  (*=End *)
+  | Sig(x,a,b) -> Sig(x,(replace_ref_inTm a liste_ref name),(replace_ref_inTm b liste_ref (name)))
+  | Zero -> Zero 
+  | Succ n -> Succ(replace_ref_inTm n liste_ref name)
+  | Nat -> Nat
+  | Bool -> Bool
+  | True -> True 
+  | False -> False 
+  | Pair(x,y) -> Pair((replace_ref_inTm x liste_ref name),(replace_ref_inTm y liste_ref name))
+  | Liste(alpha) -> Liste(replace_ref_inTm alpha liste_ref name)
+  | Nil(alpha) -> Nil(replace_ref_inTm alpha liste_ref name)
+  | Cons(a,xs) -> Cons((replace_ref_inTm a liste_ref name),(replace_ref_inTm xs liste_ref name))
+  | Vec(alpha,n) -> Vec((replace_ref_inTm alpha liste_ref name),(replace_ref_inTm n liste_ref name))
+  | DNil(alpha) -> DNil(replace_ref_inTm alpha liste_ref name)
+  | DCons(a,xs) -> DCons((replace_ref_inTm a liste_ref name),(replace_ref_inTm a liste_ref name))
+  | What(a) -> What(a)
+  | Id(gA,a,b) -> Id((replace_ref_inTm gA liste_ref name),(replace_ref_inTm a liste_ref name),(replace_ref_inTm b liste_ref name))
+  | Refl(a) -> Refl(replace_ref_inTm a liste_ref name)
+and replace_ref_exTm terme liste_ref name = 
+  match terme with 
+    (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
+  | Hole_exTm(x) -> failwith "replace_ref_exTm : I just say before that you can't check something which is not finish, how did you manage that"
+  | FVar x -> FVar x
+  | BVar x -> BVar x
+  | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref name),(replace_ref_inTm y liste_ref name))
+  | Ann(x,y) -> Ann((replace_ref_inTm x liste_ref name),(replace_ref_inTm y liste_ref name))
+  (*=End *)
+  | Iter(p,n,f,a) -> Iter((replace_ref_inTm p liste_ref name),(replace_ref_inTm n liste_ref name),(replace_ref_inTm f liste_ref name),(replace_ref_inTm a liste_ref name))
+  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_inTm p liste_ref name),(replace_ref_inTm c liste_ref name),(replace_ref_inTm tHen liste_ref name),(replace_ref_inTm eLse liste_ref name))
+  | P0(x) -> P0(replace_ref_exTm x liste_ref name)
+  | P1(x) -> P1(replace_ref_exTm x liste_ref name)
+  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_inTm alpha liste_ref name),(replace_ref_inTm p liste_ref name),(replace_ref_inTm n liste_ref name),
+				     (replace_ref_inTm xs liste_ref name),(replace_ref_inTm f liste_ref name),(replace_ref_inTm a liste_ref name))
+  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_inTm gA liste_ref name),(replace_ref_inTm p liste_ref name),(replace_ref_inTm a liste_ref name),
+				 (replace_ref_inTm b liste_ref name),(replace_ref_inTm q liste_ref name),(replace_ref_inTm x liste_ref name))
+  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_inTm gA liste_ref name),(replace_ref_inTm alpha liste_ref name),(replace_ref_inTm xs liste_ref name),(replace_ref_inTm f liste_ref name),
+			    (replace_ref_inTm a liste_ref name))
+
+
 (*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
 let rec check_if_no_hole_inTm terme = 
   match terme with 
