@@ -97,8 +97,28 @@ let intro (Loc(t,p)) =
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
   let new_son = Item(Intermediaire(new_type,Hole_inTm(1))) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
+
+let axiome (Loc(t,p)) = 
+  let var = ask_variable_name () in   
+  let env = get_env (Loc(t,p)) [] in 
+  if is_in_env env var 
+  then begin 
+    let terme = 
+      begin 
+      match t with 
+      | Item(Variable(name,terme)) -> failwith "axiome : You can't intro something which is not a def or intermediaire"
+      | Item(Definition(name,Incomplete(typ,terme))) -> 
+	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
+      | Item(Intermediaire(typ,terme)) -> 
+	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
+      | _ -> failwith "axiome : this case is supposed to be impossible" 
+      end in 
+    failwith "ICI INSERER TOUT D4ABORD LE TERME DANS LARBRE ET ENSUITE APPELER LA FONCTION QUI PERMET DE REMONTER UN MAX DE TRUCS"
+    end
+  else failwith "axiome : the var you specifie is not in the environment" 
+       
 	       
-		    
+		
   
   
 (* --------------Fonctions de manipulation de tactiques ----------------- *)			    
@@ -108,7 +128,10 @@ let choose_tactic () =
   match tactic with 
   | "intro" -> intro
   | "up" -> proof_up 
-  | "down" -> go_down
+  | "down" -> proof_down
+  | "left" -> go_left
+  | "right" -> go_right
+  | "print" -> print_to_screen_location
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
 
 

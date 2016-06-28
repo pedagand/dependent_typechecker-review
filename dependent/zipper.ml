@@ -62,6 +62,10 @@ let pretty_print_location loc =
   | Loc(pointeur,Top) -> "\nZip : " ^ pretty_print_tree pointeur ^ "Top\n"
   | Loc(pointeur,chemin) -> "Zip : \n" ^ pretty_print_tree pointeur ^ "\n Path : \n" ^ pretty_print_node chemin
 
+(* Fonction avec effets de bords nécéssaire pour l'affichage *)
+let print_to_screen_location loc = 
+  let () = Printf.printf "\nstart printing : \n %s \nstop printing\n" (pretty_print_location loc) in 
+  loc
 		     
 
 											 
@@ -131,16 +135,23 @@ let rec proof_up (Loc(t,p)) =
   | Loc(Item(Variable(name,terme)),p) -> proof_up arbre
   | Loc(Item(Definition(name,terme)),p) -> arbre
   | Loc(Item(Intermediaire(name,terme)),p) -> arbre
-  | _ -> failwith ("proof up fail : (" ^  pretty_print_location arbre ^ ")")
+  | _ -> proof_up arbre
 
 (* pour le down faire attention, ça il faut donner un numéro du nombre de lefts a faire, ce qui nécéssitera donc une fonction permettant
 de compter le nombre de fils *)
-let rec go_down_n_son (Loc(t,p)) n =  
+let rec go_right_n_times (Loc(t,p)) n = 
   match n with 
-  | 0 -> go_down (Loc(t,p))
-  | n -> go_down_n_son (Loc(t,p)) (n-1)
+  | 0 -> (Loc(t,p))
+  | n -> go_right_n_times (go_right (Loc(t,p))) (n-1)
+let go_down_n_son arbre n =  
+  let arbre = go_right_n_times arbre n in
+  go_down arbre
 
 
+let proof_down arbre = 
+  let () = Printf.printf "\n Put the number of the son where you wan't to go\n" in 
+  let num = read_line () in 
+  go_down_n_son arbre (int_of_string num)
 
 
 
@@ -217,6 +228,13 @@ let get_and_print_env arbre =
   let env = get_env arbre [] in 
   print_env env
 
+let rec is_in_env env var = 
+  match env with 
+  | [] -> false
+  | (name,typ) :: suite -> if name = var then true else is_in_env suite var
+
+
+
 (* affichage avec l'environnement de la preuve ect *)
 let pretty_print_item item = 
   match item with 
@@ -231,7 +249,7 @@ let pretty_print_state_proof (Loc(t,p)) =
 		 env ^ 
 		   "\n----------Current goal ------------\n" ^    
 		   pretty_print_item (Item(x)) 
-  | _ -> "It seem's that your on nothing, try to navigate ...." 
+  | _ -> "pretty_print_item : It seem's that your on nothing, try to navigate ...." 
 	
   
 
@@ -283,6 +301,7 @@ let insert_down (Loc(t,p)) t1 =
   | Item(_) -> failwith "down of item"
   | Section(sons) -> Loc(t1,Node([],p,sons))
 
+(* la fonction de delete tente tout d'abord de positionner le curseur a droite, sinon a gauche et sinon crée une section vide *)
 let delete (Loc(_,p)) = match p with
 Top -> failwith "delete of top"
 | Node(left,up,r::right) -> Loc(r,Node(left,up,right))
@@ -290,6 +309,30 @@ Top -> failwith "delete of top"
 | Node([],up,[]) -> Loc(Section[],up)
 
 
-(* ----------------Fonctions de recherche------------------ *)
+(* ----------------Fonctions d'écrasement ------------------ *)
+
+let rec push_to_the_max (Loc(t,p)) =   
+  let terme_type = 
+    begin 
+  match t with 
+  | Item(Intermediaire(typ,terme)) -> (typ,terme)
+  | Item(Definition(name,Complete(typ,terme))) -> (typ,terme)
+  | Item(Definition(name,Incomplete(typ,terme))) -> (typ,terme)
+  | _ -> failwith "push_to_the_max : must not append" 
+    end in 
+  let terme = 
+    begin 
+      match terme_type with | (typ,terme) -> terme
+    end in 
+  let typ = 
+    begin 
+      match terme_type with | (typ,terme) -> typ
+    end in 
+  if check_if_hole_inTm terme 
+  then 
+    failwith "a finir de toute urgence" 
+  else (Loc(t,p))
+
+
 
 
