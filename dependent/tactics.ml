@@ -97,7 +97,7 @@ let intro (Loc(t,p)) =
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
   let new_son = Item(Intermediaire(new_type,Hole_inTm(1))) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
-
+(*
 let axiome (Loc(t,p)) = 
   let var = ask_variable_name () in   
   let env = get_env (Loc(t,p)) [] in 
@@ -113,10 +113,20 @@ let axiome (Loc(t,p)) =
 	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
       | _ -> failwith "axiome : this case is supposed to be impossible" 
       end in 
-    failwith "ICI INSERER TOUT D4ABORD LE TERME DANS LARBRE ET ENSUITE APPELER LA FONCTION QUI PERMET DE REMONTER UN MAX DE TRUCS"
+    let arbre = (delete (Loc(t,p))) in 
+    let arbre = 
+      begin 	
+      match arbre with 
+      | Loc(Item(Variable(name,terme)),path) -> failwith "axiome : not possible that"
+      | Loc(Item(Definition(name,Incomplete(typ,terme))),path) -> 
+	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
+      | Loc(Item(Intermediaire(typ,terme)),path) -> 
+	 (replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)
+      | _ -> failwith "axiome : this case is supposed to be impossible" 
+      end in 
     end
   else failwith "axiome : the var you specifie is not in the environment" 
-       
+ *)       
 	       
 		
   

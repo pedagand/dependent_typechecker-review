@@ -126,19 +126,27 @@ let rec go_to_the_top (Loc(t,p)) =
   | _ -> go_up (Loc(t,p))
 
 
-(* Etant donné ma structuration de l'arbre, il me faut des fonctions testants si elles ne sont pas sur une variable, 
-car mettre le focus sur une variable ne sert à rien *)
-let rec proof_up (Loc(t,p)) = 
-  let arbre = go_up(Loc(t,p)) in
-  match arbre with 
-  | Loc(_,Top) -> (Loc(t,p))  
-  | Loc(Item(Variable(name,terme)),p) -> proof_up arbre
-  | Loc(Item(Definition(name,terme)),p) -> arbre
-  | Loc(Item(Intermediaire(name,terme)),p) -> arbre
-  | _ -> proof_up arbre
-
 (* pour le down faire attention, ça il faut donner un numéro du nombre de lefts a faire, ce qui nécéssitera donc une fonction permettant
 de compter le nombre de fils *)
+let rec go_full_left (Loc(t,p)) = 
+  match p with 
+  | Node([],up,right) -> (Loc(t,p))
+  | Node(left,up,right) -> go_full_left (go_left (Loc(t,p)))
+  | Top -> failwith "go_full_left : can't go left of a top"  
+
+(* Etant donné ma structuration de l'arbre, il suffit de remonter puis de faire un shift a gauche?*)
+let rec stop_when_def_inter arbre =   
+  match arbre with 
+  | Loc(_,Top) -> arbre
+  | Loc(Item(Variable(name,terme)),p) -> stop_when_def_inter (go_up arbre)
+  | Loc(Item(Definition(name,terme)),p) -> arbre
+  | Loc(Item(Intermediaire(name,terme)),p) -> arbre
+  | Loc(Section(x),p) -> stop_when_def_inter (go_full_left arbre)
+
+let proof_up arbre = 
+  let arbre = go_up arbre in 
+  stop_when_def_inter arbre
+
 let rec go_right_n_times (Loc(t,p)) n = 
   match n with 
   | 0 -> (Loc(t,p))
@@ -151,7 +159,7 @@ let go_down_n_son arbre n =
 let proof_down arbre = 
   let () = Printf.printf "\n Put the number of the son where you wan't to go\n" in 
   let num = read_line () in 
-  go_down_n_son arbre (int_of_string num)
+  go_down_n_son (go_full_left arbre) (int_of_string num)
 
 
 
@@ -242,6 +250,11 @@ let pretty_print_item item =
   | Item(Definition(name,def)) -> "(Def " ^ name ^ " : " ^ pretty_print_definition def ^ ")"
   | Item(Intermediaire(typ,terme)) -> "(Inter " ^ pretty_print_inTm typ [] ^ " : " ^ pretty_print_inTm terme [] ^ ")"
   | Section(x) -> failwith "pretty_print_inTm : can't print a section" 
+let rec pretty_print_tree_liste tree_liste n= 
+  match tree_liste with 
+  | [] -> "" 
+  | Item(x) :: suite -> "\n" ^ string_of_int n ^ " : \n" ^ pretty_print_item (Item(x)) ^ "\n" ^ pretty_print_tree_liste suite (n + 1)
+  | Section(x) :: suite -> "\n " ^ string_of_int n ^ " Section \n" ^ pretty_print_tree_liste suite (n-1)
 let pretty_print_state_proof (Loc(t,p)) = 
   let env = get_and_print_env (Loc(t,p)) in
   match t with 
@@ -249,7 +262,7 @@ let pretty_print_state_proof (Loc(t,p)) =
 		 env ^ 
 		   "\n----------Current goal ------------\n" ^    
 		   pretty_print_item (Item(x)) 
-  | _ -> "pretty_print_item : It seem's that your on nothing, try to navigate ...." 
+  | Section(x) -> pretty_print_tree_liste x 0 
 	
   
 
