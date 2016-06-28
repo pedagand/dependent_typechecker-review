@@ -345,50 +345,50 @@ and replace_hole_exTm  terme tsub num =
   | Fold(gA,alpha,xs,f,a) -> Fold((replace_hole_inTm gA tsub num),(replace_hole_inTm alpha tsub num),(replace_hole_inTm xs tsub num),(replace_hole_inTm f tsub num),
 			    (replace_hole_inTm a tsub num))
 
-(*Fonction pour vérifier si il n'y a plus de holes dans le terme *)
-let rec check_if_hole_inTm terme = 
+(*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
+let rec check_if_no_hole_inTm terme = 
   match terme with 
   | Hole_inTm(x) -> false
-  | Inv x -> check_if_hole_exTm x 
-  | Abs(x,y) -> check_if_hole_inTm y 
+  | Inv x -> check_if_no_hole_exTm x 
+  | Abs(x,y) -> check_if_no_hole_inTm y 
   | Star -> true 
-  | Pi(v,x,y) -> check_if_hole_inTm x && check_if_hole_inTm y 
+  | Pi(v,x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
   (*=End *)
-  | Sig(x,a,b) -> check_if_hole_inTm a && check_if_hole_inTm b 
+  | Sig(x,a,b) -> check_if_no_hole_inTm a && check_if_no_hole_inTm b 
   | Zero -> true 
-  | Succ n -> check_if_hole_inTm n 
+  | Succ n -> check_if_no_hole_inTm n 
   | Nat -> true
   | Bool -> true
   | True -> true 
   | False -> true
-  | Pair(x,y) -> check_if_hole_inTm x && check_if_hole_inTm y 
-  | Liste(alpha) -> check_if_hole_inTm alpha 
-  | Nil(alpha) -> check_if_hole_inTm alpha 
-  | Cons(a,xs) -> check_if_hole_inTm a && check_if_hole_inTm xs 
-  | Vec(alpha,n) -> check_if_hole_inTm alpha && check_if_hole_inTm n 
-  | DNil(alpha) -> check_if_hole_inTm alpha 
-  | DCons(a,xs) -> check_if_hole_inTm a && check_if_hole_inTm a 
+  | Pair(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
+  | Liste(alpha) -> check_if_no_hole_inTm alpha 
+  | Nil(alpha) -> check_if_no_hole_inTm alpha 
+  | Cons(a,xs) -> check_if_no_hole_inTm a && check_if_no_hole_inTm xs 
+  | Vec(alpha,n) -> check_if_no_hole_inTm alpha && check_if_no_hole_inTm n 
+  | DNil(alpha) -> check_if_no_hole_inTm alpha 
+  | DCons(a,xs) -> check_if_no_hole_inTm a && check_if_no_hole_inTm a 
   | What(a) -> true 
-  | Id(gA,a,b) -> check_if_hole_inTm gA && check_if_hole_inTm a && check_if_hole_inTm b 
-  | Refl(a) -> check_if_hole_inTm a 
-and check_if_hole_exTm terme = 
+  | Id(gA,a,b) -> check_if_no_hole_inTm gA && check_if_no_hole_inTm a && check_if_no_hole_inTm b 
+  | Refl(a) -> check_if_no_hole_inTm a 
+and check_if_no_hole_exTm terme = 
   match terme with 
   | Hole_exTm(x) -> false
   | FVar x -> true
   | BVar x -> true
-  | Appl(x,y) -> check_if_hole_exTm x && check_if_hole_inTm y 
-  | Ann(x,y) -> check_if_hole_inTm x && check_if_hole_inTm y 
+  | Appl(x,y) -> check_if_no_hole_exTm x && check_if_no_hole_inTm y 
+  | Ann(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
   (*=End *)
-  | Iter(p,n,f,a) -> check_if_hole_inTm p && check_if_hole_inTm n && check_if_hole_inTm f && check_if_hole_inTm a 
-  | Ifte(p,c,tHen,eLse) -> check_if_hole_inTm p && check_if_hole_inTm c  && check_if_hole_inTm tHen && check_if_hole_inTm eLse 
-  | P0(x) -> check_if_hole_exTm x 
-  | P1(x) -> check_if_hole_exTm x 
-  | DFold(alpha,p,n,xs,f,a) -> check_if_hole_inTm alpha && check_if_hole_inTm p && check_if_hole_inTm n &&
-				 check_if_hole_inTm xs && check_if_hole_inTm f && check_if_hole_inTm a 
-  | Trans(gA,p,a,b,q,x) -> check_if_hole_inTm gA && check_if_hole_inTm p && check_if_hole_inTm a && 
-				 check_if_hole_inTm b && check_if_hole_inTm q && check_if_hole_inTm x 
-  | Fold(gA,alpha,xs,f,a) -> check_if_hole_inTm gA && check_if_hole_inTm alpha && check_if_hole_inTm xs && 
-				  check_if_hole_inTm f && check_if_hole_inTm a 
+  | Iter(p,n,f,a) -> check_if_no_hole_inTm p && check_if_no_hole_inTm n && check_if_no_hole_inTm f && check_if_no_hole_inTm a 
+  | Ifte(p,c,tHen,eLse) -> check_if_no_hole_inTm p && check_if_no_hole_inTm c  && check_if_no_hole_inTm tHen && check_if_no_hole_inTm eLse 
+  | P0(x) -> check_if_no_hole_exTm x 
+  | P1(x) -> check_if_no_hole_exTm x 
+  | DFold(alpha,p,n,xs,f,a) -> check_if_no_hole_inTm alpha && check_if_no_hole_inTm p && check_if_no_hole_inTm n &&
+				 check_if_no_hole_inTm xs && check_if_no_hole_inTm f && check_if_no_hole_inTm a 
+  | Trans(gA,p,a,b,q,x) -> check_if_no_hole_inTm gA && check_if_no_hole_inTm p && check_if_no_hole_inTm a && 
+				 check_if_no_hole_inTm b && check_if_no_hole_inTm q && check_if_no_hole_inTm x 
+  | Fold(gA,alpha,xs,f,a) -> check_if_no_hole_inTm gA && check_if_no_hole_inTm alpha && check_if_no_hole_inTm xs && 
+				  check_if_no_hole_inTm f && check_if_no_hole_inTm a 
 				 
 
 

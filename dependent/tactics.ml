@@ -38,7 +38,7 @@ let init_definition typ name =
 let parse_definition def = 
   match def with 
   | Sexp.List[Sexp.Atom name;terme] -> 
-     Definition(name,Incomplete((parse_term [] terme),Hole_inTm(0)))
+     Definition(name,Incomplete((parse_term [] terme),Hole_inTm(1)))
   | _ -> failwith "parse_definition : it seem's that your def is not good"
 
 let procedure_start_definition arbre= 
@@ -117,8 +117,11 @@ let axiome (Loc(t,p)) =
     end 
   else (Loc(t,p))
 
-	       
-		
+let verif (Loc(t,p)) = 
+  verif_and_push_up_item (Loc(t,p))
+
+let def (Loc(t,p)) = 
+  procedure_start_definition (Loc(t,p))
   
   
 (* --------------Fonctions de manipulation de tactiques ----------------- *)			    
@@ -133,6 +136,8 @@ let choose_tactic () =
   | "right" -> go_right
   | "print" -> print_to_screen_location
   | "axiome" -> axiome
+  | "verif" -> verif
+  | "def" -> def
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
 
 

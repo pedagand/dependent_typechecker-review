@@ -30,8 +30,8 @@ type location = Loc of tree * path
 (* -----------------Fonctions d'affichage-------------- *)
 let pretty_print_definition def = 
   match def with 
-  | Complete(typ,terme) -> "type ::" ^ pretty_print_inTm typ [] ^ "terme ::" ^ pretty_print_inTm terme []
-  | Incomplete(typ,terme) -> "type ::" ^ pretty_print_inTm typ [] ^ "terme ::" ^ pretty_print_inTm terme []
+  | Complete(typ,terme) -> "type :: " ^ pretty_print_inTm typ [] ^ "\nterme :: " ^ pretty_print_inTm terme []
+  | Incomplete(typ,terme) -> "type :: " ^ pretty_print_inTm typ [] ^ "terme :: " ^ pretty_print_inTm terme []
 
 let pretty_print_item_debug item = 
   match item with 
@@ -324,6 +324,8 @@ Top -> failwith "delete of top"
 
 (* ----------------Fonctions d'écrasement ------------------ *)
 (* prend un noeud en cour, vérifie si celui ci est complétement bouché et le remonte dans le trou du dessus (le noeud en dessous  *)
+
+(* Apres la pause, il va falloir faire en sorte que a chaque fois avant de travailler sur un terme, si celui ci ne contient plus de trou appeler cette fonction, et justement celle ci ne dois pas buguer si on ne l'appel pas avec un terme n'ayant pas de trou, elle doit quand meme le remonter *)
 let verif_and_push_up_item (Loc(t,p)) =   
   let terme_type = 
     begin 
@@ -337,12 +339,12 @@ let verif_and_push_up_item (Loc(t,p)) =
     begin 
       match terme_type with | (typ,terme) -> terme
     end in 
-  if check_if_hole_inTm terme 
+  if check_if_no_hole_inTm terme 
   then 
     (* ici petit up pour supprimer l'ensemble de la section *)
     let arbre = delete (go_up (Loc(t,p))) in 
     let arbre = proof_up arbre in
-    let () = Printf.printf "\n Quel est le trou à remplir ? \n" in 
+    let () = Printf.printf "\n Quel est le trou à remplir ? \n %s\n" (pretty_print_state_proof arbre) in 
     let trou = int_of_string (read_line ()) in 
     let terme_sup = begin 
 	match arbre with 
@@ -353,8 +355,8 @@ let verif_and_push_up_item (Loc(t,p)) =
     let arbre = 
       begin
 	match terme_sup with 
-	| (x,"inter",typ) -> replace_item arbre (Item(Intermediaire(replace_hole_inTm x terme trou,typ)))
-	| (x,name,typ) -> replace_item arbre (Item(Definition(name,Incomplete(replace_hole_inTm x terme trou,typ))))	       
+	| (x,"inter",typ) -> replace_item arbre (Item(Intermediaire(typ,replace_hole_inTm x terme trou)))
+	| (x,name,typ) -> replace_item arbre (Item(Definition(name,Incomplete(typ,replace_hole_inTm x terme trou))))	       
     end in 
     arbre    
   else (Loc(t,p))
