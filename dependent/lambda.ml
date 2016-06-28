@@ -20,6 +20,7 @@ type name =
 type inTm =
   (*=End *)
   | Hole_inTm of int
+  | Ref of string
   (*=inTm *)
   | Abs of name * inTm
   | Inv of exTm
@@ -302,6 +303,7 @@ let read t = parse_term [] (Sexp.of_string t)
 let rec replace_hole_inTm terme tsub num = 
   match terme with 
   | Hole_inTm(x) -> if x = num then tsub else Hole_inTm(x)
+  | Ref(x) -> Ref(x)
   | Inv x -> Inv(replace_hole_exTm x tsub num)
   | Abs(x,y) -> Abs(x,(replace_hole_inTm y tsub (num)))
   | Star -> Star
@@ -349,6 +351,7 @@ and replace_hole_exTm  terme tsub num =
 let rec check_if_no_hole_inTm terme = 
   match terme with 
   | Hole_inTm(x) -> false
+  | Ref(x) -> true
   | Inv x -> check_if_no_hole_exTm x 
   | Abs(x,y) -> check_if_no_hole_inTm y 
   | Star -> true 
@@ -397,6 +400,7 @@ let rec pretty_print_inTm t l =
   match t with 
   | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm x (str :: l) ^ ")"
+  | Ref(x) -> x
   | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
   | Inv (x) ->  pretty_print_exTm x l
   | Pi (Global(str),s,t) -> "(pi " ^ str ^ " " ^ pretty_print_inTm s l ^ " " ^ pretty_print_inTm t (str :: l) ^ ")"
@@ -447,6 +451,7 @@ and pretty_print_exTm t l =
 let rec substitution_inTm t tsub var = 
   match t with 
   | Hole_inTm(x) -> Hole_inTm x
+  | Ref x -> Ref x 
   | Inv x -> Inv(substitution_exTm x tsub var)
   | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
   | Star -> Star
@@ -498,7 +503,8 @@ let vfree n = VNeutral(NFree n)
 let rec big_step_eval_inTm t envi = 
 (*=End *)
   match t with 
-  | Hole_inTm x -> failwith "You can't eval a Hole" 
+  | Hole_inTm x -> failwith "Big_step_eval : You can't eval a Hole" 
+  | Ref x -> failwith "Big_step_eval : You can't eval a Def"
 (*=big_step_inv *)
   | Inv(i) -> big_step_eval_exTm i envi
 (*=End *)
@@ -935,6 +941,7 @@ let rec contexte_to_string contexte =
 let rec check contexte inT ty steps = 
   match inT with
   | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
+  | Ref x -> create_report false (contexte_to_string contexte) steps "Maybe you juste couldn't do it"
   | Abs(x,y) -> 
      begin  
        match ty with 
