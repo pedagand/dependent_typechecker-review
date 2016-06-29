@@ -41,6 +41,13 @@ let rec liste_me_var terme =
 let create_upper_name name typ = 
   (String.uppercase name) ^ "_" ^ (List.fold_right (fun x y -> x ^ "_" ^ y) (liste_me_var typ) "")
 
+(* prend un terme, calcule sa liste de variable et retourne l'application de celui ci *)
+let make_application terme typ = 
+  let liste_var = liste_me_var terme in
+  if liste_var = [] then terme 
+  else Inv(List.fold_left (fun x y -> Appl(x,Inv(FVar(Global(y))))) (Ann(terme,typ)) liste_var)
+
+
 
 (* fonction prenant un argument un type et son nom . Celle ci retourne une location avec le uper_type générer en haut de 
 l'arbre et le curseur sur un noeud donné en entrée *)
@@ -67,11 +74,12 @@ let procedure_start_definition arbre=
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
   | Definition(name,Incomplete(typ,terme)) -> 
-     let first_def = Section([Item(init_definition typ name)]) in          
+     let first_def = Section([Item(init_definition typ name)]) in      
      let arbre = (go_down(go_right(insert_right arbre first_def))) in 
      let second_def = begin
 	 match second_def with 
-	 | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(modifie_return_type typ (Ref(create_upper_name name typ)),term))
+	 | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
+									modifie_return_type typ (Ref(create_upper_name name typ)),term))
 	 | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
 	 end in
      let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
@@ -162,11 +170,13 @@ let check (Loc(t,p)) =
     end in 
   if check_if_no_hole_inTm terme 
   then begin
-      let final_terme = replace_ref_inTm terme (get_def (Loc(t,p)) []) name in 
+      let final_terme = replace_ref_inTm terme (get_def (Loc(t,p)) []) in 
+      let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit trics, il faut quand meme que j'en parle a pierre *)
       let res_check = res_debug(check [] final_terme (big_step_eval_inTm typ []) "") in 
       if res_check 
       then replace_item (Loc(t,p)) (Item(Definition(name,Complete(typ,final_terme))))
-      else (Loc(t,p))      
+      else let () = Printf.printf "\nIt Seems that your term is not well checked \n" in 
+	   (Loc(t,p))
     end
   else failwith "check : you can't check if there are at least one hole in your term" 
 
@@ -175,6 +185,11 @@ let verif (Loc(t,p)) =
 
 let def (Loc(t,p)) = 
   procedure_start_definition (Loc(t,p))
+
+let contexte_def (Loc(t,p)) = 
+  let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p))) in 
+  (Loc(t,p))
+
   
   
 (* --------------Fonctions de manipulation de tactiques ----------------- *)			    
@@ -192,6 +207,7 @@ let choose_tactic () =
   | "verif" -> verif
   | "def" -> def
   | "check" -> check
+  | "contexte def" -> contexte_def
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
 
 

@@ -351,58 +351,60 @@ and replace_hole_exTm  terme tsub num =
 let rec def_is_in_the_liste env name_to_find= 
   match env with 
   | [] -> failwith "def_is_in_the_liste : Dummy you call a ref wich is not present in the context ..... You can shut down your computer now" 
-  | (name,typ,terme) :: suite -> if name = name_to_find then terme else def_is_in_the_liste suite name_to_find
+  | (name,typ,terme) :: suite -> 
+     let () = Printf.printf "\n we need to compare %s and %s" name name_to_find in 
+     if name = name_to_find then terme else def_is_in_the_liste suite name_to_find
 
 (* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Ref on été modifiés 
 utilise is_in_the_list qui est une fonction dans le zipper *)
-let rec replace_ref_inTm terme liste_ref name = 
+let rec replace_ref_inTm terme liste_ref = 
   match terme with 
   | Hole_inTm(x) -> failwith "replace_ref_inTm : you can't have a hole when you are replacing the ref" 
   | Ref(x) -> begin 
-      let terme = def_is_in_the_liste liste_ref name in 
+      let terme = def_is_in_the_liste liste_ref x in 
       terme
     end
-  | Inv x -> Inv(replace_ref_exTm x liste_ref name)
-  | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref (name)))
+  | Inv x -> Inv(replace_ref_exTm x liste_ref)
+  | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref ))
   | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(replace_ref_inTm x liste_ref name),(replace_ref_inTm y liste_ref (name)))
+  | Pi(v,x,y) -> Pi(v,(replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref))
   (*=End *)
-  | Sig(x,a,b) -> Sig(x,(replace_ref_inTm a liste_ref name),(replace_ref_inTm b liste_ref (name)))
+  | Sig(x,a,b) -> Sig(x,(replace_ref_inTm a liste_ref),(replace_ref_inTm b liste_ref ))
   | Zero -> Zero 
-  | Succ n -> Succ(replace_ref_inTm n liste_ref name)
+  | Succ n -> Succ(replace_ref_inTm n liste_ref)
   | Nat -> Nat
   | Bool -> Bool
   | True -> True 
   | False -> False 
-  | Pair(x,y) -> Pair((replace_ref_inTm x liste_ref name),(replace_ref_inTm y liste_ref name))
-  | Liste(alpha) -> Liste(replace_ref_inTm alpha liste_ref name)
-  | Nil(alpha) -> Nil(replace_ref_inTm alpha liste_ref name)
-  | Cons(a,xs) -> Cons((replace_ref_inTm a liste_ref name),(replace_ref_inTm xs liste_ref name))
-  | Vec(alpha,n) -> Vec((replace_ref_inTm alpha liste_ref name),(replace_ref_inTm n liste_ref name))
-  | DNil(alpha) -> DNil(replace_ref_inTm alpha liste_ref name)
-  | DCons(a,xs) -> DCons((replace_ref_inTm a liste_ref name),(replace_ref_inTm a liste_ref name))
+  | Pair(x,y) -> Pair((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
+  | Liste(alpha) -> Liste(replace_ref_inTm alpha liste_ref )
+  | Nil(alpha) -> Nil(replace_ref_inTm alpha liste_ref )
+  | Cons(a,xs) -> Cons((replace_ref_inTm a liste_ref ),(replace_ref_inTm xs liste_ref ))
+  | Vec(alpha,n) -> Vec((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm n liste_ref ))
+  | DNil(alpha) -> DNil(replace_ref_inTm alpha liste_ref )
+  | DCons(a,xs) -> DCons((replace_ref_inTm a liste_ref ),(replace_ref_inTm a liste_ref ))
   | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((replace_ref_inTm gA liste_ref name),(replace_ref_inTm a liste_ref name),(replace_ref_inTm b liste_ref name))
-  | Refl(a) -> Refl(replace_ref_inTm a liste_ref name)
-and replace_ref_exTm terme liste_ref name = 
+  | Id(gA,a,b) -> Id((replace_ref_inTm gA liste_ref ),(replace_ref_inTm a liste_ref ),(replace_ref_inTm b liste_ref ))
+  | Refl(a) -> Refl(replace_ref_inTm a liste_ref )
+and replace_ref_exTm terme liste_ref  = 
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
   | Hole_exTm(x) -> failwith "replace_ref_exTm : I just say before that you can't check something which is not finish, how did you manage that"
   | FVar x -> FVar x
   | BVar x -> BVar x
-  | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref name),(replace_ref_inTm y liste_ref name))
-  | Ann(x,y) -> Ann((replace_ref_inTm x liste_ref name),(replace_ref_inTm y liste_ref name))
+  | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref ),(replace_ref_inTm y liste_ref ))
+  | Ann(x,y) -> Ann((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
   (*=End *)
-  | Iter(p,n,f,a) -> Iter((replace_ref_inTm p liste_ref name),(replace_ref_inTm n liste_ref name),(replace_ref_inTm f liste_ref name),(replace_ref_inTm a liste_ref name))
-  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_inTm p liste_ref name),(replace_ref_inTm c liste_ref name),(replace_ref_inTm tHen liste_ref name),(replace_ref_inTm eLse liste_ref name))
-  | P0(x) -> P0(replace_ref_exTm x liste_ref name)
-  | P1(x) -> P1(replace_ref_exTm x liste_ref name)
-  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_inTm alpha liste_ref name),(replace_ref_inTm p liste_ref name),(replace_ref_inTm n liste_ref name),
-				     (replace_ref_inTm xs liste_ref name),(replace_ref_inTm f liste_ref name),(replace_ref_inTm a liste_ref name))
-  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_inTm gA liste_ref name),(replace_ref_inTm p liste_ref name),(replace_ref_inTm a liste_ref name),
-				 (replace_ref_inTm b liste_ref name),(replace_ref_inTm q liste_ref name),(replace_ref_inTm x liste_ref name))
-  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_inTm gA liste_ref name),(replace_ref_inTm alpha liste_ref name),(replace_ref_inTm xs liste_ref name),(replace_ref_inTm f liste_ref name),
-			    (replace_ref_inTm a liste_ref name))
+  | Iter(p,n,f,a) -> Iter((replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
+  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_inTm p liste_ref ),(replace_ref_inTm c liste_ref ),(replace_ref_inTm tHen liste_ref ),(replace_ref_inTm eLse liste_ref ))
+  | P0(x) -> P0(replace_ref_exTm x liste_ref )
+  | P1(x) -> P1(replace_ref_exTm x liste_ref )
+  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),
+				     (replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
+  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_inTm gA liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm a liste_ref ),
+				 (replace_ref_inTm b liste_ref ),(replace_ref_inTm q liste_ref ),(replace_ref_inTm x liste_ref ))
+  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_inTm gA liste_ref ),(replace_ref_inTm alpha liste_ref ),(replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),
+			    (replace_ref_inTm a liste_ref ))
 
 
 (*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
