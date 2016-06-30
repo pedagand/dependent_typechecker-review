@@ -35,15 +35,16 @@ let rec find_return_type typ =
 (* permet de donner la liste des variables présentes dans le théorème *)
 let rec liste_me_var terme = 
   match terme with 
-  | Pi(Global(name),s,t) -> name :: (liste_me_var t)
-  | _ -> []
+  | Pi(Global(name),s,t) -> let () = Printf.printf "there is a var %s" name in name :: (liste_me_var t)
+  | _ -> let () = Printf.printf "there is no var ...." in []
+
 
 let create_upper_name name typ = 
-  (String.uppercase name) ^ "_" ^ (List.fold_right (fun x y -> x ^ "_" ^ y) (liste_me_var typ) "")
+  String.uppercase name
 
 (* prend un terme, calcule sa liste de variable et retourne l'application de celui ci *)
-let make_application terme typ = 
-  let liste_var = liste_me_var terme in
+let make_application terme typ liste_var = 
+  let () = Printf.printf "\nLISTE DE VAR  %s \n" (List.fold_right (fun x y -> x ^ " " ^ y) liste_var "") in 
   if liste_var = [] then terme 
   else Inv(List.fold_left (fun x y -> Appl(x,Inv(FVar(Global(y))))) (Ann(terme,typ)) liste_var)
 
@@ -74,16 +75,26 @@ let procedure_start_definition arbre=
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
   | Definition(name,Incomplete(typ,terme)) -> 
-     let first_def = Section([Item(init_definition typ name)]) in      
+     let defi = init_definition typ name in 
+     let first_def = Section([Item(defi)]) in      
      let arbre = (go_down(go_right(insert_right arbre first_def))) in 
-     let second_def = begin
-	 match second_def with 
-	 | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
-									modifie_return_type typ (Ref(create_upper_name name typ)),term))
-	 | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
-	 end in
-     let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
-     arbre
+     let first_def_type = begin 
+	 match defi with 
+	 | Definition(new_name,Complete(new_typ,new_term)) -> new_typ
+	 | _ -> failwith "procedure_start_definition : it's impossible"
+       end in 
+      let liste_var = liste_me_var first_def_type in  
+      let second_def = begin
+	  match second_def with 
+	  | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
+									 modifie_return_type typ (
+											       make_application 
+												 (Ref(create_upper_name name typ)) 
+												 first_def_type liste_var),term))
+	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
+	end in
+      let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
+      arbre
   | _ -> failwith "procedure_start_definition : something goes wrong during the creation of the definition"
 
 
@@ -159,7 +170,7 @@ let check (Loc(t,p)) =
   let terme = 
     begin 
       match t with 
-      | Item(Definition(name,Incomplete(typ,terme))) -> typ
+      | Item(Definition(name,Incomplete(typ,terme))) -> terme
       | _ -> failwith "check : you can't check something else than an incomplete definition" 
     end in 
   let name = 
@@ -171,11 +182,15 @@ let check (Loc(t,p)) =
   if check_if_no_hole_inTm terme 
   then begin
       let final_terme = replace_ref_inTm terme (get_def (Loc(t,p)) []) in 
-      let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit trics, il faut quand meme que j'en parle a pierre *)
-      let res_check = res_debug(check [] final_terme (big_step_eval_inTm typ []) "") in 
+      let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
+      let final_type = replace_ref_inTm typ (get_def (Loc(t,p)) []) in 
+      let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
+      let res_check = res_debug(check [] final_terme (big_step_eval_inTm final_type []) "") in 
       if res_check 
-      then replace_item (Loc(t,p)) (Item(Definition(name,Complete(typ,final_terme))))
-      else let () = Printf.printf "\nIt Seems that your term is not well checked \n" in 
+      then replace_item (Loc(t,p)) (Item(Definition(name,Complete(final_type,final_terme))))
+      else let () = Printf.printf "\nIt Seems that your term is not well checked \n
+				   the terme is : %s \n
+				   and the type is : %s\n" (pretty_print_inTm final_terme []) (pretty_print_inTm final_type []) in 
 	   (Loc(t,p))
     end
   else failwith "check : you can't check if there are at least one hole in your term" 

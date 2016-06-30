@@ -352,7 +352,6 @@ let rec def_is_in_the_liste env name_to_find=
   match env with 
   | [] -> failwith "def_is_in_the_liste : Dummy you call a ref wich is not present in the context ..... You can shut down your computer now" 
   | (name,typ,terme) :: suite -> 
-     let () = Printf.printf "\n we need to compare %s and %s" name name_to_find in 
      if name = name_to_find then terme else def_is_in_the_liste suite name_to_find
 
 (* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Ref on été modifiés 
