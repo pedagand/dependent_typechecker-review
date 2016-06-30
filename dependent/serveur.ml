@@ -1,5 +1,5 @@
 open Lambda 
-open Tactics 
+open Old_tactics 
 open Sexplib
 
 (*

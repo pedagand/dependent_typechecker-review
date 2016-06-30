@@ -249,6 +249,8 @@ let rec parse_term env t =
 	 DNil(parse_term env alpha)
       | Sexp.List [Sexp.Atom "dcons";a;xs] -> 
 	 DCons((parse_term env a),(parse_term env xs))
+      | Sexp.List [Sexp.Atom "ref"; Sexp.Atom reference] -> 
+	 Ref(reference)      
 (* ----------------------termes librairie-------------------------------- *)
       | Sexp.List [Sexp.Atom "+";n;a] -> 
 	 Inv(Appl(Appl(Ann((parse_term env (Sexp.of_string "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) n_plus (lambda ni_plus (lambda x_plus (succ x_plus))) a_plus)))")),

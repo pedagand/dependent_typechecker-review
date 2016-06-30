@@ -39,8 +39,13 @@ let rec liste_me_var terme =
   | _ -> let () = Printf.printf "there is no var ...." in []
 
 
+
+
 let create_upper_name name typ = 
   String.uppercase name
+
+  
+
 
 (* prend un terme, calcule sa liste de variable et retourne l'application de celui ci *)
 let make_application terme typ liste_var = 
@@ -103,10 +108,17 @@ let ask_variable_name ()=
   let () = Printf.printf "\n Please Choose a name for the var, (you can press enter and it will try to find a name for the var\n" in
   let var = read_line () in var
   
-     
+let ask_predicat typ =
+  let () = Printf.printf "\n Please give the predicate you wan't to use for this split of type : %s \n" typ in 
+  let pred = read_line () in pred
 
+let ask_induct_var () = 
+  let () = Printf.printf "\n Please give the name of the variable you wan't to use for this split \n" in 
+  let var = read_line () in var 
 
-
+let ask_the_hole terme name = 
+  let () = Printf.printf "\n The current terme is %s in which hole do you wan't to put your %s " (pretty_print_inTm terme []) name in 
+  let hole = read_line () in hole 
 
 
 (* -------------- Ensemble des tactics ------------ *)
@@ -195,6 +207,30 @@ let check (Loc(t,p)) =
     end
   else failwith "check : you can't check if there are at least one hole in your term" 
 
+
+let split_iter (Loc(t,p)) = 
+  let predicat = read (ask_predicat "(Pi x N *)") in 
+  let induct_var = ask_induct_var () in 
+  (* on construit les deux nouveaux goals à partir du prédicat *)
+  let first_goal = Section([Item(Intermediaire(Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero)),Hole_inTm(1)))]) in
+  let second_goal = Section([Item(Intermediaire(Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
+					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 0)))))),Hole_inTm(1)))]) in 
+  let terme = get_terme_item t in 
+  (*  let typ = get_type_item t in  *)
+  let hole = int_of_string (ask_the_hole terme "iter") in  
+  (* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *)
+  let new_terme = Inv(Iter(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in   
+  let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in
+  (* maintenant on va insérer dans l'arbre deux nouvelles sections correspondants au deux nouveux goals *)
+  let arbre = go_up (insert_some_right arbre [first_goal;second_goal]) in 
+  arbre
+  
+  
+  
+  
+
+
+
 let verif (Loc(t,p)) = 
   verif_and_push_up_item (Loc(t,p))
 
@@ -214,6 +250,7 @@ let choose_tactic () =
   match tactic with 
   | "intro" -> intro
   | "up" -> proof_up 
+  | "little up" -> go_up
   | "down" -> proof_down
   | "left" -> go_left
   | "right" -> go_right
@@ -223,9 +260,13 @@ let choose_tactic () =
   | "def" -> def
   | "check" -> check
   | "contexte def" -> contexte_def
+  | "split iter" -> split_iter (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
+			
   | _ -> failwith "you tactic doesnt exist yet but you can create it if you wan't" 
 
-
+(* --------------Idées-------------------*)
+(* - Une tactique permettant de sauvegarder l'ensemble des définitions complètes dans un fichier et donc une tactique pour faire le chemin
+inverse, importer des definitions depuis un fichier *)
   
 
 		  

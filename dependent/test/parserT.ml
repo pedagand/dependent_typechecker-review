@@ -59,6 +59,7 @@ let inputs
        ("(number 5)",(Succ(Succ(Succ(Succ(Succ(Zero)))))));
        ("(number 0)",Zero);
        ("(number 7)",(Succ(Succ(Succ(Succ(Succ(Succ(Succ(Zero)))))))));
+       ("(lambda x (lambda y (lambda x x)))",(Abs(Global"x",Abs(Global"y",Abs(Global"x",Inv(BVar 0))))))
       (* ( (pretty_print_inTm test1x []),(test1x)); *)
       (* (test1y),(test1x) ;*)]
 	

@@ -68,7 +68,18 @@ let print_to_screen_location loc =
   let () = Printf.printf "\nstart printing : \n %s \nstop printing\n" (pretty_print_location loc) in 
   loc
 		     
-
+let get_terme_item tree = 
+  match tree with 
+  | Item(Variable(name,typ)) -> failwith "this is a variable it don't have terme" 
+  | Item(Definition(name,Incomplete(typ,terme))) -> terme     
+  | Item(Intermediaire(typ,terme)) -> terme     
+  | _ -> failwith "get item : it's not possible to get this..." 
+let get_type_item tree = 
+  match tree with 
+  | Item(Variable(name,typ)) -> typ
+  | Item(Definition(name,Incomplete(typ,terme))) -> typ
+  | Item(Intermediaire(typ,terme)) -> typ
+  | _ -> failwith "get_type_item : it's not possible to get this..." 
 											 
 
 
@@ -188,14 +199,14 @@ and get_def (Loc(t,p)) env =
   match t,p with 
   | (Section(x),Top) -> get_def_tree_liste x env
   | (Item(x),Top) -> get_def_item x env
-  | (Section(x),p) -> get_def (go_up (Loc(t,p))) (get_def_tree_liste x env)
-  | (Item(x),p) -> get_def (go_up (Loc(t,p))) (get_def_item x env)
+  | (Section(x),p) -> get_def (go_up(Loc(t,p))) (get_def_tree_liste x env)
+  | (Item(x),p) -> get_def (go_up(Loc(t,p))) (get_def_item x env)
 
 let rec print_def env = 
   match env with 
   | [] -> ""
   | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm typ [] ^ " : " ^ pretty_print_inTm terme []
-				 ^ ")" ^ print_def suite
+				 ^ ")\n" ^ print_def suite
 
  
 (* A TEEEEEEEEEEESSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTEEEEEEEEEERRRRRRRRR *)
@@ -278,6 +289,7 @@ let pretty_print_state_proof (Loc(t,p)) =
 		 
 (*------------------Fonctions de manipulation --------------*)
 
+
 let replace_item (Loc(t,p)) tsub = 
   match t with 
   | Item(_) -> Loc(tsub,p)
@@ -317,6 +329,13 @@ let insert_down (Loc(t,p)) t1 =
   match t with
   | Item(_) -> failwith "down of item"
   | Section(sons) -> Loc(t1,Node([],p,sons))
+
+
+(* mettre les elements dans le sens normale de leur insertion, exemple : en argument liste [1;2;3] ils seront rangés en [1];[2];[3] *)
+let rec insert_some_right (Loc(t,p)) liste_section_or_item = 
+  match liste_section_or_item with 
+  | [] -> (Loc(t,p))
+  | elem :: suite -> insert_right (insert_some_right (Loc(t,p)) suite) elem 
 
 (* la fonction de delete tente tout d'abord de positionner le curseur a droite, sinon a gauche et sinon crée une section vide *)
 let delete (Loc(_,p)) = match p with
