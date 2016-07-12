@@ -8,8 +8,8 @@ open Lambda
 
 (* le premier inTm correpond au type et le second au terme *)
 type definition = 
-  | Complete of inTm * inTm 
-  | Incomplete of inTm * inTm 
+  | Complete of inTm * inTm
+  | Incomplete of inTm * inTm
 
 (* le premier inTm correspond au type et le second au terme *)
 type noeud = 
@@ -33,7 +33,6 @@ let rec pretty_print_inTm_user terme l =
   match terme with 
   | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm_user x (str :: l) ^ ")"
-  | Ref(x) -> x
   | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
   | Inv (x) ->  pretty_print_exTm_user x l
   | Pi (Global(str),s,t) -> "(pi " ^ str ^ " " ^ pretty_print_inTm_user s l ^ " " ^ pretty_print_inTm_user t (str :: l) ^ ")"
@@ -70,6 +69,7 @@ and pretty_print_exTm_user t l =
   | FVar (Global x) ->  x
   | FVar (Quote x) -> string_of_int x 
   | FVar (Bound x) -> string_of_int x
+  | Ref(x) -> x
   | Appl(x,y) -> "(" ^ pretty_print_exTm_user x l ^ " " ^ pretty_print_inTm_user y l ^ ")"
   | Iter(p,n,f,z) -> "(iter " ^ pretty_print_inTm_user p l ^ " " ^ pretty_print_inTm_user n l ^ " " ^ pretty_print_inTm_user f l ^ " " ^ pretty_print_inTm_user z l ^ ")"
   | Ifte(p,c,tHen,eLse) -> "(ifte " ^ pretty_print_inTm_user p l ^ " " ^ pretty_print_inTm_user c l ^ " " ^ pretty_print_inTm_user tHen l ^ " " ^ pretty_print_inTm_user eLse l ^ ")"
@@ -81,56 +81,6 @@ and pretty_print_exTm_user t l =
 			     pretty_print_inTm_user b l ^ " " ^pretty_print_inTm_user q l ^ " " ^pretty_print_inTm_user x l ^ ")"
   | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm_user bA l ^ " " ^ pretty_print_inTm_user alpha l ^ " " ^ pretty_print_inTm_user xs l ^ "  " ^ pretty_print_inTm_user f l ^ " " ^
 			 pretty_print_inTm_user a l ^ ")"
-(*=substitution_inTm *)
-let rec substitution_inTm t tsub var = 
-  match t with 
-  | Hole_inTm(x) -> Hole_inTm x
-  | Ref x -> Ref x 
-  | Inv x -> Inv(substitution_exTm x tsub var)
-  | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
-  | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(substitution_inTm x tsub var),(substitution_inTm y tsub (var+1)))
-  (*=End *)
-  | Sig(x,a,b) -> Sig(x,(substitution_inTm a tsub var),(substitution_inTm b tsub (var+1)))
-  | Zero -> Zero 
-  | Succ n -> Succ(substitution_inTm n tsub var)
-  | Nat -> Nat
-  | Bool -> Bool
-  | True -> True 
-  | False -> False 
-  | Pair(x,y) -> Pair((substitution_inTm x tsub var),(substitution_inTm y tsub var))
-  | Liste(alpha) -> Liste(substitution_inTm alpha tsub var)
-  | Nil(alpha) -> Nil(substitution_inTm alpha tsub var)
-  | Cons(a,xs) -> Cons((substitution_inTm a tsub var),(substitution_inTm xs tsub var))
-  | Vec(alpha,n) -> Vec((substitution_inTm alpha tsub var),(substitution_inTm n tsub var))
-  | DNil(alpha) -> DNil(substitution_inTm alpha tsub var)
-  | DCons(a,xs) -> DCons((substitution_inTm a tsub var),(substitution_inTm a tsub var))
-  | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((substitution_inTm gA tsub var),(substitution_inTm a tsub var),(substitution_inTm b tsub var))
-  | Refl(a) -> Refl(substitution_inTm a tsub var)
-(*=substitution_exTm *)
-and substitution_exTm  t tsub var = 
-  match t with 
-  | Hole_exTm(x) -> Hole_exTm x
-  | FVar x -> FVar x
-  | BVar x when x = var -> tsub
-  | BVar x -> BVar x
-  | Appl(x,y) -> Appl((substitution_exTm x tsub var),(substitution_inTm y tsub var))
-  | Ann(x,y) -> Ann((substitution_inTm x tsub var),(substitution_inTm y tsub var))
-  (*=End *)
-  | Iter(p,n,f,a) -> Iter((substitution_inTm p tsub var),(substitution_inTm n tsub var),(substitution_inTm f tsub var),(substitution_inTm a tsub var))
-  | Ifte(p,c,tHen,eLse) -> Ifte((substitution_inTm p tsub var),(substitution_inTm c tsub var),(substitution_inTm tHen tsub var),(substitution_inTm eLse tsub var))
-  | P0(x) -> P0(substitution_exTm x tsub var)
-  | P1(x) -> P1(substitution_exTm x tsub var)
-  | DFold(alpha,p,n,xs,f,a) -> DFold((substitution_inTm alpha tsub var),(substitution_inTm p tsub var),(substitution_inTm n tsub var),
-				     (substitution_inTm xs tsub var),(substitution_inTm f tsub var),(substitution_inTm a tsub var))
-  | Trans(gA,p,a,b,q,x) -> Trans((substitution_inTm gA tsub var),(substitution_inTm p tsub var),(substitution_inTm a tsub var),
-				 (substitution_inTm b tsub var),(substitution_inTm q tsub var),(substitution_inTm x tsub var))
-  | Fold(gA,alpha,xs,f,a) -> Fold((substitution_inTm gA tsub var),(substitution_inTm alpha tsub var),(substitution_inTm xs tsub var),(substitution_inTm f tsub var),
-			    (substitution_inTm a tsub var))
-
-
-
 
 
 let pretty_print_definition def = 
@@ -271,13 +221,13 @@ let proof_down arbre =
 (* Fonctions permettants de récupérer l'ensemble des définitions terminée à partir d'une position *)
 let rec get_def_item it env = 
   match it with 
-  | Definition(name,Complete(typ,terme)) -> ((name,typ,terme) :: env)
+  | Definition(name,Complete(typ,terme)) -> ((name,typ,Ann(terme,typ)) :: env)
   | _ -> env 
 and get_def_tree_liste tree_liste env = 
   match tree_liste with 
   | [] -> env 
-  | Item(Definition(name,Complete(typ,terme))) :: [] -> ((name,typ,terme) :: env)
-  | Item(Definition(name,Complete(typ,terme))) :: suite -> get_def_tree_liste suite ((name,typ,terme) :: env)
+  | Item(Definition(name,Complete(typ,terme))) :: [] -> ((name,typ,Ann(terme,typ)) :: env)
+  | Item(Definition(name,Complete(typ,terme))) :: suite -> get_def_tree_liste suite ((name,typ,Ann(terme,typ)) :: env)
   | other :: suite -> get_def_tree_liste suite env
 and get_def (Loc(t,p)) env = 
   match t,p with 
@@ -289,7 +239,7 @@ and get_def (Loc(t,p)) env =
 let rec print_def env = 
   match env with 
   | [] -> ""
-  | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm_user typ [] ^ " : " ^ pretty_print_inTm_user terme []
+  | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm_user typ [] ^ " : " ^ pretty_print_exTm_user terme []
 				 ^ ")\n" ^ print_def suite
 
  
@@ -324,6 +274,10 @@ and get_env (Loc(t,p)) env =
   | (Section(x),p) -> get_env (go_up (Loc(t,p))) (get_env_tree_liste x env)
   | (Item(x),p) -> get_env (go_up (Loc(t,p))) (get_env_item x env)
 		    
+let rec return_type_var_env env var = 
+  match env with 
+  | [] -> failwith "returne_type_var_env : la variable ne fait pas partis de l'environement" 
+  | (name,typ) :: suite -> if name = var then typ else return_type_var_env suite var
 (* Fonctions permettants d'afficher une liste de paires (name,type) *)
 
 let rec print_env env = 

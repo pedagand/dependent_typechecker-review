@@ -21,7 +21,7 @@ let rec modifie_return_terme typ return =
 let rec modifie_return_type typ return = 
   match typ with
   | Pi(n,s,t) -> Pi(n,s,(modifie_return_type t return))
-  | Nat -> return 
+  | Nat -> return
   | _ -> failwith "modifie_return_type : mettre a jour la fonction au fur et à mesure pour quelle accepte tous les types"
 
 
@@ -45,10 +45,14 @@ let create_upper_name name typ =
 
 
 (* prend un terme, calcule sa liste de variable et retourne l'application de celui ci *)
-let make_application terme typ liste_var = 
-  let () = Printf.printf "\nLISTE DE VAR  %s \n" (List.fold_right (fun x y -> x ^ " " ^ y) liste_var "") in 
-  if liste_var = [] then terme 
-  else Inv(List.fold_left (fun x y -> Appl(x,Inv(FVar(Global(y))))) (Ann(terme,typ)) liste_var)
+(* let make_application terme typ liste_var =  *)
+(*   let () = Printf.printf "\nLISTE DE VAR  %s \n" (List.fold_right (fun x y -> x ^ " " ^ y) liste_var "") in  *)
+(*   if liste_var = [] then terme  *)
+(*   else Inv(List.fold_left (fun x y -> Appl(x,Inv(FVar(Global(y))))) (Ann(terme,typ)) liste_var) *)
+let make_application (terme : exTm) liste_var =
+  let () = Printf.printf "\nLISTE DE VAR  %s \n" (List.fold_right (fun x y -> x ^ " " ^ y) liste_var "") in
+  if liste_var = [] then terme
+  else List.fold_left (fun x y -> Appl(x,Inv(FVar(Global(y))))) terme liste_var
 
 
 
@@ -89,10 +93,10 @@ let procedure_start_definition arbre=
       let second_def = begin
 	  match second_def with 
 	  | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
-									 modifie_return_type typ (
-											       make_application 
-												 (Ref(create_upper_name name typ)) 
-												 first_def_type liste_var),term))
+									 modifie_return_type typ (Inv(
+											       (make_application 
+												 (Ref(create_upper_name name typ))
+												  liste_var))),term))
 	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
 	end in
       let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
@@ -101,9 +105,14 @@ let procedure_start_definition arbre=
 
 
 (* ---------------- Routines de demande de saisies pour l'utilisateur ----------------------- *)
-let ask_variable_name ()= 
+(* transformer toutes les fonctions de la sorte *)
+let rec ask_variable_name ()= 
   let () = Printf.printf "\n Please Choose a name for the var, (you can press enter and it will try to find a name for the var\n" in
-  let var = read_line () in var
+  let var = read_line () in begin 
+      match var with 
+      | "" -> ask_variable_name ()
+      | _ -> var
+      end 
   
 let ask_predicat typ =
   let () = Printf.printf "\n Please give the predicate you wan't to use for this split of type : %s \n" typ in 
@@ -126,10 +135,6 @@ let ask_the_hole terme name =
 (* -------------- Ensemble des tactics ------------ *)
 let intro (Loc(t,p)) = 
   let var = ask_variable_name () in 
-  let var = begin if var = "" 
-		  then failwith "Intro : Enter doesnt work" (* modifier afin de crée une variable *)
-		  else var 
-	    end in 
   let terme_and_type = begin 
       match t with 
   | Item(Variable(name,terme)) -> failwith "intro : You can't intro something which is not a def"
@@ -143,6 +148,7 @@ let intro (Loc(t,p)) =
 		       | (_,Pi(x,s,t)) -> s
 		       | _ -> failwith "intro : you can't intro something which is not an intro" 
 		 end in 
+  (* je fais bien la substitution donc pas de soucis *)
   let new_type = begin match terme_and_type with 
 		       | (_,Pi(x,s,t)) -> substitution_inTm t (FVar x) 0
 		       | _ -> failwith "intro : you can't intro something which is not an intro"
@@ -209,24 +215,64 @@ let check (Loc(t,p)) =
     end
   else failwith "check : you can't check if there are at least one hole in your term" 
 
+(* old version of split iter *)
+(* let split_iter (Loc(t,p)) =  *)
+(*   let predicat = read (ask_predicat "(Pi x N *\)") in   *)
+(*   let induct_var = ask_induct_var () in  *)
+(*   (\* on construit les deux nouveaux goals à partir du prédicat *\) *)
+(*   let first_goal = Section([Item(Intermediaire(Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero)),Hole_inTm(1)))]) in *)
+(*   let second_goal = Section([Item(Intermediaire(Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))), *)
+(* 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 0)))))),Hole_inTm(1)))]) in  *)
+(*   let terme = get_terme_item t in  *)
+(*   (\*  let typ = get_type_item t in  *\) *)
+(*   let hole = int_of_string (ask_the_hole terme "iter") in   *)
+(*   (\* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *\) *)
+(*   let new_terme = Inv(Iter(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in    *)
+(*   let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in *)
+(*   (\* maintenant on va insérer dans l'arbre deux nouvelles sections correspondants au deux nouveux goals *\) *)
+(*   let arbre = insert_some_right arbre [first_goal;second_goal] in  *)
+(*   arbre *)
 
-let split_iter (Loc(t,p)) = 
-  let predicat = read (ask_predicat "(Pi x N *)") in  
-  let induct_var = ask_induct_var () in 
-  (* on construit les deux nouveaux goals à partir du prédicat *)
-  let first_goal = Section([Item(Intermediaire(Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero)),Hole_inTm(1)))]) in
-  let second_goal = Section([Item(Intermediaire(Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
-					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 0)))))),Hole_inTm(1)))]) in 
-  let terme = get_terme_item t in 
-  (*  let typ = get_type_item t in  *)
-  let hole = int_of_string (ask_the_hole terme "iter") in  
+(* on sait que le prédicat iter est de type (pi x N Star ) *)
+let create_iter_predicat returneType var_induct = 
+  let predicat = Abs(Global "x",returneType) in 
+  bound_var_inTm predicat 0 var_induct  
+  
+  
+  
+
+let split_iter (Loc(t,p)) induct_var = 
+  let returne_type  = get_type_focus (Loc(t,p)) in 
+  let predicat = create_iter_predicat returne_type induct_var in    
+  let first_goal_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero))) []) in 
+  let second_goal_type = value_to_inTm 0 (big_step_eval_inTm 
+					      (Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
+					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 0)))))))
+					     []) in 
+  let first_goal = Section([Item(Intermediaire(first_goal_type,Hole_inTm(1)))]) in 
+  let second_goal = Section([Item(Intermediaire(second_goal_type,Hole_inTm(1)))]) in
+  let terme = get_terme_item t in  
+  let hole = int_of_string (ask_the_hole terme "iter") in
   (* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *)
-  let new_terme = Inv(Iter(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in   
+  let new_terme = Inv(Iter(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in
   let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in
   (* maintenant on va insérer dans l'arbre deux nouvelles sections correspondants au deux nouveux goals *)
-  let arbre = insert_some_right arbre [first_goal;second_goal] in 
+  let arbre = insert_some_right arbre [first_goal;second_goal] in
   arbre
+  
+  
 
+let split (Loc(t,p)) = 
+  let env = get_env (Loc(t,p)) [] in 
+  let induct_var = ask_induct_var () in
+  let var_type = return_type_var_env env induct_var in 
+  begin 
+  match var_type with 
+  | Nat -> split_iter (Loc(t,p)) induct_var
+  | _ -> failwith "split : you split on a var that has not a type recognise by the program"
+  end
+  
+  
 
 let return (Loc(t,p)) = 
   let terme = get_terme_item t in 
@@ -271,7 +317,8 @@ let choose_tactic () =
   | "def" -> def
   | "check" -> check
   | "contexte def" -> contexte_def
-  | "split iter" -> split_iter (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
+ (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
+  | "split" -> split
   | "return" -> return
 			
   | _ -> nothing

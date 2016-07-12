@@ -20,7 +20,6 @@ type name =
 type inTm =
   (*=End *)
   | Hole_inTm of int
-  | Ref of string
   (*=inTm *)
   | Abs of name * inTm
   | Inv of exTm
@@ -56,6 +55,7 @@ type inTm =
 and exTm = 
 (*=End *)
   | Hole_exTm of int 
+  | Ref of string
 (*=exTm *) 
   | Ann of inTm * inTm 
   | BVar of int 
@@ -110,6 +110,7 @@ type value =
   | VId of value * value * value 
   | VRefl of value 
 and neutral = 
+  | NRef of string
   | NFree of name 
   | NApp of neutral * value 
   | NIter of value * value * value * value
@@ -249,8 +250,6 @@ let rec parse_term env t =
 	 DNil(parse_term env alpha)
       | Sexp.List [Sexp.Atom "dcons";a;xs] -> 
 	 DCons((parse_term env a),(parse_term env xs))
-      | Sexp.List [Sexp.Atom "ref"; Sexp.Atom reference] -> 
-	 Ref(reference)      
 (* ----------------------termes librairie-------------------------------- *)
       | Sexp.List [Sexp.Atom "+";n;a] -> 
 	 Inv(Appl(Appl(Ann((parse_term env (Sexp.of_string "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) n_plus (lambda ni_plus (lambda x_plus (succ x_plus))) a_plus)))")),
@@ -279,6 +278,8 @@ and parse_exTm env t =
      P0(parse_exTm env x)
   | Sexp.List [Sexp.Atom "p1";x] ->
      P1(parse_exTm env x)
+  | Sexp.List [Sexp.Atom "ref"; Sexp.Atom reference] -> 
+     Ref(reference)      
   | Sexp.List [Sexp.Atom "iter"; p ; n ; f ; z] ->
      Iter((parse_term env p),(parse_term env n),(parse_term env f),(parse_term env z))
   | Sexp.List [Sexp.Atom ":" ;x; t] -> 
@@ -305,7 +306,6 @@ let read t = parse_term [] (Sexp.of_string t)
 let rec replace_hole_inTm terme tsub num = 
   match terme with 
   | Hole_inTm(x) -> if x = num then tsub else Hole_inTm(x)
-  | Ref(x) -> Ref(x)
   | Inv x -> Inv(replace_hole_exTm x tsub num)
   | Abs(x,y) -> Abs(x,(replace_hole_inTm y tsub (num)))
   | Star -> Star
@@ -333,6 +333,7 @@ and replace_hole_exTm  terme tsub num =
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
   | Hole_exTm(x) -> if x = num then Ann(tsub,Star) else Hole_exTm(x)
+  | Ref(x) -> Ref(x)
   | FVar x -> FVar x
   | BVar x -> BVar x
   | Appl(x,y) -> Appl((replace_hole_exTm x tsub num),(replace_hole_inTm y tsub num))
@@ -361,10 +362,6 @@ utilise is_in_the_list qui est une fonction dans le zipper *)
 let rec replace_ref_inTm terme liste_ref = 
   match terme with 
   | Hole_inTm(x) -> failwith "replace_ref_inTm : you can't have a hole when you are replacing the ref" 
-  | Ref(x) -> begin 
-      let terme = def_is_in_the_liste liste_ref x in 
-      terme
-    end
   | Inv x -> Inv(replace_ref_exTm x liste_ref)
   | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref ))
   | Star -> Star
@@ -391,6 +388,10 @@ and replace_ref_exTm terme liste_ref  =
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
   | Hole_exTm(x) -> failwith "replace_ref_exTm : I just say before that you can't check something which is not finish, how did you manage that"
+  | Ref(x) -> begin 
+      let terme = def_is_in_the_liste liste_ref x in 
+      terme
+    end
   | FVar x -> FVar x
   | BVar x -> BVar x
   | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref ),(replace_ref_inTm y liste_ref ))
@@ -412,7 +413,6 @@ and replace_ref_exTm terme liste_ref  =
 let rec check_if_no_hole_inTm terme = 
   match terme with 
   | Hole_inTm(x) -> false
-  | Ref(x) -> true
   | Inv x -> check_if_no_hole_exTm x 
   | Abs(x,y) -> check_if_no_hole_inTm y 
   | Star -> true 
@@ -440,6 +440,7 @@ and check_if_no_hole_exTm terme =
   | Hole_exTm(x) -> false
   | FVar x -> true
   | BVar x -> true
+  | Ref(x) -> true
   | Appl(x,y) -> check_if_no_hole_exTm x && check_if_no_hole_inTm y 
   | Ann(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
   (*=End *)
@@ -461,7 +462,6 @@ let rec pretty_print_inTm t l =
   match t with 
   | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm x (str :: l) ^ ")"
-  | Ref(x) -> x
   | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
   | Inv (x) ->  pretty_print_exTm x l
   | Pi (Global(str),s,t) -> "(pi " ^ str ^ " " ^ pretty_print_inTm s l ^ " " ^ pretty_print_inTm t (str :: l) ^ ")"
@@ -494,6 +494,7 @@ and pretty_print_exTm t l =
 	| Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong list is to short BVar de " ^ string_of_int x) 
 	| _ -> List.nth l x
     end
+  | Ref(x) -> x
   | FVar (Global x) ->  x
   | FVar (Quote x) -> string_of_int x 
   | FVar (Bound x) -> string_of_int x
@@ -512,7 +513,6 @@ and pretty_print_exTm t l =
 let rec substitution_inTm t tsub var = 
   match t with 
   | Hole_inTm(x) -> Hole_inTm x
-  | Ref x -> Ref x 
   | Inv x -> Inv(substitution_exTm x tsub var)
   | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
   | Star -> Star
@@ -542,6 +542,7 @@ and substitution_exTm  t tsub var =
   | FVar x -> FVar x
   | BVar x when x = var -> tsub
   | BVar x -> BVar x
+  | Ref x -> Ref x 
   | Appl(x,y) -> Appl((substitution_exTm x tsub var),(substitution_inTm y tsub var))
   | Ann(x,y) -> Ann((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   (*=End *)
@@ -556,6 +557,57 @@ and substitution_exTm  t tsub var =
   | Fold(gA,alpha,xs,f,a) -> Fold((substitution_inTm gA tsub var),(substitution_inTm alpha tsub var),(substitution_inTm xs tsub var),(substitution_inTm f tsub var),
 			    (substitution_inTm a tsub var))
 
+(* Utilisation de la fonction, si on a un terme de la forme (lambda ....) et que l'on souhaite binder sur le lambda en cour il faut mettre 0 *)
+let rec bound_var_inTm t i var = 
+  match t with 
+  | Hole_inTm(x) -> Hole_inTm x
+  | Inv x -> Inv(bound_var_exTm x i var)
+  | Abs(x,y) -> Abs(x,(bound_var_inTm y (i + 1) var))
+  | Star -> Star
+  | Pi(v,x,y) -> Pi(v,(bound_var_inTm x i var),(bound_var_inTm y (i + 1) var))
+  (*=End *)
+  | Sig(x,a,b) -> Sig(x,(bound_var_inTm a i var),(bound_var_inTm b (i + 1) var))
+  | Zero -> Zero 
+  | Succ n -> Succ(bound_var_inTm n i var)
+  | Nat -> Nat
+  | Bool -> Bool
+  | True -> True 
+  | False -> False 
+  | Pair(x,y) -> Pair((bound_var_inTm x i var),(bound_var_inTm y i var))
+  | Liste(alpha) -> Liste(bound_var_inTm alpha i var)
+  | Nil(alpha) -> Nil(bound_var_inTm alpha i var)
+  | Cons(a,xs) -> Cons((bound_var_inTm a i var),(bound_var_inTm xs i var))
+  | Vec(alpha,n) -> Vec((bound_var_inTm alpha i var),(bound_var_inTm n i var))
+  | DNil(alpha) -> DNil(bound_var_inTm alpha i var)
+  | DCons(a,xs) -> DCons((bound_var_inTm a i var),(bound_var_inTm a i var))
+  | What(a) -> What(a)
+  | Id(gA,a,b) -> Id((bound_var_inTm gA i var),(bound_var_inTm a i var),(bound_var_inTm b i var))
+  | Refl(a) -> Refl(bound_var_inTm a i var)
+(*=replace_var_exTm *)
+and bound_var_exTm  t i var = 
+  match t with 
+  | Hole_exTm(x) -> Hole_exTm x
+(* ici i - 1 parceque on va forcément traverser un premier lambda et que c'est mieux si on doit mettre 0 pour binder sur le premier lambda 
+plustot que de mettre -1 comme argument *)
+  | FVar(Global x) -> begin if x = var then BVar(i - 1) else FVar(Global x) end 
+  | FVar(x) -> FVar(x)
+  | BVar x -> BVar x
+  | Ref x -> Ref x 
+  | Appl(x,y) -> Appl((bound_var_exTm x i var),(bound_var_inTm y i var))
+  | Ann(x,y) -> Ann((bound_var_inTm x i var),(bound_var_inTm y i var))
+  (*=End *)
+  | Iter(p,n,f,a) -> Iter((bound_var_inTm p i var),(bound_var_inTm n i var),(bound_var_inTm f i var),(bound_var_inTm a i var))
+  | Ifte(p,c,tHen,eLse) -> Ifte((bound_var_inTm p i var),(bound_var_inTm c i var),(bound_var_inTm tHen i var),(bound_var_inTm eLse i var))
+  | P0(x) -> P0(bound_var_exTm x i var)
+  | P1(x) -> P1(bound_var_exTm x i var)
+  | DFold(alpha,p,n,xs,f,a) -> DFold((bound_var_inTm alpha i var),(bound_var_inTm p i var),(bound_var_inTm n i var),
+				     (bound_var_inTm xs i var),(bound_var_inTm f i var),(bound_var_inTm a i var))
+  | Trans(gA,p,a,b,q,x) -> Trans((bound_var_inTm gA i var),(bound_var_inTm p i var),(bound_var_inTm a i var),
+				 (bound_var_inTm b i var),(bound_var_inTm q i var),(bound_var_inTm x i var))
+  | Fold(gA,alpha,xs,f,a) -> Fold((bound_var_inTm gA i var),(bound_var_inTm alpha i var),(bound_var_inTm xs i var),(bound_var_inTm f i var),
+			    (bound_var_inTm a i var))
+
+
 
 
 let vfree n = VNeutral(NFree n)
@@ -565,10 +617,11 @@ let rec big_step_eval_inTm t envi =
 (*=End *)
   match t with 
   | Hole_inTm x -> failwith "Big_step_eval : You can't eval a Hole" 
-  | Ref x -> failwith "Big_step_eval : You can't eval a Def"
+(*  | Ref x -> failwith "Big_step_eval : You can't eval a Def" *)
 (*=big_step_inv *)
   | Inv(i) -> big_step_eval_exTm i envi
 (*=End *)
+
   | Abs(x,y) -> VLam(function arg -> (big_step_eval_inTm y (arg::envi)))
 (*=big_step_new *)
   | Star -> VStar
@@ -636,6 +689,7 @@ and big_step_eval_exTm t envi =
   | Ann(x,_) -> big_step_eval_inTm x envi 
   | FVar(v) -> vfree v 
   | BVar(v) -> List.nth envi v 
+  | Ref x -> VNeutral(NRef x) 		    
   | Appl(x,y) -> vapp((big_step_eval_exTm x envi),(big_step_eval_inTm y envi))    
 (*=big_step_iter *)
   | Iter(p,n,f,a) -> vitter ((big_step_eval_inTm p envi),
@@ -724,6 +778,7 @@ and neutral_to_exTm i v =
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
   (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
   | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
+  | NRef x-> Ref x
   | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
   | NFold(p,alpha,xs,f,a) -> Fold((value_to_inTm i p),(value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
@@ -1002,7 +1057,6 @@ let rec contexte_to_string contexte =
 let rec check contexte inT ty steps = 
   match inT with
   | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
-  | Ref x -> create_report false (contexte_to_string contexte) steps "Maybe you juste couldn't do it"
   | Abs(x,y) -> 
      begin  
        match ty with 
@@ -1199,6 +1253,7 @@ and synth contexte exT steps =
   | BVar x -> create_retSynth (create_report false (contexte_to_string contexte) steps "BVar : not possible during type checking") VStar
   | FVar x -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
 (*=End *)
+  | Ref x -> create_retSynth (create_report false (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") VStar
   | P0(x) -> let synth_x = synth contexte x (pretty_print_exTm exT [] ^ ";" ^ steps) in 
 	     if res_debug_synth synth_x
 	     then
