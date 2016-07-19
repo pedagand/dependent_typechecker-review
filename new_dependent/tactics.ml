@@ -144,7 +144,7 @@ let intro (Loc(t,p)) =
   | Item(Variable(name,terme)) -> failwith "intro : You can't intro something which is not a def"
   | Item(Definition(name,Incomplete(typ,terme))) -> 
      ((replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1),typ)
-  | Item(Intermediaire(typ,terme)) -> 
+  | Item(Intermediaire(n,typ,terme)) -> 
      ((replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1),typ)
   | _ -> failwith "intro : this case is supposed to be impossible" 
     end in 
@@ -163,7 +163,7 @@ let intro (Loc(t,p)) =
   let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
   let new_var = Item(Variable(var,var_type)) in
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
-  let new_son = Item(Intermediaire(new_type,Hole_inTm(1))) in 
+  let new_son = Item(Intermediaire(1,new_type,Hole_inTm(1))) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
 let intro_auto (Loc(t,p)) = 
@@ -190,7 +190,7 @@ let intro_auto (Loc(t,p)) =
   let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
   let new_var = Item(Variable(name_var,typ_var)) in
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
-  let new_son = Item(Intermediaire(new_typ,Hole_inTm(1))) in 
+  let new_son = Item(Intermediaire(1,new_typ,Hole_inTm(1))) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
 let rec intros arbre = 
@@ -213,8 +213,8 @@ let axiome (Loc(t,p)) =
       | (Loc(Item(Variable(name,terme)),p)) -> failwith "axiome : You can't intro something which is not a def or intermediaire"
       | (Loc(Item(Definition(name,Incomplete(typ,terme))),p)) -> 
 	 (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)))),p))
-      | (Loc(Item(Intermediaire(typ,terme)),p)) -> 
-	 (Loc(Item(Intermediaire(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1))),p))
+      | (Loc(Item(Intermediaire(n,typ,terme)),p)) -> 
+	 (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1))),p))
       | _ -> failwith "axiome : this case is supposed to be impossible" 
       end in 
     verif_and_push_up_item new_arbre
@@ -289,8 +289,8 @@ let split_iter (Loc(t,p)) induct_var =
 					      (Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
-  let first_goal = Section([Item(Intermediaire(first_goal_type,Hole_inTm(1)))]) in 
-  let second_goal = Section([Item(Intermediaire(second_goal_type,Hole_inTm(1)))]) in
+  let first_goal = Section([Item(Intermediaire(1,first_goal_type,Hole_inTm(1)))]) in 
+  let second_goal = Section([Item(Intermediaire(2,second_goal_type,Hole_inTm(1)))]) in
   let terme = get_terme_item (Loc(t,p)) in  
   let hole = int_of_string (ask_the_hole terme "iter") in
   (* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *)

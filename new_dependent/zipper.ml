@@ -12,10 +12,11 @@ type definition =
   | Incomplete of inTm * inTm
 
 (* le premier inTm correspond au type et le second au terme *)
+(* je rajoute un int pour dire quel fils il est *)
 type noeud = 
   | Variable of string * inTm 
   | Definition of string * definition
-  | Intermediaire of inTm * inTm 
+  | Intermediaire of int * inTm * inTm 
 
 type tree =
   | Item of noeud     
@@ -92,7 +93,7 @@ let pretty_print_item_debug item =
   match item with 
   | Item(Variable(name,term)) -> "(Var " ^ name ^ " : " ^ pretty_print_inTm_user term [] ^ ")"
   | Item(Definition(name,def)) -> "(Def " ^ name ^ " \n " ^ pretty_print_definition def ^ ")"
-  | Item(Intermediaire(typ,terme)) -> "(Inter " ^ pretty_print_inTm_user typ [] ^ " " ^ pretty_print_inTm_user terme [] ^ ")"
+  | Item(Intermediaire(n,typ,terme)) -> "(Inter " ^ string_of_int n ^ " " ^ pretty_print_inTm_user typ [] ^ " " ^ pretty_print_inTm_user terme [] ^ ")"
   | Section(x) -> failwith "pretty_print_inTm_user : can't print a section" 
 
 let rec pretty_print_tree_liste tree_liste = 
@@ -131,15 +132,19 @@ let get_terme_item tree =
   match tree with 
   | Loc(Item(Variable(name,typ)),t) -> failwith "this is a variable it don't have terme" 
   | Loc(Item(Definition(name,Incomplete(typ,terme))),t) -> terme     
-  | Loc(Item(Intermediaire(typ,terme)),t) -> terme     
+  | Loc(Item(Intermediaire(n,typ,terme)),t) -> terme     
   | _ -> failwith "get item : it's not possible to get this..." 
 let get_type_item tree = 
   match tree with 
   | Loc(Item(Variable(name,typ)),t) -> typ
   | Loc(Item(Definition(name,Incomplete(typ,terme))),t) -> typ
-  | Loc(Item(Intermediaire(typ,terme)),t) -> typ
+  | Loc(Item(Intermediaire(n,typ,terme)),t) -> typ
   | _ -> failwith "get_type_item : it's not possible to get this..." 
-											 
+let get_num_Inter tree = 
+  match tree with 					
+  | Loc(Item(Intermediaire(n,typ,terme)),t) -> n
+  | _ -> failwith "get_num_Inter : you can't ask for a num if you are no on Inter" 					 
+
 
 
   
@@ -190,7 +195,7 @@ let rec stop_when_def_inter arbre =
   | Loc(_,Top) -> arbre
   | Loc(Item(Variable(name,terme)),p) -> stop_when_def_inter (go_up arbre)
   | Loc(Item(Definition(name,terme)),p) -> arbre
-  | Loc(Item(Intermediaire(name,terme)),p) -> arbre
+  | Loc(Item(Intermediaire(n,name,terme)),p) -> arbre
   | Loc(Section(x),p) -> stop_when_def_inter (go_full_left arbre)
 
 let proof_up arbre = 
@@ -305,7 +310,7 @@ let pretty_print_item item =
   match item with 
   | Item(Variable(name,term)) -> "(Var " ^ name ^ " \n " ^ pretty_print_inTm_user term [] ^ ")"
   | Item(Definition(name,def)) -> "(Def " ^ name ^ " \n " ^ pretty_print_definition def ^ ")"
-  | Item(Intermediaire(typ,terme)) -> "(Inter \n goal: " ^ pretty_print_inTm_user typ [] ^ "\n" ^ pretty_print_inTm_user terme [] ^ ")"
+  | Item(Intermediaire(n,typ,terme)) -> "(Inter \n goal: " ^ pretty_print_inTm_user typ [] ^ "\n" ^ pretty_print_inTm_user terme [] ^ ")"
   | Section(x) -> failwith "pretty_print_inTm_user : can't print a section" 
 let rec pretty_print_tree_liste tree_liste n= 
   match tree_liste with 
@@ -339,21 +344,21 @@ let replace_item (Loc(t,p)) tsub =
 
 let complete_focus_terme (Loc(t,p)) tsub num = 
   match t with 
-  | Item(Intermediaire(typ,terme)) -> Loc(Item(Intermediaire(typ,(replace_hole_inTm terme tsub num))),p)
+  | Item(Intermediaire(n,typ,terme)) -> Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme tsub num))),p)
   | Item(Definition(name,Complete(typ,terme))) -> Loc(Item(Definition(name,Complete(typ,(replace_hole_inTm terme tsub num)))),p)
   | Item(Definition(name,Incomplete(typ,terme))) -> Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme tsub num)))),p)
   | _ -> failwith "complete_focus_terme : you can't get the type of something else than an item"
 
 let get_type_focus (Loc(t,p)) = 
   match t with 
-  | Item(Intermediaire(typ,terme)) -> typ
+  | Item(Intermediaire(n,typ,terme)) -> typ
   | Item(Definition(name,Complete(typ,terme))) -> typ
   | Item(Definition(name,Incomplete(typ,terme))) -> typ
   | _ -> failwith "get_type_focus : you can't get the type of something else than an item"
 
 let get_terme_focus (Loc(t,p)) = 
   match t with 
-  | Item(Intermediaire(typ,terme)) -> terme
+  | Item(Intermediaire(n,typ,terme)) -> terme
   | Item(Definition(name,Complete(typ,terme))) -> terme
   | Item(Definition(name,Incomplete(typ,terme))) -> terme
   | _ -> failwith "get_terme_focus : you can't get the type of something else than an item"
@@ -395,7 +400,7 @@ let verif_and_push_up_item (Loc(t,p)) =
   let terme_type = 
     begin 
   match t with 
-  | Item(Intermediaire(typ,terme)) -> (typ,terme)
+  | Item(Intermediaire(n,typ,terme)) -> (typ,terme)
   | Item(Definition(name,Complete(typ,terme))) -> (typ,terme)
   | Item(Definition(name,Incomplete(typ,terme))) -> (typ,terme)
   | _ -> failwith "push_to_the_max : must not append" 
@@ -409,23 +414,23 @@ let verif_and_push_up_item (Loc(t,p)) =
     (* ici petit up pour supprimer l'ensemble de la section *)
     let arbre = delete (Loc(t,p)) in  
     let arbre = proof_up arbre (* arbre *) in (* LOl *)
-    let () = Printf.printf "\n %s \n Quel est le trou à remplir ?\n" (pretty_print_state_proof arbre) in 
-    let trou = int_of_string (read_line ()) in 
+(*    let () = Printf.printf "\n %s \n Quel est le trou à remplir ?\n" (pretty_print_state_proof arbre) in *)
+    let trou = get_num_Inter (Loc(t,p)) (* int_of_string (read_line ()) *) in 
     let terme_sup = begin 
 	match arbre with 
-	| Loc(Item(Intermediaire(typ,terme_sup)),p) -> (terme_sup,"inter",typ)
+	| Loc(Item(Intermediaire(n,typ,terme_sup)),p) -> (terme_sup,"inter",typ)
 	| Loc(Item(Definition(name,Incomplete(typ,terme_sup))),p) -> (terme_sup,name,typ)
 	| _ -> failwith "push_to_the_max : this kinds of things must not append"
       end in 
     let arbre = 
       begin
 	match terme_sup with 
-	| (x,"inter",typ) -> replace_item arbre (Item(Intermediaire(typ,replace_hole_inTm x terme trou)))
+	| (x,"inter",typ) -> replace_item arbre (Item(Intermediaire(1,(* ce num cest juste pour pas buguer *)typ,replace_hole_inTm x terme trou)))
 	| (x,name,typ) -> replace_item arbre (Item(Definition(name,Incomplete(typ,replace_hole_inTm x terme trou))))	       
     end in 
     arbre    
   else (Loc(t,p))
 
-
+  
 
 
