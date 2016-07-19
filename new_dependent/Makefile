@@ -23,6 +23,8 @@ serveur.native: serveur.ml
 
 zipper.native: zipper.ml
 	ocamlbuild -use-ocamlfind zipper.native
+compiler.native: compiler.ml
+	ocamlbuild -use-ocamlfind compiler.native
 
 client.native: client.ml
 	ocamlbuild -use-ocamlfind client.native

@@ -29,6 +29,7 @@ let inputs =
     ("(lambda x (lambda y x))","(-> * (-> (-> * *) *))",true); 
     ("(lambda x zero)","(-> * N)",true);
     ("(lambda x N)","(-> N *)",true);
+    ("(lambda x (lambda y (succ y)))","(-> N (-> N N))",true);
 
 
 
@@ -115,6 +116,9 @@ let inputs =
     ("(+ (succ (succ zero)) (succ zero))","N",true);
     ("(mult (succ (succ zero)) (succ zero))","N",true);
     ("(pow (succ (succ zero)) (succ zero))","N",true);
+    ("(lambda m (lambda n (iter (lambda x N) m (lambda x (lambda y (succ y))) n)))","(pi m N (pi n N N))",true);
+    ("(lambda m (iter (lambda x (pi n N N)) m (lambda x (lambda y (lambda n (succ (y n))))) (lambda n n)))",
+     "(pi m N (pi n N N))",true); 
 
 
     ("(succ N)","N",false);

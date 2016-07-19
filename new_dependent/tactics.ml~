@@ -95,7 +95,7 @@ let procedure_start_definition arbre=
 	  | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
 									 modifie_return_type typ (Inv(
 											       (make_application 
-												 (Ref(create_upper_name name typ))
+												 (Etiquette(create_upper_name name typ))
 												  liste_var))),term))
 	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
 	end in
@@ -201,9 +201,9 @@ let check (Loc(t,p)) =
     end in 
   if check_if_no_hole_inTm terme 
   then begin
-      let final_terme = replace_ref_inTm terme (get_def (Loc(t,p)) []) in 
+      let final_terme = replace_etiquette_inTm terme (get_def (Loc(t,p)) []) in 
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-      let final_type = replace_ref_inTm typ (get_def (Loc(t,p)) []) in 
+      let final_type = replace_etiquette_inTm typ (get_def (Loc(t,p)) []) in 
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
       let res_check = res_debug(check [] final_terme (big_step_eval_inTm final_type []) "") in 
       if res_check 
@@ -247,7 +247,7 @@ let split_iter (Loc(t,p)) induct_var =
   let first_goal_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero))) []) in 
   let second_goal_type = value_to_inTm 0 (big_step_eval_inTm 
 					      (Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
-					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 0)))))))
+					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
   let first_goal = Section([Item(Intermediaire(first_goal_type,Hole_inTm(1)))]) in 
   let second_goal = Section([Item(Intermediaire(second_goal_type,Hole_inTm(1)))]) in
@@ -259,6 +259,9 @@ let split_iter (Loc(t,p)) induct_var =
   (* maintenant on va insérer dans l'arbre deux nouvelles sections correspondants au deux nouveux goals *)
   let arbre = insert_some_right arbre [first_goal;second_goal] in
   arbre
+
+(* let split_list (Loc(t,p)) induct_var = *)
+  
   
   
 

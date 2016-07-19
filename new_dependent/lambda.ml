@@ -55,7 +55,7 @@ type inTm =
 and exTm = 
 (*=End *)
   | Hole_exTm of int 
-  | Ref of string
+  | Etiquette of string
 (*=exTm *) 
   | Ann of inTm * inTm 
   | BVar of int 
@@ -79,11 +79,11 @@ and exTm =
 (*=value_head *)
 type value = 
 (*=End *)
-  | VLam of (value -> value)
+  | VLam of name * (value -> value)
   | VNeutral of neutral 
 (*=value_pi_star *)
   | VStar 
-  | VPi of value * (value -> value)
+  | VPi of name * value * (value -> value)
   | VSig of value * (value -> value)
   | VPair of value * value
 (*=End *)
@@ -110,7 +110,7 @@ type value =
   | VId of value * value * value 
   | VRefl of value 
 and neutral = 
-  | NRef of string
+  | NEtiquette of string
   | NFree of name 
   | NApp of neutral * value 
   | NIter of value * value * value * value
@@ -279,7 +279,7 @@ and parse_exTm env t =
   | Sexp.List [Sexp.Atom "p1";x] ->
      P1(parse_exTm env x)
   | Sexp.List [Sexp.Atom "ref"; Sexp.Atom reference] -> 
-     Ref(reference)      
+     Etiquette(reference)      
   | Sexp.List [Sexp.Atom "iter"; p ; n ; f ; z] ->
      Iter((parse_term env p),(parse_term env n),(parse_term env f),(parse_term env z))
   | Sexp.List [Sexp.Atom ":" ;x; t] -> 
@@ -333,7 +333,7 @@ and replace_hole_exTm  terme tsub num =
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
   | Hole_exTm(x) -> if x = num then Ann(tsub,Star) else Hole_exTm(x)
-  | Ref(x) -> Ref(x)
+  | Etiquette(x) -> Etiquette(x)
   | FVar x -> FVar x
   | BVar x -> BVar x
   | Appl(x,y) -> Appl((replace_hole_exTm x tsub num),(replace_hole_inTm y tsub num))
@@ -357,56 +357,56 @@ let rec def_is_in_the_liste env name_to_find=
   | (name,typ,terme) :: suite -> 
      if name = name_to_find then terme else def_is_in_the_liste suite name_to_find
 
-(* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Ref on été modifiés 
+(* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Etiquette on été modifiés 
 utilise is_in_the_list qui est une fonction dans le zipper *)
-let rec replace_ref_inTm terme liste_ref = 
+let rec replace_etiquette_inTm terme liste_ref = 
   match terme with 
-  | Hole_inTm(x) -> failwith "replace_ref_inTm : you can't have a hole when you are replacing the ref" 
-  | Inv x -> Inv(replace_ref_exTm x liste_ref)
-  | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref ))
+  | Hole_inTm(x) -> failwith "replace_etiquette_inTm : you can't have a hole when you are replacing the ref" 
+  | Inv x -> Inv(replace_etiquette_exTm x liste_ref)
+  | Abs(x,y) -> Abs(x,(replace_etiquette_inTm y liste_ref ))
   | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref))
+  | Pi(v,x,y) -> Pi(v,(replace_etiquette_inTm x liste_ref ),(replace_etiquette_inTm y liste_ref))
   (*=End *)
-  | Sig(x,a,b) -> Sig(x,(replace_ref_inTm a liste_ref),(replace_ref_inTm b liste_ref ))
+  | Sig(x,a,b) -> Sig(x,(replace_etiquette_inTm a liste_ref),(replace_etiquette_inTm b liste_ref ))
   | Zero -> Zero 
-  | Succ n -> Succ(replace_ref_inTm n liste_ref)
+  | Succ n -> Succ(replace_etiquette_inTm n liste_ref)
   | Nat -> Nat
   | Bool -> Bool
   | True -> True 
   | False -> False 
-  | Pair(x,y) -> Pair((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
-  | Liste(alpha) -> Liste(replace_ref_inTm alpha liste_ref )
-  | Nil(alpha) -> Nil(replace_ref_inTm alpha liste_ref )
-  | Cons(a,xs) -> Cons((replace_ref_inTm a liste_ref ),(replace_ref_inTm xs liste_ref ))
-  | Vec(alpha,n) -> Vec((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm n liste_ref ))
-  | DNil(alpha) -> DNil(replace_ref_inTm alpha liste_ref )
-  | DCons(a,xs) -> DCons((replace_ref_inTm a liste_ref ),(replace_ref_inTm a liste_ref ))
+  | Pair(x,y) -> Pair((replace_etiquette_inTm x liste_ref ),(replace_etiquette_inTm y liste_ref ))
+  | Liste(alpha) -> Liste(replace_etiquette_inTm alpha liste_ref )
+  | Nil(alpha) -> Nil(replace_etiquette_inTm alpha liste_ref )
+  | Cons(a,xs) -> Cons((replace_etiquette_inTm a liste_ref ),(replace_etiquette_inTm xs liste_ref ))
+  | Vec(alpha,n) -> Vec((replace_etiquette_inTm alpha liste_ref ),(replace_etiquette_inTm n liste_ref ))
+  | DNil(alpha) -> DNil(replace_etiquette_inTm alpha liste_ref )
+  | DCons(a,xs) -> DCons((replace_etiquette_inTm a liste_ref ),(replace_etiquette_inTm a liste_ref ))
   | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((replace_ref_inTm gA liste_ref ),(replace_ref_inTm a liste_ref ),(replace_ref_inTm b liste_ref ))
-  | Refl(a) -> Refl(replace_ref_inTm a liste_ref )
-and replace_ref_exTm terme liste_ref  = 
+  | Id(gA,a,b) -> Id((replace_etiquette_inTm gA liste_ref ),(replace_etiquette_inTm a liste_ref ),(replace_etiquette_inTm b liste_ref ))
+  | Refl(a) -> Refl(replace_etiquette_inTm a liste_ref )
+and replace_etiquette_exTm terme liste_ref  = 
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
-  | Hole_exTm(x) -> failwith "replace_ref_exTm : I just say before that you can't check something which is not finish, how did you manage that"
-  | Ref(x) -> begin 
+  | Hole_exTm(x) -> failwith "replace_etiquette_exTm : I just say before that you can't check something which is not finish, how did you manage that"
+  | Etiquette(x) -> begin 
       let terme = def_is_in_the_liste liste_ref x in 
       terme
     end
   | FVar x -> FVar x
   | BVar x -> BVar x
-  | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref ),(replace_ref_inTm y liste_ref ))
-  | Ann(x,y) -> Ann((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
+  | Appl(x,y) -> Appl((replace_etiquette_exTm x liste_ref ),(replace_etiquette_inTm y liste_ref ))
+  | Ann(x,y) -> Ann((replace_etiquette_inTm x liste_ref ),(replace_etiquette_inTm y liste_ref ))
   (*=End *)
-  | Iter(p,n,f,a) -> Iter((replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
-  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_inTm p liste_ref ),(replace_ref_inTm c liste_ref ),(replace_ref_inTm tHen liste_ref ),(replace_ref_inTm eLse liste_ref ))
-  | P0(x) -> P0(replace_ref_exTm x liste_ref )
-  | P1(x) -> P1(replace_ref_exTm x liste_ref )
-  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),
-				     (replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
-  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_inTm gA liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm a liste_ref ),
-				 (replace_ref_inTm b liste_ref ),(replace_ref_inTm q liste_ref ),(replace_ref_inTm x liste_ref ))
-  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_inTm gA liste_ref ),(replace_ref_inTm alpha liste_ref ),(replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),
-			    (replace_ref_inTm a liste_ref ))
+  | Iter(p,n,f,a) -> Iter((replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm n liste_ref ),(replace_etiquette_inTm f liste_ref ),(replace_etiquette_inTm a liste_ref ))
+  | Ifte(p,c,tHen,eLse) -> Ifte((replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm c liste_ref ),(replace_etiquette_inTm tHen liste_ref ),(replace_etiquette_inTm eLse liste_ref ))
+  | P0(x) -> P0(replace_etiquette_exTm x liste_ref )
+  | P1(x) -> P1(replace_etiquette_exTm x liste_ref )
+  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_etiquette_inTm alpha liste_ref ),(replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm n liste_ref ),
+				     (replace_etiquette_inTm xs liste_ref ),(replace_etiquette_inTm f liste_ref ),(replace_etiquette_inTm a liste_ref ))
+  | Trans(gA,p,a,b,q,x) -> Trans((replace_etiquette_inTm gA liste_ref ),(replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm a liste_ref ),
+				 (replace_etiquette_inTm b liste_ref ),(replace_etiquette_inTm q liste_ref ),(replace_etiquette_inTm x liste_ref ))
+  | Fold(gA,alpha,xs,f,a) -> Fold((replace_etiquette_inTm gA liste_ref ),(replace_etiquette_inTm alpha liste_ref ),(replace_etiquette_inTm xs liste_ref ),(replace_etiquette_inTm f liste_ref ),
+			    (replace_etiquette_inTm a liste_ref ))
 
 
 (*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
@@ -440,7 +440,7 @@ and check_if_no_hole_exTm terme =
   | Hole_exTm(x) -> false
   | FVar x -> true
   | BVar x -> true
-  | Ref(x) -> true
+  | Etiquette(x) -> true
   | Appl(x,y) -> check_if_no_hole_exTm x && check_if_no_hole_inTm y 
   | Ann(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
   (*=End *)
@@ -494,7 +494,7 @@ and pretty_print_exTm t l =
 	| Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong list is to short BVar de " ^ string_of_int x) 
 	| _ -> List.nth l x
     end
-  | Ref(x) -> x
+  | Etiquette(x) -> x
   | FVar (Global x) ->  x
   | FVar (Quote x) -> string_of_int x 
   | FVar (Bound x) -> string_of_int x
@@ -542,7 +542,7 @@ and substitution_exTm  t tsub var =
   | FVar x -> FVar x
   | BVar x when x = var -> tsub
   | BVar x -> BVar x
-  | Ref x -> Ref x 
+  | Etiquette x -> Etiquette x 
   | Appl(x,y) -> Appl((substitution_exTm x tsub var),(substitution_inTm y tsub var))
   | Ann(x,y) -> Ann((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   (*=End *)
@@ -592,7 +592,7 @@ plustot que de mettre -1 comme argument *)
   | FVar(Global x) -> begin if x = var then BVar(i - 1) else FVar(Global x) end 
   | FVar(x) -> FVar(x)
   | BVar x -> BVar x
-  | Ref x -> Ref x 
+  | Etiquette x -> Etiquette x 
   | Appl(x,y) -> Appl((bound_var_exTm x i var),(bound_var_inTm y i var))
   | Ann(x,y) -> Ann((bound_var_inTm x i var),(bound_var_inTm y i var))
   (*=End *)
@@ -617,16 +617,16 @@ let rec big_step_eval_inTm t envi =
 (*=End *)
   match t with 
   | Hole_inTm x -> failwith "Big_step_eval : You can't eval a Hole" 
-(*  | Ref x -> failwith "Big_step_eval : You can't eval a Def" *)
+(*  | Etiquette x -> failwith "Big_step_eval : You can't eval a Def" *)
 (*=big_step_inv *)
   | Inv(i) -> big_step_eval_exTm i envi
 (*=End *)
 
-  | Abs(x,y) -> VLam(function arg -> (big_step_eval_inTm y (arg::envi)))
+  | Abs(x,y) -> VLam(x,function arg -> (big_step_eval_inTm y (arg::envi)))
 (*=big_step_new *)
   | Star -> VStar
   | Pi (v,x,y) -> 
-     VPi ((big_step_eval_inTm x envi),
+     VPi (v,(big_step_eval_inTm x envi),
 	  (function arg -> (big_step_eval_inTm y (arg :: envi))))
 (*=End *)
   | Sig (x,a,b) -> 
@@ -656,21 +656,21 @@ let rec big_step_eval_inTm t envi =
   | What(a) -> failwith "do not put a hole in a type, it make no sense"  
 and vapp v = 
   match v with 
-  | ((VLam f),v) -> f v
+  | ((VLam (x,f)),v) -> f v
   | ((VNeutral n),v) -> VNeutral(NApp(n,v))
   | _ -> failwith "must not append"   
 (*=vitter *)
 and vitter (p,n,f,a) =
   match n,f with
-  | (VZero,VLam fu) -> a
-  | (VSucc(x),VLam fu) -> vapp(fu n,(vitter (p,x,f,a)))
+  | (VZero,VLam (name,fu)) -> a
+  | (VSucc(x),VLam (name,fu)) -> vapp(fu n,(vitter (p,x,f,a)))
   | _ -> VNeutral(NIter(p,n,f,a))
 (*=End *)
 (*=vfold *) 
 and vdfold(alpha,p,n,xs,f,a) = 
   match xs,f,n with
-  | (VDNil(alphi),VLam fu,VZero) -> a
-  | (VDCons(elem,y),VLam fu,VSucc(ni)) -> vapp(vapp(vapp(fu n,xs),elem),vdfold(alpha,p,ni,y,f,a))
+  | (VDNil(alphi),VLam (name,fu),VZero) -> a
+  | (VDCons(elem,y),VLam (name,fu),VSucc(ni)) -> vapp(vapp(vapp(fu n,xs),elem),vdfold(alpha,p,ni,y,f,a))
   | _ -> VNeutral(NDFold(alpha,p,n,xs,f,a))
 (*=End *)
 and vifte(p,c,tHen,eLse) = 
@@ -680,8 +680,8 @@ and vifte(p,c,tHen,eLse) =
   | _ -> VNeutral(NIfte(p,c,tHen,eLse))
 and vfold(p,alpha,xs,f,a) = 
   match xs,f with 
-  | (VNil(alphi),VLam fu) -> a 
-  | (VCons(elem,suite),VLam fu) -> vapp(vapp((fu elem),xs),vfold(p,alpha,suite,f,a))
+  | (VNil(alphi),VLam (name,fu)) -> a 
+  | (VCons(elem,suite),VLam (name,fu)) -> vapp(vapp((fu elem),xs),vfold(p,alpha,suite,f,a))
   | _ -> VNeutral(NFold(p,alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
@@ -689,7 +689,7 @@ and big_step_eval_exTm t envi =
   | Ann(x,_) -> big_step_eval_inTm x envi 
   | FVar(v) -> vfree v 
   | BVar(v) -> List.nth envi v 
-  | Ref x -> VNeutral(NRef x) 		    
+  | Etiquette x -> VNeutral(NEtiquette x) 		    
   | Appl(x,y) -> vapp((big_step_eval_exTm x envi),(big_step_eval_inTm y envi))    
 (*=big_step_iter *)
   | Iter(p,n,f,a) -> vitter ((big_step_eval_inTm p envi),
@@ -734,15 +734,13 @@ let gensym =
 let rec value_to_inTm i v =
   match v with 
 (*=End *)
-  | VLam f -> value_to_inTm (i+1) (f (vfree(Quote i)))
+  | VLam (name,f) -> value_to_inTm (i+1) (f (vfree(Quote i)))
   | VNeutral n -> Inv(neutral_to_exTm i n)
 (*=value_to_inTm_new *)		     
-  | VPi(x,f) -> let var = gensym () in 
-		begin
-		  Pi(Global(var),
+  | VPi(var,x,f) -> 
+		  Pi(var,
 		     (value_to_inTm i x),
 		     (value_to_inTm (i+1) (f(vfree(Quote i)))))
-		end
 (*=End *)
   | VSig(x,f) -> let var = gensym () in 
 		 begin 
@@ -778,7 +776,7 @@ and neutral_to_exTm i v =
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
   (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
   | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
-  | NRef x-> Ref x
+  | NEtiquette x-> Etiquette x
   | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
   | NFold(p,alpha,xs,f,a) -> Fold((value_to_inTm i p),(value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
@@ -841,7 +839,7 @@ let rec lcheck contexte ty inT =
   | Abs(x,y) ->
      begin
        match ty with
-       | VPi(s,t) -> let freshVar = gensym() in
+       | VPi(name,s,t) -> let freshVar = gensym() in
 		     lcheck (((Global freshVar),s)::contexte)
 		       (t (vfree (Global freshVar)))
 		       (substitution_inTm y (FVar(Global(freshVar))) 0)
@@ -977,7 +975,7 @@ and lsynth ctxt exT =
      let synth_f = lsynth ctxt f in
      begin
        match synth_f with
-       | VPi(s_pi,fu) -> if lcheck ctxt s_pi s 
+       | VPi(name,s_pi,fu) -> if lcheck ctxt s_pi s 
 		     then (fu (big_step_eval_inTm s [])) 
 		     else failwith "fail synth Appl"
        | _ -> failwith "fail synth Appl"
@@ -1060,7 +1058,7 @@ let rec check contexte inT ty steps =
   | Abs(x,y) -> 
      begin  
        match ty with 
-       | VPi(s,t) -> let freshVar = gensym () in 
+       | VPi(name,s,t) -> let freshVar = gensym () in 
 		     check (((Global freshVar),s)::contexte) (substitution_inTm y (FVar(Global(freshVar))) 0) (t (vfree (Global freshVar))) (pretty_print_inTm inT [] ^ ";"^ steps) 
        | _ -> create_report false (contexte_to_string contexte) steps "Abs type must be a Pi"
      end 
@@ -1210,8 +1208,8 @@ test le retour de la synthèse *)
 			    begin 
 			      check contexte a gA (pretty_print_inTm inT [] ^ ";"^ steps)
 			    end 
-			  else create_report false (contexte_to_string contexte) steps "Refl : a and ta must be equal"	       
-       | _ -> create_report false (contexte_to_string contexte) steps "Refl : ty must be of type Id"
+			  else create_report false (contexte_to_string contexte) steps "refl : a and ta must be equal"	       
+       | _ -> create_report false (contexte_to_string contexte) steps "refl : ty must be of type Id"
      end
   | Liste(alpha) -> 
      begin 
@@ -1253,7 +1251,7 @@ and synth contexte exT steps =
   | BVar x -> create_retSynth (create_report false (contexte_to_string contexte) steps "BVar : not possible during type checking") VStar
   | FVar x -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
 (*=End *)
-  | Ref x -> create_retSynth (create_report false (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") VStar
+  | Etiquette x -> create_retSynth (create_report false (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") VStar
   | P0(x) -> let synth_x = synth contexte x (pretty_print_exTm exT [] ^ ";" ^ steps) in 
 	     if res_debug_synth synth_x
 	     then
@@ -1291,7 +1289,7 @@ and synth contexte exT steps =
      then
      begin
        match ret_debug_synth synth_f with 
-       | VPi(s_pi,fu) -> if res_debug(check contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
+       | VPi(name,s_pi,fu) -> if res_debug(check contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
 		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (fu (big_step_eval_inTm s [])) 
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : s is not of type S") VStar
        | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : f is not of type Pi") VStar
@@ -1300,9 +1298,10 @@ and synth contexte exT steps =
 (*=End *) 
   | Iter(p,n,f,a) -> let big_p = big_step_eval_inTm p [] in
 		     let big_n = big_step_eval_inTm n [] in 
- 		     let check_p = check contexte p (big_step_eval_inTm (read "(-> N *)") []) (pretty_print_exTm exT [] ^ ";") in    
+		     let type_p = read "(pi x N *)" in 
+ 		     let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in    
 		     let check_n = check contexte n (big_step_eval_inTm (read "N") []) (pretty_print_exTm exT [] ^ ";") in
-		     let check_f = check contexte f (big_step_eval_inTm (Pi(Global("n"),Nat,Pi(Global("NO"),(Inv(Appl(Ann(p,Pi(Global"NO",Nat,Star)),n))),(Inv(Appl(Ann(p,Pi(Global"NO",Nat,Star)),Succ(n))))))) [])  (pretty_print_exTm exT [] ^ ";") in
+		     let check_f = check contexte f (big_step_eval_inTm (Pi(Global("n"),Nat,Pi(Global("NO"),(Inv(Appl(Ann(p,type_p),Inv(BVar 0)))),(Inv(Appl(Ann(p,type_p),Succ(Inv(BVar 1)))))))) [])  (pretty_print_exTm exT [] ^ ";") in
 		     let check_a = check contexte a (vapp(big_p,VZero)) (pretty_print_exTm exT [] ^ ";") in
 		     if res_debug(check_n)
 		     then 

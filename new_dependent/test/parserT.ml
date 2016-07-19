@@ -20,6 +20,8 @@ let inputs
        ("(pi x (pi y * *) *)", Pi(Global "x",Pi(Global "y",Star,Star),Star));
        ("(pi (x y z) * (lambda w w))",Pi(Global "x",Star,Pi(Global "y",Star,Pi(Global "z",Star,Abs(Global "w",Inv(BVar 0))))));
        ("(pi A * (pi B (pi x A *) *))",Pi(Global "A",Star,Pi(Global "B",(Pi (Global "x" ,Inv(BVar 0), Star)),Star)));
+       ("(pi x * (pi y N (vec x (succ zero))))",Pi(Global"x",Star,Pi(Global"y",Nat,Vec(Inv(BVar 1),Succ(Zero)))));
+       ("(pi x * (pi y N (vec x y)))",Pi(Global"x",Star,Pi(Global"y",Nat,Vec(Inv(BVar 1),Inv(BVar 0)))));
        ("(-> * *)",Pi(Global "NO",Star,Star));
        ("(succ (succ zero))",Succ(Succ(Zero)));
        ("(: (succ zero) N)",Inv(Ann(Succ(Zero),Nat)));

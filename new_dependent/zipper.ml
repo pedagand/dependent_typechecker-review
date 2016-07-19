@@ -69,7 +69,7 @@ and pretty_print_exTm_user t l =
   | FVar (Global x) ->  x
   | FVar (Quote x) -> string_of_int x 
   | FVar (Bound x) -> string_of_int x
-  | Ref(x) -> x
+  | Etiquette(x) -> x
   | Appl(x,y) -> "(" ^ pretty_print_exTm_user x l ^ " " ^ pretty_print_inTm_user y l ^ ")"
   | Iter(p,n,f,z) -> "(iter " ^ pretty_print_inTm_user p l ^ " " ^ pretty_print_inTm_user n l ^ " " ^ pretty_print_inTm_user f l ^ " " ^ pretty_print_inTm_user z l ^ ")"
   | Ifte(p,c,tHen,eLse) -> "(ifte " ^ pretty_print_inTm_user p l ^ " " ^ pretty_print_inTm_user c l ^ " " ^ pretty_print_inTm_user tHen l ^ " " ^ pretty_print_inTm_user eLse l ^ ")"
@@ -129,15 +129,15 @@ let print_to_screen_location loc =
 		     
 let get_terme_item tree = 
   match tree with 
-  | Item(Variable(name,typ)) -> failwith "this is a variable it don't have terme" 
-  | Item(Definition(name,Incomplete(typ,terme))) -> terme     
-  | Item(Intermediaire(typ,terme)) -> terme     
+  | Loc(Item(Variable(name,typ)),t) -> failwith "this is a variable it don't have terme" 
+  | Loc(Item(Definition(name,Incomplete(typ,terme))),t) -> terme     
+  | Loc(Item(Intermediaire(typ,terme)),t) -> terme     
   | _ -> failwith "get item : it's not possible to get this..." 
 let get_type_item tree = 
   match tree with 
-  | Item(Variable(name,typ)) -> typ
-  | Item(Definition(name,Incomplete(typ,terme))) -> typ
-  | Item(Intermediaire(typ,terme)) -> typ
+  | Loc(Item(Variable(name,typ)),t) -> typ
+  | Loc(Item(Definition(name,Incomplete(typ,terme))),t) -> typ
+  | Loc(Item(Intermediaire(typ,terme)),t) -> typ
   | _ -> failwith "get_type_item : it's not possible to get this..." 
 											 
 
@@ -164,6 +164,10 @@ let go_down (Loc(t,p)) = match t with
     Item(_) -> failwith "down of item"
   | Section(t1::trees) -> Loc(t1,Node([],p,trees))
   | _ -> failwith "down of empty"
+
+let rec go_n_son (Loc(t,p)) n = match n with    
+  | 0 -> go_down (Loc(t,p))
+  | n -> go_n_son (go_right (Loc(t,p))) (n-1)
 
 (* To print a location we need a function that return the location at the top of the entiere tree *)
 let rec go_to_the_top (Loc(t,p)) = 
@@ -217,7 +221,7 @@ let proof_down arbre =
 
 
 (* -----------Fonctions de recherche --------------- *)
-
+   
 (* Fonctions permettants de récupérer l'ensemble des définitions terminée à partir d'une position *)
 let rec get_def_item it env = 
   match it with 
