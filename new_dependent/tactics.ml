@@ -183,7 +183,7 @@ let intro_auto (Loc(t,p)) =
   let new_typ = 
     begin
       match typ with 
-      | (Pi(x,s,t)) -> t
+      | (Pi(x,s,t)) -> substitution_inTm t (FVar x) 0
       | _ -> failwith "intro_auto : it's not possible to intro something else then a pi"
     end in 
   let new_terme = Abs(Global(name_var),Hole_inTm 1) in 
@@ -284,13 +284,13 @@ let create_iter_predicat returneType var_induct =
 let split_iter (Loc(t,p)) induct_var = 
   let returne_type  = get_type_focus (Loc(t,p)) in 
   let predicat = create_iter_predicat returne_type induct_var in    
-  let first_goal_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero))) []) in 
-  let second_goal_type = value_to_inTm 0 (big_step_eval_inTm 
+  let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero))) []) in 
+  let first_goal_typ = value_to_inTm 0 (big_step_eval_inTm 
 					      (Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
-  let first_goal = Section([Item(Intermediaire(1,first_goal_type,Hole_inTm(1)))]) in 
-  let second_goal = Section([Item(Intermediaire(2,second_goal_type,Hole_inTm(1)))]) in
+  let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1)))]) in 
+  let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Hole_inTm(1)))]) in
   let terme = get_terme_item (Loc(t,p)) in  
   let hole = int_of_string (ask_the_hole terme "iter") in
   (* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *)

@@ -391,11 +391,16 @@ Top -> failwith "delete of top"
 | Node(l::left,up,[]) -> Loc(l,Node(left,up,[]))
 | Node([],up,[]) -> Loc(Section[],up)
 
+  
+    
+
 
 (* ----------------Fonctions d'écrasement ------------------ *)
 (* prend un noeud en cour, vérifie si celui ci est complétement bouché et le remonte dans le trou du dessus (le noeud en dessous  *)
 
 (* Apres la pause, il va falloir faire en sorte que a chaque fois avant de travailler sur un terme, si celui ci ne contient plus de trou appeler cette fonction, et justement celle ci ne dois pas buguer si on ne l'appel pas avec un terme n'ayant pas de trou, elle doit quand meme le remonter *)
+(* Vieille version *)
+(*
 let verif_and_push_up_item (Loc(t,p)) =   
   let terme_type = 
     begin 
@@ -412,10 +417,9 @@ let verif_and_push_up_item (Loc(t,p)) =
   if check_if_no_hole_inTm terme 
   then 
     (* ici petit up pour supprimer l'ensemble de la section *)
-    let arbre = delete (Loc(t,p)) in  
-    let arbre = proof_up arbre (* arbre *) in (* LOl *)
-(*    let () = Printf.printf "\n %s \n Quel est le trou à remplir ?\n" (pretty_print_state_proof arbre) in *)
-    let trou = get_num_Inter (Loc(t,p)) (* int_of_string (read_line ()) *) in 
+     let arbre = proof_up (Loc(t,p)) (* arbre *) in (* LOl *) 
+(*     let () = Printf.printf "\n %s \n Quel est le trou à remplir ?\n" (pretty_print_state_proof arbre) in *)
+    let trou = get_num_Inter (Loc(t,p)) (* int_of_string (read_line ())*) in 
     let terme_sup = begin 
 	match arbre with 
 	| Loc(Item(Intermediaire(n,typ,terme_sup)),p) -> (terme_sup,"inter",typ)
@@ -430,7 +434,27 @@ let verif_and_push_up_item (Loc(t,p)) =
     end in 
     arbre    
   else (Loc(t,p))
+ *)
 
+let verif_and_push_up_item (Loc(t,p)) =     
+  let terme_to_put = get_terme_item (Loc(t,p)) in 
+  if check_if_no_hole_inTm terme_to_put
+  then     
+    begin 
+    let trou = get_num_Inter (Loc(t,p)) in 
+    let arbre = proof_up (Loc(t,p)) in 
+    let terme_to_fullfill = get_terme_item arbre in 
+    let terme = replace_hole_inTm terme_to_fullfill terme_to_put trou in 
+    let arbre = 
+      begin 
+	match arbre with 
+	| Loc(Item(Intermediaire(n,x,y)),p) -> replace_item arbre (Item(Intermediaire(n,x,terme)))
+	| Loc(Item(Definition(name,Incomplete(typ,terme_sup))),p) -> replace_item arbre (Item(Definition(name,Incomplete(typ,terme))))
+	| _ -> failwith "verif_and_push_up_item : this case is supposed to be impossible" 
+      end in 
+    arbre
+    end
+  else (Loc(t,p))  
   
 
 
