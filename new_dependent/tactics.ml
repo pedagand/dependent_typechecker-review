@@ -315,14 +315,15 @@ let split (Loc(t,p)) =
   | _ -> failwith "split : you split on a var that has not a type recognise by the program"
   end
   
-  
+let verif (Loc(t,p)) = 
+  verif_and_push_up_item (Loc(t,p))  
 
 let return (Loc(t,p)) = 
   let terme = get_terme_item (Loc(t,p)) in 
   let terme_push = read (ask_terme ()) in 
   let hole = int_of_string (ask_the_hole terme "iter") in    
   let arbre = complete_focus_terme (Loc(t,p)) terme_push hole in
-  arbre
+  verif arbre
   
   
 let nothing (Loc(t,p)) = (Loc(t,p))
@@ -334,8 +335,7 @@ let son (Loc(t,p)) =
   
 
 
-let verif (Loc(t,p)) = 
-  verif_and_push_up_item (Loc(t,p))
+
 
 let def (Loc(t,p)) = 
   procedure_start_definition (Loc(t,p))

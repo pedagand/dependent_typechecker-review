@@ -145,7 +145,13 @@ let get_num_Inter tree =
   | Loc(Item(Intermediaire(n,typ,terme)),t) -> n
   | _ -> failwith "get_num_Inter : you can't ask for a num if you are no on Inter" 					 
 
-
+(* fonctions permettants de savoir quand s'arreter *)
+let know_def_inter tree = 
+  match tree with 
+  | Loc(Item(Variable(name,typ)),t) -> failwith "know_def_inter: this case is supposed to be impossible"
+  | Loc(Item(Definition(name,Incomplete(typ,terme))),t) -> false
+  | Loc(Item(Intermediaire(n,typ,terme)),t) -> true
+  | _ -> failwith "know_def_inter: this case is supposed to be impossible"
 
   
   
@@ -391,8 +397,7 @@ Top -> failwith "delete of top"
 | Node(l::left,up,[]) -> Loc(l,Node(left,up,[]))
 | Node([],up,[]) -> Loc(Section[],up)
 
-  
-    
+      
 
 
 (* ----------------Fonctions d'écrasement ------------------ *)
@@ -436,9 +441,9 @@ let verif_and_push_up_item (Loc(t,p)) =
   else (Loc(t,p))
  *)
 
-let verif_and_push_up_item (Loc(t,p)) =     
-  let terme_to_put = get_terme_item (Loc(t,p)) in 
-  if check_if_no_hole_inTm terme_to_put
+let rec verif_and_push_up_item (Loc(t,p)) =     
+  let terme_to_put = get_terme_item (Loc(t,p)) in   
+  if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p))
   then     
     begin 
     let trou = get_num_Inter (Loc(t,p)) in 
@@ -452,7 +457,7 @@ let verif_and_push_up_item (Loc(t,p)) =
 	| Loc(Item(Definition(name,Incomplete(typ,terme_sup))),p) -> replace_item arbre (Item(Definition(name,Incomplete(typ,terme))))
 	| _ -> failwith "verif_and_push_up_item : this case is supposed to be impossible" 
       end in 
-    arbre
+    verif_and_push_up_item arbre
     end
   else (Loc(t,p))  
   
