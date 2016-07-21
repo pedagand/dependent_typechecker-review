@@ -85,14 +85,18 @@ let pretty_print_def userDef =
 
 
 (* Fonctions manipulants une user_def afin de la transformer en terme *)
+let rec matching 
+
 
 let rec pattern_match_to_terme arbre pattern_match = 
+  let goal_terme = get_type_item arbre in
   match pattern_match with 
   | [] -> arbre 
   | () :: suite -> failwith "lol"
 
-let userDef_to_terme d arbre =
-  (* dans cette fonction surement mettre le truc qui permet de lire des fichiers *)
+
+(* faire une fonction à coté qui permet de lire les fichiers *)
+let userDef_to_terme d arbre =  
   let arbre = procedure_start_definition d.def arbre in 
   let arbre = intros arbre in 
   let arbre = pattern_match_to_terme arbre in 

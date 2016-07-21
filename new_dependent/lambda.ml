@@ -18,6 +18,7 @@ type name =
 
 (*=inTm_head *) 
 type inTm =
+  | Ref of string
   (*=End *)
   | Hole_inTm of int
   (*=inTm *)
@@ -202,6 +203,8 @@ let rec parse_term env t =
       | Sexp.Atom "false" -> False
       | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
 	 Hole_inTm (int_of_string num)	 
+      | Sexp.List [Sexp.Atom "ref";Sexp.Atom name] -> 
+	 Ref(name)
       | Sexp.List [Sexp.Atom "?";Sexp.Atom a] -> What a
       | Sexp.List [Sexp.Atom "succ"; n] -> 
 	 Succ(parse_term env n)
@@ -313,6 +316,7 @@ let read t = parse_term [] (Sexp.of_string t)
 (* Fonction de remplacement des holes dans les termes *)
 let rec replace_hole_inTm terme tsub num = 
   match terme with 
+  | Ref(name) -> Ref(name)
   | Hole_inTm(x) -> if x = num then tsub else Hole_inTm(x)
   | Inv x -> Inv(replace_hole_exTm x tsub num)
   | Abs(x,y) -> Abs(x,(replace_hole_inTm y tsub (num)))
@@ -359,6 +363,7 @@ and replace_hole_exTm  terme tsub num =
 			    (replace_hole_inTm a tsub num))
 
 (* prend en argument une liste de ref ainsi qu'un nom et retourne le terme associé au nom si celui ci existe *)
+(*-----------LOLOLOL surement à changer quand le moment viendra---------------------*)
 let rec def_is_in_the_liste env name_to_find= 
   match env with 
   | [] -> failwith "def_is_in_the_liste : Dummy you call a ref wich is not present in the context ..... You can shut down your computer now" 
@@ -367,59 +372,58 @@ let rec def_is_in_the_liste env name_to_find=
 
 (* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Etiquette on été modifiés 
 utilise is_in_the_list qui est une fonction dans le zipper *)
-let rec replace_etiquette_inTm terme liste_ref = 
+let rec replace_ref_inTm terme liste_ref = 
   match terme with 
-  | Hole_inTm(x) -> failwith "replace_etiquette_inTm : you can't have a hole when you are replacing the ref" 
-  | Inv x -> Inv(replace_etiquette_exTm x liste_ref)
-  | Abs(x,y) -> Abs(x,(replace_etiquette_inTm y liste_ref ))
+  | Ref(name) -> def_is_in_the_liste liste_ref name
+  | Hole_inTm(x) -> failwith "replace_ref_inTm : you can't have a hole when you are replacing the ref" 
+  | Inv x -> Inv(replace_ref_exTm x liste_ref)
+  | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref ))
   | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(replace_etiquette_inTm x liste_ref ),(replace_etiquette_inTm y liste_ref))
+  | Pi(v,x,y) -> Pi(v,(replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref))
   (*=End *)
-  | Sig(x,a,b) -> Sig(x,(replace_etiquette_inTm a liste_ref),(replace_etiquette_inTm b liste_ref ))
+  | Sig(x,a,b) -> Sig(x,(replace_ref_inTm a liste_ref),(replace_ref_inTm b liste_ref ))
   | Zero -> Zero 
-  | Succ n -> Succ(replace_etiquette_inTm n liste_ref)
+  | Succ n -> Succ(replace_ref_inTm n liste_ref)
   | Nat -> Nat
   | Bool -> Bool
   | True -> True 
   | False -> False 
-  | Pair(x,y) -> Pair((replace_etiquette_inTm x liste_ref ),(replace_etiquette_inTm y liste_ref ))
-  | Liste(alpha) -> Liste(replace_etiquette_inTm alpha liste_ref )
-  | Nil(alpha) -> Nil(replace_etiquette_inTm alpha liste_ref )
-  | Cons(a,xs) -> Cons((replace_etiquette_inTm a liste_ref ),(replace_etiquette_inTm xs liste_ref ))
-  | Vec(alpha,n) -> Vec((replace_etiquette_inTm alpha liste_ref ),(replace_etiquette_inTm n liste_ref ))
-  | DNil(alpha) -> DNil(replace_etiquette_inTm alpha liste_ref )
-  | DCons(a,xs) -> DCons((replace_etiquette_inTm a liste_ref ),(replace_etiquette_inTm a liste_ref ))
+  | Pair(x,y) -> Pair((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
+  | Liste(alpha) -> Liste(replace_ref_inTm alpha liste_ref )
+  | Nil(alpha) -> Nil(replace_ref_inTm alpha liste_ref )
+  | Cons(a,xs) -> Cons((replace_ref_inTm a liste_ref ),(replace_ref_inTm xs liste_ref ))
+  | Vec(alpha,n) -> Vec((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm n liste_ref ))
+  | DNil(alpha) -> DNil(replace_ref_inTm alpha liste_ref )
+  | DCons(a,xs) -> DCons((replace_ref_inTm a liste_ref ),(replace_ref_inTm a liste_ref ))
   | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((replace_etiquette_inTm gA liste_ref ),(replace_etiquette_inTm a liste_ref ),(replace_etiquette_inTm b liste_ref ))
-  | Refl(a) -> Refl(replace_etiquette_inTm a liste_ref )
-and replace_etiquette_exTm terme liste_ref  = 
+  | Id(gA,a,b) -> Id((replace_ref_inTm gA liste_ref ),(replace_ref_inTm a liste_ref ),(replace_ref_inTm b liste_ref ))
+  | Refl(a) -> Refl(replace_ref_inTm a liste_ref )
+and replace_ref_exTm terme liste_ref  = 
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
-  | Hole_exTm(x) -> failwith "replace_etiquette_exTm : I just say before that you can't check something which is not finish, how did you manage that"
-  | Etiquette(x) -> begin 
-      let terme = def_is_in_the_liste liste_ref x in 
-      terme
-    end
+  | Hole_exTm(x) -> failwith "replace_ref_exTm : I just say before that you can't check something which is not finish, how did you manage that"
+  | Etiquette(x) -> Etiquette(x)
   | FVar x -> FVar x
   | BVar x -> BVar x
-  | Appl(x,y) -> Appl((replace_etiquette_exTm x liste_ref ),(replace_etiquette_inTm y liste_ref ))
-  | Ann(x,y) -> Ann((replace_etiquette_inTm x liste_ref ),(replace_etiquette_inTm y liste_ref ))
+  | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref ),(replace_ref_inTm y liste_ref ))
+  | Ann(x,y) -> Ann((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
   (*=End *)
-  | Iter(p,n,f,a) -> Iter((replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm n liste_ref ),(replace_etiquette_inTm f liste_ref ),(replace_etiquette_inTm a liste_ref ))
-  | Ifte(p,c,tHen,eLse) -> Ifte((replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm c liste_ref ),(replace_etiquette_inTm tHen liste_ref ),(replace_etiquette_inTm eLse liste_ref ))
-  | P0(x) -> P0(replace_etiquette_exTm x liste_ref )
-  | P1(x) -> P1(replace_etiquette_exTm x liste_ref )
-  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_etiquette_inTm alpha liste_ref ),(replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm n liste_ref ),
-				     (replace_etiquette_inTm xs liste_ref ),(replace_etiquette_inTm f liste_ref ),(replace_etiquette_inTm a liste_ref ))
-  | Trans(gA,p,a,b,q,x) -> Trans((replace_etiquette_inTm gA liste_ref ),(replace_etiquette_inTm p liste_ref ),(replace_etiquette_inTm a liste_ref ),
-				 (replace_etiquette_inTm b liste_ref ),(replace_etiquette_inTm q liste_ref ),(replace_etiquette_inTm x liste_ref ))
-  | Fold(gA,alpha,xs,f,a) -> Fold((replace_etiquette_inTm gA liste_ref ),(replace_etiquette_inTm alpha liste_ref ),(replace_etiquette_inTm xs liste_ref ),(replace_etiquette_inTm f liste_ref ),
-			    (replace_etiquette_inTm a liste_ref ))
+  | Iter(p,n,f,a) -> Iter((replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
+  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_inTm p liste_ref ),(replace_ref_inTm c liste_ref ),(replace_ref_inTm tHen liste_ref ),(replace_ref_inTm eLse liste_ref ))
+  | P0(x) -> P0(replace_ref_exTm x liste_ref )
+  | P1(x) -> P1(replace_ref_exTm x liste_ref )
+  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),
+				     (replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
+  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_inTm gA liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm a liste_ref ),
+				 (replace_ref_inTm b liste_ref ),(replace_ref_inTm q liste_ref ),(replace_ref_inTm x liste_ref ))
+  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_inTm gA liste_ref ),(replace_ref_inTm alpha liste_ref ),(replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),
+			    (replace_ref_inTm a liste_ref ))
 
 
 (*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
 let rec check_if_no_hole_inTm terme = 
   match terme with 
+  | Ref(name) -> true
   | Hole_inTm(x) -> false
   | Inv x -> check_if_no_hole_exTm x 
   | Abs(x,y) -> check_if_no_hole_inTm y 
@@ -468,6 +472,7 @@ and check_if_no_hole_exTm terme =
  
 let rec pretty_print_inTm t l = 
   match t with 
+  | Ref(name) -> "(ref " ^ name ^ ")"
   | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm x (str :: l) ^ ")"
   | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
@@ -520,6 +525,7 @@ and pretty_print_exTm t l =
 (*=substitution_inTm *)
 let rec substitution_inTm t tsub var = 
   match t with 
+  | Ref(name) -> Ref(name)
   | Hole_inTm(x) -> Hole_inTm x
   | Inv x -> Inv(substitution_exTm x tsub var)
   | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
@@ -568,6 +574,7 @@ and substitution_exTm  t tsub var =
 (* Utilisation de la fonction, si on a un terme de la forme (lambda ....) et que l'on souhaite binder sur le lambda en cour il faut mettre 0 *)
 let rec bound_var_inTm t i var = 
   match t with 
+  | Ref(name) -> Ref(name)
   | Hole_inTm(x) -> Hole_inTm x
   | Inv x -> Inv(bound_var_exTm x i var)
   | Abs(x,y) -> Abs(x,(bound_var_inTm y (i + 1) var))
@@ -624,6 +631,8 @@ let vfree n = VNeutral(NFree n)
 let rec big_step_eval_inTm t envi = 
 (*=End *)
   match t with 
+  | Ref(name) -> failwith "big_step_eval_inTm : you can't eval a ref (maybe i will change this later and call the function on it to put all 
+			   the term at this place"
   | Hole_inTm x -> failwith "Big_step_eval : You can't eval a Hole" 
 (*  | Etiquette x -> failwith "Big_step_eval : You can't eval a Def" *)
 (*=big_step_inv *)
@@ -1062,6 +1071,7 @@ let rec contexte_to_string contexte =
      
 let rec check contexte inT ty steps = 
   match inT with
+  | Ref(name) -> create_report false (contexte_to_string contexte) steps "check : there is a ref in the terme"
   | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
   | Abs(x,y) -> 
      begin  
