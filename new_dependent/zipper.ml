@@ -222,6 +222,17 @@ let proof_down arbre =
   let num = read_line () in 
   go_down_n_son arbre (int_of_string num)
 
+(*fonction préliminaire permettant de descendre dans l'arbre tous les PI pour la creation de userDef *)
+let rec go_down_until_pi (Loc(t,p)) = 
+  match t with
+  | Item(Variable(name,terme)) -> go_down_until_pi(go_down(go_right(Loc(t,p))))
+  | Item(Definition(typ,terme)) -> go_down_until_pi(go_down(go_right(Loc(t,p))))
+  | Item(Intermediaire(n,typ,terme)) -> begin 
+      match typ with 
+      | Pi(_,_,_) -> go_down_until_pi(go_down(go_right(Loc(t,p))))
+      | _ -> (Loc(t,p))
+    end
+  | _ -> failwith "supposed not to append" 
 
 
 

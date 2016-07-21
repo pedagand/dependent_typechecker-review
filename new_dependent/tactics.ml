@@ -3,6 +3,7 @@ open Lambda
 open Sexplib
 
 
+
 (*-----------------------Fonctions pour crée le Upper type------------------------*)
 (* permet de crée un type à partir du type donné par l'utilisateur *)
 let rec create_uper_type typ = 
@@ -56,28 +57,26 @@ let make_application (terme : exTm) liste_var =
 
 
 
-(* fonction prenant un argument un type et son nom . Celle ci retourne une location avec le uper_type générer en haut de 
+(* fonction prenant un argument un type et son nom . Celle ci retourne Defintion avec le uper_type générer en haut de 
 l'arbre et le curseur sur un noeud donné en entrée *)
 let init_definition typ name = 
   let return = find_return_type typ in 
-  let () = Printf.printf "\nreturn : %s" (pretty_print_inTm return []) in
+  let () = Printf.printf "\nreturn : %s" (pretty_print_inTm return []) in 
   let new_typ = create_uper_type typ in 
-  let () = Printf.printf "\nnew_type : %s" (pretty_print_inTm new_typ []) in
-  let new_term = modifie_return_terme new_typ return in
-  let () = Printf.printf "\nnew_term : %s" (pretty_print_inTm new_term []) in
+  let () = Printf.printf "\nnew_type : %s" (pretty_print_inTm new_typ []) in 
+  let new_term = modifie_return_terme new_typ return in 
+  let () = Printf.printf "\nnew_term : %s" (pretty_print_inTm new_term []) in 
   let new_name = create_upper_name name new_typ  in 
-  let () = Printf.printf "\nnew_name : %s\n" new_name in
-  Definition(new_name,Complete(new_typ,new_term))
-  
+  let () = Printf.printf "\nnew_name : %s\n" new_name in 
+  Definition(new_name,Complete(new_typ,new_term)) 
+
 let parse_definition def refe = 
   match def with 
   | Sexp.List[Sexp.Atom name;terme] -> let terme = parse_term [] terme in 
      Definition(name,Incomplete(terme,Hole_inTm(1)))
   | _ -> failwith "parse_definition : it seem's that your def is not good"
 
-let procedure_start_definition arbre= 
-  let () = Printf.printf "\n\nEntrer une nouvelle définition à prouver : \n" in 
-  let typ_not_parsed = read_line () in
+let procedure_start_definition typ_not_parsed arbre= 
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
   | Definition(name,Incomplete(typ,terme)) -> 
@@ -202,8 +201,7 @@ let rec intros arbre =
   end
   
 
-let axiome (Loc(t,p)) = 
-  let var = ask_variable_name () in   
+let axiome var (Loc(t,p))  = 
   let env = get_env (Loc(t,p)) [] in 
   if is_in_env env var 
   then begin 
@@ -245,9 +243,11 @@ let check (Loc(t,p)) =
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
       let final_type = replace_etiquette_inTm typ (get_def (Loc(t,p)) []) in 
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-      let res_check = res_debug(check [] final_terme (big_step_eval_inTm final_type []) "") in 
-      if res_check 
-      then replace_item (Loc(t,p)) (Item(Definition(name,Complete(final_type,final_terme))))
+      let res_check = check [] final_terme (big_step_eval_inTm final_type []) "" in 
+      let steps = get_steps_report res_check in 
+      if res_debug res_check 
+      then let () = Printf.printf "\n\n\n STEPS :\n %s \n\n\n\n\n" steps in 
+		   replace_item (Loc(t,p)) (Item(Definition(name,Complete(final_type,final_terme))))
       else let () = Printf.printf "\nIt Seems that your term is not well checked \n
 				   the terme is : %s \n
 				   and the type is : %s\n" (pretty_print_inTm final_terme []) (pretty_print_inTm final_type []) in 
@@ -305,15 +305,21 @@ let split_iter (Loc(t,p)) induct_var =
   
   
 
-let split (Loc(t,p)) = 
+let split induct_var (Loc(t,p)) = 
   let env = get_env (Loc(t,p)) [] in 
-  let induct_var = ask_induct_var () in
   let var_type = return_type_var_env env induct_var in 
   begin 
   match var_type with 
   | Nat -> split_iter (Loc(t,p)) induct_var
   | _ -> failwith "split : you split on a var that has not a type recognise by the program"
   end
+
+(* -------------------tactiques permettants de remplir une userDefinition afin de la sauvegarder--------------------*)
+(* en suspend parceque c'est le type checker qui va me les générers *)
+  
+  
+
+
   
 let verif (Loc(t,p)) = 
   verif_and_push_up_item (Loc(t,p))  
@@ -327,7 +333,9 @@ let return (Loc(t,p)) =
   
   
 let nothing (Loc(t,p)) = (Loc(t,p))
-  
+			   
+
+
   
 let son (Loc(t,p)) = 
   let num = ask_the_son () in 
@@ -337,8 +345,8 @@ let son (Loc(t,p)) =
 
 
 
-let def (Loc(t,p)) = 
-  procedure_start_definition (Loc(t,p))
+let def typ_not_parsed (Loc(t,p)) = 
+  procedure_start_definition typ_not_parsed (Loc(t,p))
 
 let contexte_def (Loc(t,p)) = 
   let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p))) in 
@@ -360,13 +368,14 @@ let choose_tactic () =
   | "left" -> go_left
   | "right" -> go_right
   | "print" -> print_to_screen_location
-  | "axiome" -> axiome
+  | "axiome" -> let var = ask_variable_name () in axiome var
   | "verif" -> verif
-  | "def" -> def
+  | "def" ->   let () = Printf.printf "\n\nEntrer une nouvelle définition à prouver : \n" in 
+	       let typ_not_parsed = read_line () in def typ_not_parsed
   | "check" -> check
   | "contexte def" -> contexte_def
  (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
-  | "split" -> split
+  | "split" -> let induct_var = ask_induct_var () in split induct_var
   | "return" -> return
 			
   | _ -> nothing

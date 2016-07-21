@@ -165,7 +165,15 @@ let res_debug d =
      s
   | _ -> failwith "report don't have the good Shape" 
 
+let get_steps_report_synth r = 
+  match r with 
+  | RetSynth(Report(Success(s),c,Steps(e),er),y) -> e
+  | _ -> failwith "get_steps_report : your report don't have a good shape" 
 
+let get_steps_report r = 
+  match r with 
+  | Report(Success(s),Contexte(c),Steps(e),Error(er)) -> e
+  | _ -> failwith "get_stepts_report : it has fail because you don't have a good shape" 
 let res_debug_synth d = 
   match d with 
   | RetSynth(Report(Success(s),c,e,er),y) -> s
@@ -1063,14 +1071,14 @@ let rec check contexte inT ty steps =
        | _ -> create_report false (contexte_to_string contexte) steps "Abs type must be a Pi"
      end 
   | Inv(x) -> 
-     let ret = synth contexte x (pretty_print_inTm inT [] ^ ";" ^ steps) in 
+     let ret = synth contexte x steps in (* LOL *)
      if res_debug_synth ret
      then 
        begin 
 	 if equal_inTm (value_to_inTm 0 (ty)) (value_to_inTm 0 (ret_debug_synth ret)) (* elle est ici l'erreur il faut que je 
 test le retour de la synthèse *) 
-	 then create_report true (contexte_to_string contexte) steps "NO"
-	 else create_report false (contexte_to_string contexte) steps "Inv: ret and ty are not equal"
+	 then create_report true (contexte_to_string contexte) (get_steps_report_synth ret) "NO"
+	 else create_report false (contexte_to_string contexte) (get_steps_report_synth ret) "Inv: ret and ty are not equal"
        end
      else create_report false (contexte_to_string contexte) steps ("Inv: Synth of x goes wrong \n ----Rapport du Inv---\n" ^ print_report_synth ret ^ "\n------Fin Rapport Inv---\n")
   | Star -> 
@@ -1083,8 +1091,9 @@ test le retour de la synthèse *)
      begin 
        match ty with 
        | VStar -> let freshVar = gensym () in 
-		  if res_debug(check contexte s VStar (pretty_print_inTm inT [] ^ ";"^ steps))
-		  then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar (pretty_print_inTm inT [] ^ ";"^ steps)
+		  let check_s = check contexte s VStar steps in 
+		  if res_debug(check_s)
+		  then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar steps
 		  else create_report false (contexte_to_string contexte) steps "Pi : S is not of type Star"
        | _ -> create_report false (contexte_to_string contexte) steps "Pi : ty must be of type Star"
      end 
@@ -1092,8 +1101,8 @@ test le retour de la synthèse *)
     begin 
       match ty with 
       | VStar -> let freshVar = gensym () in 
-		 if res_debug(check contexte s VStar (pretty_print_inTm inT [] ^ ";"^ steps))
-		 then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar (pretty_print_inTm inT [] ^ ";"^ steps)
+		 if res_debug(check contexte s VStar steps)
+		 then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar steps
 		 else create_report false (contexte_to_string contexte) steps "Sig : A is not of type Star"
       | _ -> create_report false (contexte_to_string contexte) steps "Sig : ty must be of type Star"
     end 
@@ -1137,9 +1146,9 @@ test le retour de la synthèse *)
      begin
        match ty with 
        | VSig(a,b) -> 
-	  let check_x = check contexte x a (pretty_print_inTm inT [] ^ ";"^ steps) in
+	  let check_x = check contexte x a steps in
 	  let check_y = check (*pas sur a 100% de ne rien mettre dans le contexte ici à réfléchir*)
-			  contexte y (b (big_step_eval_inTm x [])) (pretty_print_inTm inT [] ^ ";"^ steps) in 
+			  contexte y (b (big_step_eval_inTm x [])) steps in 
 	  if res_debug(check_x) 
 	  then
 	    begin 
@@ -1154,9 +1163,9 @@ test le retour de la synthèse *)
   | Vec(alpha,n) -> 
      begin        
        match ty with 
-       | VStar -> let check_alpha = check contexte alpha VStar (pretty_print_inTm inT [] ^ ";"^ steps) in
+       | VStar -> let check_alpha = check contexte alpha VStar steps in
 		  if res_debug(check_alpha) 
-		  then check contexte n VNat (pretty_print_inTm inT [] ^ ";"^ steps)
+		  then check contexte n VNat steps
 		  else create_report false (contexte_to_string contexte) steps "Vec : alpha must be of type star"
        | _ -> create_report false (contexte_to_string contexte) steps "Vec : ty must be VStar" 
      end
@@ -1172,19 +1181,19 @@ test le retour de la synthèse *)
   | DCons(a,xs) -> 
      begin 
        match ty with 
-       | VVec(alpha,VSucc(n)) -> let check_xs = check contexte xs (VVec(alpha,n)) (pretty_print_inTm inT [] ^ ";"^ steps) in 
+       | VVec(alpha,VSucc(n)) -> let check_xs = check contexte xs (VVec(alpha,n)) steps in 
 				 if res_debug(check_xs)
-				 then check contexte a alpha (pretty_print_inTm inT [] ^ ";"^ steps)
+				 then check contexte a alpha steps
 				 else create_report false (contexte_to_string contexte) steps "DCons : xs must be of type (VVec alpha n)"
        | _ -> create_report false (contexte_to_string contexte) steps "DCons : ty must be a VVec"
      end
   (*=check_what *)
   | What(a) -> create_report true (contexte_to_string contexte) steps ("(contexte " ^ (contexte_to_string contexte) ^ ")(type " ^ (pretty_print_inTm inT []) ^ ")")
   (*=End *)
-  | Id(gA,a,b) -> let check_gA = check contexte gA VStar (pretty_print_inTm inT [] ^ ";"^ steps) in 		  
+  | Id(gA,a,b) -> let check_gA = check contexte gA VStar steps in 		  
 		  let eval_gA = big_step_eval_inTm gA [] in 
-		  let check_a = check contexte a eval_gA (pretty_print_inTm inT [] ^ ";"^ steps) in 
-		  let check_b = check contexte b eval_gA (pretty_print_inTm inT [] ^ ";"^ steps) in 
+		  let check_a = check contexte a eval_gA steps in 
+		  let check_b = check contexte b eval_gA steps in 
 		  if res_debug(check_gA) 
 		  then 
 		    begin 
@@ -1206,7 +1215,7 @@ test le retour de la synthèse *)
 			  if equal_inTm a quote_ta && equal_inTm a quote_ba
 			  then
 			    begin 
-			      check contexte a gA (pretty_print_inTm inT [] ^ ";"^ steps)
+			      check contexte a gA steps
 			    end 
 			  else create_report false (contexte_to_string contexte) steps "refl : a and ta must be equal"	       
        | _ -> create_report false (contexte_to_string contexte) steps "refl : ty must be of type Id"
@@ -1214,7 +1223,7 @@ test le retour de la synthèse *)
   | Liste(alpha) -> 
      begin 
        match ty with 
-       | VStar -> let check_alpha = check contexte alpha VStar (pretty_print_inTm inT [] ^ ";"^ steps) in
+       | VStar -> let check_alpha = check contexte alpha VStar steps in
 		  if res_debug(check_alpha) 
 		  then create_report true (contexte_to_string contexte) steps "NO"
 		  else create_report false (contexte_to_string contexte) steps "Liste : alpha seems to not be of type Star"
@@ -1232,8 +1241,8 @@ test le retour de la synthèse *)
   | Cons(a,xs) -> 
      begin 
        match ty with 
-       | VListe(alpha_liste) -> let check_a = check contexte a alpha_liste (pretty_print_inTm inT [] ^ ";"^ steps) in
-				let check_xs = check contexte xs (VListe(alpha_liste)) (pretty_print_inTm inT [] ^ ";"^ steps) in
+       | VListe(alpha_liste) -> let check_a = check contexte a alpha_liste steps in
+				let check_xs = check contexte xs (VListe(alpha_liste)) steps in
 				if res_debug(check_a) 
 				then 
 				  begin 
@@ -1252,7 +1261,7 @@ and synth contexte exT steps =
   | FVar x -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
 (*=End *)
   | Etiquette x -> create_retSynth (create_report false (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") VStar
-  | P0(x) -> let synth_x = synth contexte x (pretty_print_exTm exT [] ^ ";" ^ steps) in 
+  | P0(x) -> let synth_x = synth contexte x steps in 
 	     if res_debug_synth synth_x
 	     then
 	       begin
@@ -1261,7 +1270,7 @@ and synth contexte exT steps =
 		 | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : has to be applied to a pair") VStar
 	       end 
 	     else create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : synth of elem don't work") VStar
-  | P1(x) -> let synth_x = synth contexte x (pretty_print_exTm exT [] ^ ";" ^ steps) in 
+  | P1(x) -> let synth_x = synth contexte x steps in 
 	     if res_debug_synth synth_x
 	     then
 	       begin
@@ -1284,7 +1293,7 @@ and synth contexte exT steps =
 (*=End *)
 (*=synth_app *) 
   | Appl(f,s) -> 
-     let synth_f = synth contexte f (pretty_print_exTm exT [] ^ ";"^ steps) in 
+     let synth_f = synth contexte f steps in 
      if res_debug_synth synth_f 
      then
      begin
@@ -1298,11 +1307,15 @@ and synth contexte exT steps =
 (*=End *) 
   | Iter(p,n,f,a) -> let big_p = big_step_eval_inTm p [] in
 		     let big_n = big_step_eval_inTm n [] in 
-		     let type_p = read "(pi x N *)" in 
+		     let type_p = read "(pi x N *)" in 		     
  		     let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in    
 		     let check_n = check contexte n (big_step_eval_inTm (read "N") []) (pretty_print_exTm exT [] ^ ";") in
-		     let check_f = check contexte f (big_step_eval_inTm (Pi(Global("n"),Nat,Pi(Global("NO"),(Inv(Appl(Ann(p,type_p),Inv(BVar 0)))),(Inv(Appl(Ann(p,type_p),Succ(Inv(BVar 1)))))))) [])  (pretty_print_exTm exT [] ^ ";") in
+		     let type_f = (Pi(Global("n"),Nat,Pi(Global("NO"),(Inv(Appl(Ann(p,type_p),Inv(BVar 0)))),(Inv(Appl(Ann(p,type_p),Succ(Inv(BVar 1)))))))) in 
+		     let check_f = check contexte f (big_step_eval_inTm type_f [])  (pretty_print_exTm exT [] ^ ";") in
 		     let check_a = check contexte a (vapp(big_p,VZero)) (pretty_print_exTm exT [] ^ ";") in
+		     let steps_iter = "(<= " ^ pretty_print_inTm n []^ "((" ^ pretty_print_inTm type_f [] ^ ") (-> " ^ pretty_print_inTm f []
+				     ^ ")(" ^ pretty_print_inTm (value_to_inTm 0 (vapp(big_p,VZero))) [] ^ ")(-> " 
+				     ^ pretty_print_inTm a [] ^ ")))" in 
 		     if res_debug(check_n)
 		     then 
 		       begin 
@@ -1313,7 +1326,7 @@ and synth contexte exT steps =
 			     then
 			       begin 
 				 if res_debug(check_a)
-				 then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (vapp(big_p,big_n)) 
+				 then create_retSynth (create_report true (contexte_to_string contexte) steps_iter "NO") (vapp(big_p,big_n)) 
 				 else create_retSynth (create_report false (contexte_to_string contexte) steps "Iter : a is not of type (P 0)") VStar
 			       end
 			     else create_retSynth (create_report false (contexte_to_string contexte) steps "Iter : f is not of type (pi n N (-> (P n) (P (succ n))))") VStar
