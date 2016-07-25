@@ -32,6 +32,7 @@ type location = Loc of tree * path
 (* -----------------Fonctions d'affichage-------------- *)
 let rec pretty_print_inTm_user terme l = 
   match terme with 
+  | Ref(name) -> name
   | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm_user x (str :: l) ^ ")"
   | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
@@ -247,13 +248,13 @@ let rec go_down_until_pi (Loc(t,p)) =
 (* Fonctions permettants de récupérer l'ensemble des définitions terminée à partir d'une position *)
 let rec get_def_item it env = 
   match it with 
-  | Definition(name,Complete(typ,terme)) -> ((name,typ,Ann(terme,typ)) :: env)
+  | Definition(name,Complete(typ,terme)) -> ((name,typ,terme) :: env)
   | _ -> env 
 and get_def_tree_liste tree_liste env = 
   match tree_liste with 
   | [] -> env 
-  | Item(Definition(name,Complete(typ,terme))) :: [] -> ((name,typ,Ann(terme,typ)) :: env)
-  | Item(Definition(name,Complete(typ,terme))) :: suite -> get_def_tree_liste suite ((name,typ,Ann(terme,typ)) :: env)
+  | Item(Definition(name,Complete(typ,terme))) :: [] -> ((name,typ,terme) :: env)
+  | Item(Definition(name,Complete(typ,terme))) :: suite -> get_def_tree_liste suite ((name,typ,terme) :: env)
   | other :: suite -> get_def_tree_liste suite env
 and get_def (Loc(t,p)) env = 
   match t,p with 
@@ -265,7 +266,7 @@ and get_def (Loc(t,p)) env =
 let rec print_def env = 
   match env with 
   | [] -> ""
-  | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm_user typ [] ^ " : " ^ pretty_print_exTm_user terme []
+  | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm_user typ [] ^ " : " ^ pretty_print_inTm_user terme []
 				 ^ ")\n" ^ print_def suite
 
  

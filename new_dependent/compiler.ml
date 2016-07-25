@@ -6,6 +6,11 @@ open Tactics
 type pattern = 
   | Pattern of inTm 
 
+(* le inTm de ce résult est une substitution *)
+type matching = 
+  | Success of (string * inTm) list
+  | Failed
+
 type act = 
   | Return of inTm 
   | Split of string * ((pattern * act) list)
@@ -85,26 +90,174 @@ let pretty_print_def userDef =
 
 
 (* Fonctions manipulants une user_def afin de la transformer en terme *)
-let rec matching 
+(* le premier est un terme faisant office de pattern et le second le terme à matcher *)
+(* fonction en cour de modification *)
+let rec matching_inTm p t l =
+  match (p,t) with 
+  | (Abs(_,x1),Abs(_,x2)) -> matching_inTm x1 x2 l
+  | (Pi(_,x1,y1),Pi(_,x2,y2)) -> begin match matching_inTm x1 x2 l with
+				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Failed -> Failed
+				 end
+  | (Sig(_,x1,y1),Sig(_,x2,y2)) -> begin match matching_inTm x1 x2 l with 
+					 | Success(liste) -> matching_inTm y1 y2 liste 
+					 | Failed -> Failed
+				   end
+  | (Star,Star) -> Success(l)
+  | (Zero,Zero) -> Success(l)
+  | (Succ(n1),Succ(n2)) -> matching_inTm n1 n2 l
+  | (Nat,Nat) -> Success(l)
+  | (Bool,Bool) -> Success(l)
+  | (True,True) -> Success(l)
+  | (False,False) -> Success(l)
+(*   | (Inv(FVar(Global name)),terme) -> Success((name,terme) :: l) Plus besoin de ce cas *)
+  | (Inv(x1),Inv(x2)) -> matching_exTm x1 x2 l
+  | (Pair(x1,y1),Pair(x2,y2)) -> begin match matching_inTm x1 x2 l with 
+				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Failed -> Failed 
+				 end
+  | (What(a),What(b)) -> Success(l)
+  | (Vec(x1,y1),Vec(x2,y2)) -> begin match matching_inTm x1 x2 l with 
+				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Failed -> Failed 
+			       end
+  | (DNil x1,DNil x2) -> matching_inTm x1 x2 l
+  | (DCons(x1,y1),DCons(x2,y2)) -> begin match matching_inTm x1 x2 l with 
+				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Failed -> Failed 
+				 end
+  | (Id(x1,y1,z1),Id(x2,y2,z2)) -> begin match matching_inTm x1 x2 l with 
+				       | Success(liste) -> begin match matching_inTm y1 y2 liste with 
+								 | Success(liste) -> matching_inTm z1 z2 liste
+								 | Failed -> Failed
+							   end 
+				       | Failed -> Failed 
+				 end 
+  | (Refl(a),Refl(b)) -> matching_inTm a b l
+  | (Liste(a),Liste(b))-> matching_inTm a b l
+  | (Nil(a),Nil(b)) -> matching_inTm a b l 
+  | (Cons(y1,z1),Cons(y2,z2)) -> begin match matching_inTm y1 y2 l with 
+				       | Success(liste) -> matching_inTm z1 z2 liste 
+				       | Failed -> Failed 
+				 end				  
+  | _ -> Failed 
+and matching_exTm p t l = 
+  match (p,t) with 
+  | (Ann(x1,y1),Ann(x2,y2)) -> begin match matching_inTm x1 x2 l with 
+				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Failed -> Failed 
+				 end
+  | (BVar(x1),BVar(x2)) -> if x1 = x2 then Success(l) else Failed 
+  | (FVar(Global(user_name)),FVar(Global(name))) -> Success((user_name,Inv(FVar(Global(name)))) :: l)
+  | (Appl(x1,y1),Appl(x2,y2)) -> begin match matching_exTm x1 x2 l with 
+				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Failed -> Failed 
+				 end
+  | (Iter(w1,x1,y1,z1),Iter(w2,x2,y2,z2)) -> 
+     begin match matching_inTm w1 w2 l with 
+	   | Success(liste) -> 
+	      begin match matching_inTm x1 x2 liste with 
+		    | Success(liste) -> begin 
+			match matching_inTm y1 y2 liste with 
+			| Success(liste) -> matching_inTm z1 z2 liste 
+			| Failed -> Failed 
+		      end
+		    | Failed -> Failed 
+	      end
+	   | Failed -> Failed 
+     end
+  | (Ifte(w1,x1,y1,z1),Ifte(w2,x2,y2,z2)) -> 
+     begin match matching_inTm w1 w2 l with 
+	   | Success(liste) -> 
+	      begin match matching_inTm x1 x2 liste with 
+		    | Success(liste) -> begin 
+			match matching_inTm y1 y2 liste with 
+			| Success(liste) -> matching_inTm z1 z2 liste 
+			| Failed -> Failed 
+		      end
+		    | Failed -> Failed 
+	      end
+	   | Failed -> Failed 
+     end
+  | (P0(x1),P0(x2)) -> matching_exTm x1 x2 l 
+  | (P1(x1),P1(x2)) -> matching_exTm x1 x2 l 
+  | (DFold(w1,x1,y1,z1,f1,a1),DFold(w2,x2,y2,z2,f2,a2)) ->      
+     begin match matching_inTm w1 w2 l with 
+	   | Success(liste) -> 
+	      begin match matching_inTm x1 x2 liste with 
+		    | Success(liste) -> begin 
+			match matching_inTm y1 y2 liste with 
+			| Success(liste) -> begin 
+			    match matching_inTm z1 z2 liste with 
+			    | Success(liste) -> begin 
+			      match matching_inTm f1 f2 liste with 
+			      | Success(liste) -> matching_inTm a1 a2 liste
+			      | Failed -> Failed 
+			      end 
+			    | Failed -> Failed 
+			  end
+			| Failed -> Failed 
+		      end
+		    | Failed -> Failed 
+	      end
+	   | Failed -> Failed 
+     end
+  | (Fold(w1,x1,y1,z1,f1),Fold(w2,x2,y2,z2,f2)) -> 
+     begin match matching_inTm w1 w2 l with 
+	   | Success(liste) -> 
+	      begin match matching_inTm x1 x2 liste with 
+		    | Success(liste) -> begin 
+			match matching_inTm y1 y2 liste with 
+			| Success(liste) -> begin 
+			    match matching_inTm z1 z2 liste with 
+			    | Success(liste) -> matching_inTm f1 f2 liste 
+			    | Failed -> Failed 
+			  end
+			| Failed -> Failed 
+		      end
+		    | Failed -> Failed 
+	      end
+	   | Failed -> Failed 
+     end
+  | _ -> Failed
 
+(* a partir d'une liste permet de remplacer les elements de l'utilisateur par les réels termes *)
+let rec change_name_liste terme l = 
+  match l with 
+  | [] -> terme
+  | (name,terme) :: suite -> let terme = change_name_FVar_inTm terme name in 
+			     change_name_liste terme suite
+	   
 
-let rec pattern_match_to_terme arbre pattern_match = 
+(* permet de transformer une liste de patAct en terme *)
+(* avant de faire les returnes il faut juste remplacer l'ensemble des variables libres du terme grace a la liste obtenue*)
+let rec patAct_to_terme arbre pattern_match  = 
   let goal_terme = get_type_item arbre in
   match pattern_match with 
   | [] -> arbre 
-  | () :: suite -> failwith "lol"
+  | (Pattern(p),act) :: suite -> let liste = begin 
+				     match matching_inTm p goal_terme [] with 
+				     | Success(l) -> l
+				     | Failed -> []
+				   end in 
+				 begin 
+				   match act with 
+				   | Split(name,patActListe) -> patAct_to_terme (split name arbre) suite 
+				   | Return(t) -> let terme = change_name_liste t liste in 
+						  return terme 1 arbre
+				 end
+				 
+			
 
 
 (* faire une fonction à coté qui permet de lire les fichiers *)
 let userDef_to_terme d arbre =  
   let arbre = procedure_start_definition d.def arbre in 
   let arbre = intros arbre in 
-  let arbre = pattern_match_to_terme arbre in 
+  let arbre = patAct_to_terme arbre [d.patAct] in 
   arbre
   
-  
-  
-  
+    
   
   
 (* let create_terme_with_pattern p = *)

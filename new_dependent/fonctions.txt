@@ -1,0 +1,87 @@
+Booléens ---------
+negation pour les booléens 
+
+implication pour les booléens
+
+le ou exclusif 
+
+le ou et le "et" booléen
+
+
+les entiers -----------
+addition soustraction multiplication 
+plus petit stric et pas strict (tous les comparateurs)
+
+Le prédécesseur 
+
+L'égalité entre deux entiers
+
+La soustraction
+
+l'exponentiel
+
+la parité 
+
+factorielle 
+
+le maximum et minimum de deux nombres 
+
+fonction qui double le nombre
+
+la division par 2 entière (euclidienne)
+
+
+
+Listes--------------- 
+
+la taille 
+
+la tete (prend deux arguments le deuxième pour renvoyer quelque chose)
+la queue (comme le suite dans ocaml avec le pattern matching a :: suite)
+
+crée une liste de taille n avec que des x de type A
+
+la concaténation de deux listes
+
+inversion de liste
+
+le dernier élément de la liste
+
+le n-ième élément d'une liste
+
+fonction avec un prédicat (booléens) et une liste qui retourne le premier élément qui 
+retourne l'indice du premier élément qui retourne true au predicat
+
+fonction de filtrage : qui prend un prédicat et qui crée une liste avec les éléments qui ont passés le predicat(true)
+
+fonction qui compte le nombre d'éléments qui passent le prédicat 
+
+Exist : fonction qui retourne vrai si au moins un élément de la liste vérifie
+le prédicat
+
+Pourtout : qui retourne vrai si et seulement si tous les éléments de la liste 
+vérifient le prédicat
+
+drop : prend un entier n et une liste et jette les n premiers éléments de la liste
+
+take : retourne les n premiers éléments de la liste (si la liste moins de n alors il faut retourner toute la liste)
+
+l'égalité sur les listes : deux listes plus un prédicat permettant de tester 
+si les éléments de la liste sont égaux deux a deux selon le prédicat
+
+fonction zip qui prend deux listes et qui construit une liste des pairs.
+
+fonction unzip qui prend une liste de paire et qui retoune une pair de deux listes 
+
+flatten : prend une liste de liste de a et retourne une liste de a en concaténant toutes les listes qui sont à l'intérieur
+
+produit cartésien : retourne des pairs issus de deux liste (a1 * b1) (a1 * b2)......(ai * bn)
+
+lire papier 
+
+
+
+
+
+
+

@@ -3,7 +3,6 @@ open Lambda
 open Sexplib
 
 
-
 (*-----------------------Fonctions pour crée le Upper type------------------------*)
 (* permet de crée un type à partir du type donné par l'utilisateur *)
 let rec create_uper_type typ = 
@@ -239,9 +238,9 @@ let check (Loc(t,p)) =
     end in 
   if check_if_no_hole_inTm terme 
   then begin
-      let final_terme = replace_etiquette_inTm terme (get_def (Loc(t,p)) []) in 
+      let final_terme = replace_ref_etiq_inTm terme (get_def (Loc(t,p)) []) in 
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-      let final_type = replace_etiquette_inTm typ (get_def (Loc(t,p)) []) in 
+      let final_type = replace_ref_etiq_inTm typ (get_def (Loc(t,p)) []) in 
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
       let res_check = check [] final_terme (big_step_eval_inTm final_type []) "" in 
       let steps = get_steps_report res_check in 
@@ -324,11 +323,8 @@ let split induct_var (Loc(t,p)) =
 let verif (Loc(t,p)) = 
   verif_and_push_up_item (Loc(t,p))  
 
-let return (Loc(t,p)) = 
-  let terme = get_terme_item (Loc(t,p)) in 
-  let terme_push = read (ask_terme ()) in 
-  let hole = int_of_string (ask_the_hole terme "iter") in    
-  let arbre = complete_focus_terme (Loc(t,p)) terme_push hole in
+let return terme hole (Loc(t,p)) = 
+  let arbre = complete_focus_terme (Loc(t,p)) terme hole in
   verif arbre
   
   
@@ -352,6 +348,11 @@ let contexte_def (Loc(t,p)) =
   let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p))) in 
   (Loc(t,p))
 
+
+let load_def fichier (Loc(t,p)) = 
+  let f = In_channel.create fichier in
+  failwith "lol"
+  
   
   
 (* --------------Fonctions de manipulation de tactiques ----------------- *)			    
@@ -376,8 +377,15 @@ let choose_tactic () =
   | "contexte def" -> contexte_def
  (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
   | "split" -> let induct_var = ask_induct_var () in split induct_var
-  | "return" -> return
-			
+  | "return" -> let () = Printf.printf "Enter the terme you wan't to push on it \n" in
+		let terme = read (read_line ()) in 
+		let () = Printf.printf "Enter the hole you wan't to complete \n" in 
+		let hole = int_of_string (read_line ()) in 
+		return terme hole
+  | "load" -> 
+     let () = Printf.printf "\nEnter the name of the filename you wan't to load\n" in 
+     let fichier = read_line () in 
+     load_def fichier
   | _ -> nothing
 
 (* --------------Idées-------------------*)

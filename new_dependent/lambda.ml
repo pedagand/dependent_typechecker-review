@@ -289,7 +289,7 @@ and parse_exTm env t =
      P0(parse_exTm env x)
   | Sexp.List [Sexp.Atom "p1";x] ->
      P1(parse_exTm env x)
-  | Sexp.List [Sexp.Atom "ref"; Sexp.Atom reference] -> 
+  | Sexp.List [Sexp.Atom reference] -> 
      Etiquette(reference)      
   | Sexp.List [Sexp.Atom "iter"; p ; n ; f ; z] ->
      Iter((parse_term env p),(parse_term env n),(parse_term env f),(parse_term env z))
@@ -364,60 +364,65 @@ and replace_hole_exTm  terme tsub num =
 
 (* prend en argument une liste de ref ainsi qu'un nom et retourne le terme associé au nom si celui ci existe *)
 (*-----------LOLOLOL surement à changer quand le moment viendra---------------------*)
-let rec def_is_in_the_liste env name_to_find= 
+let rec def_is_in_the_liste_inTm env name_to_find= 
   match env with 
   | [] -> failwith "def_is_in_the_liste : Dummy you call a ref wich is not present in the context ..... You can shut down your computer now" 
   | (name,typ,terme) :: suite -> 
-     if name = name_to_find then terme else def_is_in_the_liste suite name_to_find
+     if name = name_to_find then terme else def_is_in_the_liste_inTm suite name_to_find
+let rec def_is_in_the_liste_exTm env name_to_find = 
+  match env with 
+  | [] -> failwith "def_is_in_the_liste : You use a bad list" 
+  | (name,typ,terme) :: suite -> 
+     if name = name_to_find then Ann(terme,typ) else def_is_in_the_liste_exTm suite name_to_find
 
 (* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Etiquette on été modifiés 
 utilise is_in_the_list qui est une fonction dans le zipper *)
-let rec replace_ref_inTm terme liste_ref = 
+let rec replace_ref_etiq_inTm terme liste_ref = 
   match terme with 
-  | Ref(name) -> def_is_in_the_liste liste_ref name
-  | Hole_inTm(x) -> failwith "replace_ref_inTm : you can't have a hole when you are replacing the ref" 
-  | Inv x -> Inv(replace_ref_exTm x liste_ref)
-  | Abs(x,y) -> Abs(x,(replace_ref_inTm y liste_ref ))
+  | Ref(name) -> def_is_in_the_liste_inTm liste_ref name
+  | Hole_inTm(x) -> failwith "replace_ref_etiq_inTm  : you can't have a hole when you are replacing the ref" 
+  | Inv x -> Inv(replace_ref_etiq_exTm x liste_ref)
+  | Abs(x,y) -> Abs(x,(replace_ref_etiq_inTm  y liste_ref ))
   | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref))
+  | Pi(v,x,y) -> Pi(v,(replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref))
   (*=End *)
-  | Sig(x,a,b) -> Sig(x,(replace_ref_inTm a liste_ref),(replace_ref_inTm b liste_ref ))
+  | Sig(x,a,b) -> Sig(x,(replace_ref_etiq_inTm  a liste_ref),(replace_ref_etiq_inTm  b liste_ref ))
   | Zero -> Zero 
-  | Succ n -> Succ(replace_ref_inTm n liste_ref)
+  | Succ n -> Succ(replace_ref_etiq_inTm  n liste_ref)
   | Nat -> Nat
   | Bool -> Bool
   | True -> True 
   | False -> False 
-  | Pair(x,y) -> Pair((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
-  | Liste(alpha) -> Liste(replace_ref_inTm alpha liste_ref )
-  | Nil(alpha) -> Nil(replace_ref_inTm alpha liste_ref )
-  | Cons(a,xs) -> Cons((replace_ref_inTm a liste_ref ),(replace_ref_inTm xs liste_ref ))
-  | Vec(alpha,n) -> Vec((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm n liste_ref ))
-  | DNil(alpha) -> DNil(replace_ref_inTm alpha liste_ref )
-  | DCons(a,xs) -> DCons((replace_ref_inTm a liste_ref ),(replace_ref_inTm a liste_ref ))
+  | Pair(x,y) -> Pair((replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
+  | Liste(alpha) -> Liste(replace_ref_etiq_inTm  alpha liste_ref )
+  | Nil(alpha) -> Nil(replace_ref_etiq_inTm  alpha liste_ref )
+  | Cons(a,xs) -> Cons((replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  xs liste_ref ))
+  | Vec(alpha,n) -> Vec((replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  n liste_ref ))
+  | DNil(alpha) -> DNil(replace_ref_etiq_inTm  alpha liste_ref )
+  | DCons(a,xs) -> DCons((replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  a liste_ref ))
   | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((replace_ref_inTm gA liste_ref ),(replace_ref_inTm a liste_ref ),(replace_ref_inTm b liste_ref ))
-  | Refl(a) -> Refl(replace_ref_inTm a liste_ref )
-and replace_ref_exTm terme liste_ref  = 
+  | Id(gA,a,b) -> Id((replace_ref_etiq_inTm  gA liste_ref ),(replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  b liste_ref ))
+  | Refl(a) -> Refl(replace_ref_etiq_inTm  a liste_ref )
+and replace_ref_etiq_exTm terme liste_ref  = 
   match terme with 
     (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
-  | Hole_exTm(x) -> failwith "replace_ref_exTm : I just say before that you can't check something which is not finish, how did you manage that"
-  | Etiquette(x) -> Etiquette(x)
+  | Hole_exTm(x) -> failwith "replace_ref_etiq_exTm : I just say before that you can't check something which is not finish, how did you manage that"
+  | Etiquette(name) -> def_is_in_the_liste_exTm liste_ref name
   | FVar x -> FVar x
   | BVar x -> BVar x
-  | Appl(x,y) -> Appl((replace_ref_exTm x liste_ref ),(replace_ref_inTm y liste_ref ))
-  | Ann(x,y) -> Ann((replace_ref_inTm x liste_ref ),(replace_ref_inTm y liste_ref ))
+  | Appl(x,y) -> Appl((replace_ref_etiq_exTm x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
+  | Ann(x,y) -> Ann((replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
   (*=End *)
-  | Iter(p,n,f,a) -> Iter((replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
-  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_inTm p liste_ref ),(replace_ref_inTm c liste_ref ),(replace_ref_inTm tHen liste_ref ),(replace_ref_inTm eLse liste_ref ))
-  | P0(x) -> P0(replace_ref_exTm x liste_ref )
-  | P1(x) -> P1(replace_ref_exTm x liste_ref )
-  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_inTm alpha liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm n liste_ref ),
-				     (replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),(replace_ref_inTm a liste_ref ))
-  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_inTm gA liste_ref ),(replace_ref_inTm p liste_ref ),(replace_ref_inTm a liste_ref ),
-				 (replace_ref_inTm b liste_ref ),(replace_ref_inTm q liste_ref ),(replace_ref_inTm x liste_ref ))
-  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_inTm gA liste_ref ),(replace_ref_inTm alpha liste_ref ),(replace_ref_inTm xs liste_ref ),(replace_ref_inTm f liste_ref ),
-			    (replace_ref_inTm a liste_ref ))
+  | Iter(p,n,f,a) -> Iter((replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  n liste_ref ),(replace_ref_etiq_inTm  f liste_ref ),(replace_ref_etiq_inTm  a liste_ref ))
+  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  c liste_ref ),(replace_ref_etiq_inTm  tHen liste_ref ),(replace_ref_etiq_inTm  eLse liste_ref ))
+  | P0(x) -> P0(replace_ref_etiq_exTm x liste_ref )
+  | P1(x) -> P1(replace_ref_etiq_exTm x liste_ref )
+  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  n liste_ref ),
+				     (replace_ref_etiq_inTm  xs liste_ref ),(replace_ref_etiq_inTm  f liste_ref ),(replace_ref_etiq_inTm  a liste_ref ))
+  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_etiq_inTm  gA liste_ref ),(replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  a liste_ref ),
+				 (replace_ref_etiq_inTm  b liste_ref ),(replace_ref_etiq_inTm  q liste_ref ),(replace_ref_etiq_inTm  x liste_ref ))
+  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_etiq_inTm  gA liste_ref ),(replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  xs liste_ref ),(replace_ref_etiq_inTm  f liste_ref ),
+			    (replace_ref_etiq_inTm  a liste_ref ))
 
 
 (*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
@@ -621,6 +626,55 @@ plustot que de mettre -1 comme argument *)
 				 (bound_var_inTm b i var),(bound_var_inTm q i var),(bound_var_inTm x i var))
   | Fold(gA,alpha,xs,f,a) -> Fold((bound_var_inTm gA i var),(bound_var_inTm alpha i var),(bound_var_inTm xs i var),(bound_var_inTm f i var),
 			    (bound_var_inTm a i var))
+
+ 
+let rec change_name_FVar_inTm t tsub = 
+  match t with 
+  | Ref(name) -> Ref(name)
+  | Hole_inTm(x) -> Hole_inTm x
+  | Inv x -> Inv(change_name_FVar_exTm x tsub)
+  | Abs(x,y) -> Abs(x,(change_name_FVar_inTm y tsub))
+  | Star -> Star
+  | Pi(v,x,y) -> Pi(v,(change_name_FVar_inTm x tsub),(change_name_FVar_inTm y tsub))
+  (*=End *)
+  | Sig(x,a,b) -> Sig(x,(change_name_FVar_inTm a tsub),(change_name_FVar_inTm b tsub ))
+  | Zero -> Zero 
+  | Succ n -> Succ(change_name_FVar_inTm n tsub)
+  | Nat -> Nat
+  | Bool -> Bool
+  | True -> True 
+  | False -> False 
+  | Pair(x,y) -> Pair((change_name_FVar_inTm x tsub ),(change_name_FVar_inTm y tsub ))
+  | Liste(alpha) -> Liste(change_name_FVar_inTm alpha tsub )
+  | Nil(alpha) -> Nil(change_name_FVar_inTm alpha tsub )
+  | Cons(a,xs) -> Cons((change_name_FVar_inTm a tsub ),(change_name_FVar_inTm xs tsub ))
+  | Vec(alpha,n) -> Vec((change_name_FVar_inTm alpha tsub ),(change_name_FVar_inTm n tsub ))
+  | DNil(alpha) -> DNil(change_name_FVar_inTm alpha tsub )
+  | DCons(a,xs) -> DCons((change_name_FVar_inTm a tsub ),(change_name_FVar_inTm a tsub ))
+  | What(a) -> What(a)
+  | Id(gA,a,b) -> Id((change_name_FVar_inTm gA tsub ),(change_name_FVar_inTm a tsub ),(change_name_FVar_inTm b tsub ))
+  | Refl(a) -> Refl(change_name_FVar_inTm a tsub )
+(*=change_name_FVar_exTm *)
+and change_name_FVar_exTm  t tsub = 
+  match t with 
+  | Hole_exTm(x) -> Hole_exTm x
+  | FVar(Global x) -> if x = tsub then FVar(Global(tsub)) else FVar(Global x )
+  | BVar x -> BVar x
+  | Etiquette x -> Etiquette x 
+  | Appl(x,y) -> Appl((change_name_FVar_exTm x tsub),(change_name_FVar_inTm y tsub))
+  | Ann(x,y) -> Ann((change_name_FVar_inTm x tsub),(change_name_FVar_inTm y tsub))
+  (*=End *)
+  | Iter(p,n,f,a) -> Iter((change_name_FVar_inTm p tsub),(change_name_FVar_inTm n tsub),(change_name_FVar_inTm f tsub),(change_name_FVar_inTm a tsub))
+  | Ifte(p,c,tHen,eLse) -> Ifte((change_name_FVar_inTm p tsub),(change_name_FVar_inTm c tsub),(change_name_FVar_inTm tHen tsub),(change_name_FVar_inTm eLse tsub))
+  | P0(x) -> P0(change_name_FVar_exTm x tsub)
+  | P1(x) -> P1(change_name_FVar_exTm x tsub)
+  | DFold(alpha,p,n,xs,f,a) -> DFold((change_name_FVar_inTm alpha tsub),(change_name_FVar_inTm p tsub),(change_name_FVar_inTm n tsub ),
+				     (change_name_FVar_inTm xs tsub ),(change_name_FVar_inTm f tsub ),(change_name_FVar_inTm a tsub ))
+  | Trans(gA,p,a,b,q,x) -> Trans((change_name_FVar_inTm gA tsub ),(change_name_FVar_inTm p tsub ),(change_name_FVar_inTm a tsub ),
+				 (change_name_FVar_inTm b tsub ),(change_name_FVar_inTm q tsub),(change_name_FVar_inTm x tsub))
+  | Fold(gA,alpha,xs,f,a) -> Fold((change_name_FVar_inTm gA tsub ),(change_name_FVar_inTm alpha tsub ),(change_name_FVar_inTm xs tsub),(change_name_FVar_inTm f tsub),
+			    (change_name_FVar_inTm a tsub))
+  | _ -> failwith "change_name_FVar : maybe i don't make the all function but i don't care"
 
 
 
