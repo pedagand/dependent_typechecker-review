@@ -1,7 +1,7 @@
 open Lambda 
 open Sexplib
 open Zipper
-open Tactics
+(* open Tactics *)
 
 type pattern = 
   | Pattern of inTm 
@@ -43,13 +43,23 @@ let rec parse_act str =
   | _ -> failwith "parse_act : your pattern don't have a good shape" 
 
 
-let parse_type_definition str = 
+let rec parse_type_definition str l = 
   match str with 
-  | Sexp.List [Sexp.Atom "def";def;Sexp.List[p;a]] -> 
-     {def = Sexp.to_string def;patAct = (Pattern(parse_term [] p),parse_act a)}
-  | _ -> failwith "parse_type_definition : your definition don't have a good shape"
+  | Sexp.List [Sexp.Atom "def";Sexp.List def;Sexp.List[p;a]] -> 
+     {def = Sexp.to_string (Sexp.List def);patAct = (Pattern(parse_term [] p),parse_act a)} :: l
+(*   | Sexp.List [elem] -> parse_type_definition elem l 
+  | Sexp.List [Sexp.List elem; suite] -> 
+     let liste = parse_type_definition (Sexp.List elem) l in 
+     parse_type_definition suite liste *)
+  | _ -> failwith ("parse_type_definition : your definition don't have a good shape: \n " ^ Sexp.to_string str)
 
+let read_definition str = 
+  parse_type_definition (Sexp.of_string str) []
+
+
+  
      
+(* dans la fonction de création des defintion dans l'arbre il faut prendre en considération le fait que ce soit une liste *)
 
   
 
@@ -231,32 +241,8 @@ let rec change_name_liste terme l =
 
 (* permet de transformer une liste de patAct en terme *)
 (* avant de faire les returnes il faut juste remplacer l'ensemble des variables libres du terme grace a la liste obtenue*)
-let rec patAct_to_terme arbre pattern_match  = 
-  let goal_terme = get_type_item arbre in
-  match pattern_match with 
-  | [] -> arbre 
-  | (Pattern(p),act) :: suite -> let liste = begin 
-				     match matching_inTm p goal_terme [] with 
-				     | Success(l) -> l
-				     | Failed -> []
-				   end in 
-				 begin 
-				   match act with 
-				   | Split(name,patActListe) -> patAct_to_terme (split name arbre) suite 
-				   | Return(t) -> let terme = change_name_liste t liste in 
-						  return terme 1 arbre
-				 end
-				 
-			
 
-
-(* faire une fonction à coté qui permet de lire les fichiers *)
-let userDef_to_terme d arbre =  
-  let arbre = procedure_start_definition d.def arbre in 
-  let arbre = intros arbre in 
-  let arbre = patAct_to_terme arbre [d.patAct] in 
-  arbre
-  
+       
     
   
   

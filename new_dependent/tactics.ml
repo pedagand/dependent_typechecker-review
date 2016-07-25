@@ -1,7 +1,7 @@
 open Zipper
 open Lambda
 open Sexplib
-
+open Compiler
 
 (*-----------------------Fonctions pour crée le Upper type------------------------*)
 (* permet de crée un type à partir du type donné par l'utilisateur *)
@@ -330,7 +330,35 @@ let return terme hole (Loc(t,p)) =
   
 let nothing (Loc(t,p)) = (Loc(t,p))
 			   
+(* ------------------ ici c'est pour le chargement des defintions *)
+let rec patAct_to_terme arbre pattern_match  = 
+  let goal_terme = get_type_item arbre in
+  match pattern_match with 
+  | [] -> arbre 
+  | (Pattern(p),act) :: suite -> let liste = begin 
+				     match matching_inTm p goal_terme [] with 
+				     | Success(l) -> l
+				     | Failed ->  []
+				   end in 
+				 begin 
+				   match act with 
+				   | Split(name,patActListe) -> patAct_to_terme (split name arbre) suite 
+				   | Return(t) -> let terme = change_name_liste t liste in 
+						  return terme 1 arbre
+				 end
+				 
+			
 
+
+(* faire une fonction à coté qui permet de lire les fichiers *)
+let rec userDef_to_terme l arbre =  
+  match l with 
+  | [] -> arbre
+  | d :: suite ->
+     let arbre = procedure_start_definition d.def arbre in 
+     let arbre = intros arbre in 
+     let arbre = patAct_to_terme arbre [d.patAct] in 
+     arbre
 
   
 let son (Loc(t,p)) = 
@@ -348,10 +376,32 @@ let contexte_def (Loc(t,p)) =
   let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p))) in 
   (Loc(t,p))
 
+let rec file_to_string f l= 
+   try 
+    let line = l ^ (input_line f) in  (* read line from in_channel and discard \n *)
+    file_to_string f line
+   with e -> l
+  
+(* let replace input output =
+  Str.global_replace (Str.regexp_string input) output *)
 
-let load_def fichier (Loc(t,p)) = 
-  let f = In_channel.create fichier in
-  failwith "lol"
+(* prend un string en argument pour ouvir un flux sur celui ci *)
+(* let load_def fichier (Loc(t,p)) = 
+  let f = open_in fichier in
+  let res = file_to_string f "" in   
+  let () = close_in f in 
+  let () = Printf.printf "\n%s\n" res in
+  let res = replace "\t" "" res in 
+  let () = Printf.printf "\n%s\n" res in
+  (* maintenant il faut parser la réponse ect... *)
+  let defs = read_definition res in 
+  userDef_to_terme defs (Loc(t,p)) *)
+let load_def d (Loc(t,p)) = 
+  let defs = read_definition d in 
+  userDef_to_terme defs (Loc(t,p))
+  
+  
+  
   
   
   
@@ -384,8 +434,7 @@ let choose_tactic () =
 		return terme hole
   | "load" -> 
      let () = Printf.printf "\nEnter the name of the filename you wan't to load\n" in 
-     let fichier = read_line () in 
-     load_def fichier
+     let fichier = read_line () in load_def fichier
   | _ -> nothing
 
 (* --------------Idées-------------------*)
