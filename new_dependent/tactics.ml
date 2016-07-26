@@ -75,32 +75,6 @@ let parse_definition def refe =
      Definition(name,Incomplete(terme,Hole_inTm(1)))
   | _ -> failwith "parse_definition : it seem's that your def is not good"
 
-let procedure_start_definition typ_not_parsed arbre= 
-  let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
-  match second_def with 
-  | Definition(name,Incomplete(typ,terme)) -> 
-     let defi = init_definition typ name in 
-     let first_def = Section([Item(defi)]) in      
-     let arbre = (go_down(go_right(insert_right arbre first_def))) in 
-     let first_def_type = begin 
-	 match defi with 
-	 | Definition(new_name,Complete(new_typ,new_term)) -> new_typ
-	 | _ -> failwith "procedure_start_definition : it's impossible"
-       end in 
-      let liste_var = liste_me_var first_def_type in  
-      let second_def = begin
-	  match second_def with 
-	  | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
-									 modifie_return_type typ (Inv(
-											       (make_application 
-												 (Etiquette(create_upper_name name typ))
-												  liste_var))),term))
-	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
-	end in
-      let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
-      arbre
-  | _ -> failwith "procedure_start_definition : something goes wrong during the creation of the definition"
-
 
 (* ---------------- Routines de demande de saisies pour l'utilisateur ----------------------- *)
 (* transformer toutes les fonctions de la sorte *)
@@ -198,6 +172,34 @@ let rec intros arbre =
     | (Pi(x,s,t)) -> intros (intro_auto arbre)
     | _ -> arbre
   end
+
+let procedure_start_definition typ_not_parsed arbre= 
+  let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
+  match second_def with 
+  | Definition(name,Incomplete(typ,terme)) -> 
+     let defi = init_definition typ name in 
+     let first_def = Section([Item(defi)]) in      
+     let arbre = (go_down(go_right(insert_right arbre first_def))) in 
+     let first_def_type = begin 
+	 match defi with 
+	 | Definition(new_name,Complete(new_typ,new_term)) -> new_typ
+	 | _ -> failwith "procedure_start_definition : it's impossible"
+       end in 
+      let liste_var = liste_me_var first_def_type in  
+      let second_def = begin
+	  match second_def with 
+	  | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
+									 modifie_return_type typ (Inv(
+											       (make_application 
+												 (Etiquette(create_upper_name name typ))
+												  liste_var))),term))
+	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
+	end in
+      let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
+      let arbre = intros arbre in
+      arbre
+  | _ -> failwith "procedure_start_definition : something goes wrong during the creation of the definition"
+
   
 
 let axiome var (Loc(t,p))  = 
@@ -356,6 +358,14 @@ let nothing (Loc(t,p)) = (Loc(t,p))
 (* 				 end *)			
 	   
 
+(* ----------------------------fonctions de debug ----------------------*)
+let rec pretty_print_goal_liste liste = 
+  match liste with 
+  | [] -> "End"
+  | elem :: suite -> pretty_print_inTm elem [] ^ ";" ^ pretty_print_goal_liste suite
+  
+(*-----------------------------Fin--------------------------------------*)
+
 (* l'argument l est le mapping obtenue par le matching lors de l'évaluation de la clause *)
 let rec act_to_terme a map_match arbre = 
   match a with 
@@ -373,13 +383,15 @@ and clause_to_terme c arbre =
 			    let res_match = match_pattern_goal_liste l p 1 in 
 			    let map_var = 
 			      begin match res_match with 
-				    | (n,[]) -> failwith "clause_to_terme : this pattern match no goal so fail"
-				    | (n,map_var) -> map_var
+				    | (n,Failed) -> failwith 
+						  ("clause_to_terme : this pattern match no goal so fail" ^ pretty_print_inTm p [] 
+						  ^ "  " ^ pretty_print_goal_liste l)
+				    | (n,Success(map_var)) -> map_var
 			    end in 
 			    let goal_number = 
 			      begin match res_match with 
-				    | (n,[]) -> failwith "clause_to_terme : this pattern match no goal so fail"
-				    | (n,map_var) -> n
+				    | (n,Failed) -> failwith "clause_to_terme : this pattern match no goal so fail"
+				    | (n,Success(map_var)) -> n
 			    end in 
 			    (* c'est ici que je descend dans l'arbre (cela remontera tout seul avec les verif *)
 			    act_to_terme a map_var (go_n_son arbre goal_number)
@@ -389,7 +401,7 @@ and liste_clause_to_terme liste_clause arbre =
   | c :: suite -> let arbre = clause_to_terme c arbre in 
 		  liste_clause_to_terme suite arbre
 			    
-	    		     
+
 (* faire une fonction à coté qui permet de lire les fichiers *)
 let rec userDefs_to_terme l arbre =  
   match l with 
@@ -405,9 +417,9 @@ let rec userDefs_to_terme l arbre =
 
 
 
-
-let def typ_not_parsed (Loc(t,p)) = 
-  procedure_start_definition typ_not_parsed (Loc(t,p))
+(* supprimer ces printf de merde *)
+let def typ_not_parsed arbre = 
+  procedure_start_definition typ_not_parsed arbre
 
 let contexte_def (Loc(t,p)) = 
   let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p))) in 
@@ -472,9 +484,9 @@ let choose_tactic () =
 		let () = Printf.printf "Enter the hole you wan't to complete \n" in 
 		let hole = int_of_string (read_line ()) in 
 		return terme hole
-(*  | "load" -> 
+  | "load" -> 
      let () = Printf.printf "\nEnter the name of the filename you wan't to load\n" in 
-     let fichier = read_line () in load_def fichier *)
+     let fichier = read_line () in load_def fichier
   | "count son" -> count_son_tact
   | _ -> nothing
 

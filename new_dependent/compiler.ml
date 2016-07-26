@@ -33,22 +33,24 @@ let set_patAct_userDef u p =
 
 let rec parse_clause str = 
   match str with 
-  | Sexp.List [p;a] -> Clause(Pattern(parse_term [] p),parse_act a)
+  | Sexp.List [p;a] -> Clause(Pattern(post_parsing_pattern_inTm (parse_term [] p)),parse_act a)
   | _ -> failwith "parse_clause : your clause don't have a good shape" 
 and parse_act str = 
   match str with 
-  | Sexp.List [Sexp.Atom "<="; Sexp.Atom id; Sexp.List clause] -> 
-     let liste_clause = List.fold_right (fun c suite -> (parse_clause c) :: suite) clause [] in 
+  | Sexp.List [Sexp.Atom "<="; Sexp.Atom id;Sexp.List clauses] -> 
+     let liste_clause = List.fold_right (fun c suite -> (parse_clause c) :: suite) clauses [] in 
      Split(id,liste_clause)		       		 
-     (* let liste_folder = (List.fold_right (fun couple suite ->  *)
-     (* 				   begin  *)
-     (* 				     match couple with  *)
-     (* 				     | Sexp.List[p;a] -> (Pattern(parse_term [] p),parse_act a) :: suite *)
-     (* 				     | _ -> failwith "parse_act : second error" *)
-     (* 				   end )patact_liste [])  in  *)
-     (* Split(id,liste_folder) *)
   | Sexp.List [Sexp.Atom "->";t] -> Return(parse_term [] t)
   | _ -> failwith ("parse_act : your action don't have a good shape" ^ Sexp.to_string str)
+and post_parsing_pattern_inTm t = 
+  match t with 
+  | Inv(x) -> Inv(post_parsing_pattern_exTm x)
+  | _ -> failwith "post_parsing_pattern_exTm : this is not supposed to happend" 
+and post_parsing_pattern_exTm t = 
+  match t with 
+  | Appl(creuse,x) -> Appl(post_parsing_pattern_exTm creuse,x)
+  | FVar(Global(x)) -> Etiquette(x)
+  | _ -> failwith "post_parsing_pattern : it seem's that it don't work"
 
 
 let rec parse_type_definition str l = 
@@ -245,9 +247,9 @@ and matching_exTm p t l =
 
 let rec match_pattern_goal_liste liste_goal p n = 
   match liste_goal with 
-  | [] -> (n,[])
+  | [] -> (n,Failed)
   | g :: suite -> begin match matching_inTm p g [] with 
-			| Success(liste) -> (n,liste)
+			| Success(liste) -> (n,Success(liste))
 			| Failed -> match_pattern_goal_liste suite p (n + 1)
 		  end
   
