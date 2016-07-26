@@ -11,15 +11,17 @@ type matching =
   | Success of (string * inTm) list
   | Failed
 
+
 type act = 
   | Return of inTm 
-  | Split of string * ((pattern * act) list)
-
+  | Split of string * clause list
+and clause = 
+  | Clause of pattern * act
 
 type userDefinition = 
-  {
+  {    
     def : string;
-    patAct : (pattern * act);
+    patAct : clause;
   }
 
 let set_def_userDef u d = 
@@ -29,26 +31,32 @@ let set_patAct_userDef u p =
    
 (* lors du parse on va initialiser une structure de def *)
 
-let rec parse_act str = 
+let rec parse_clause str = 
   match str with 
-  | Sexp.List [Sexp.Atom "<="; Sexp.Atom id; Sexp.List patact_liste ] -> 
-     let liste_folder = (List.fold_right (fun couple suite -> 
-				   begin 
-				     match couple with 
-				     | Sexp.List[p;a] -> (Pattern(parse_term [] p),parse_act a) :: suite
-				     | _ -> failwith "lol"
-				   end )patact_liste [])  in 
-     Split(id,liste_folder)
+  | Sexp.List [p;a] -> Clause(Pattern(parse_term [] p),parse_act a)
+  | _ -> failwith "parse_clause : your clause don't have a good shape" 
+and parse_act str = 
+  match str with 
+  | Sexp.List [Sexp.Atom "<="; Sexp.Atom id; Sexp.List clause] -> 
+     let liste_clause = List.fold_right (fun c suite -> (parse_clause c) :: suite) clause [] in 
+     Split(id,liste_clause)		       		 
+     (* let liste_folder = (List.fold_right (fun couple suite ->  *)
+     (* 				   begin  *)
+     (* 				     match couple with  *)
+     (* 				     | Sexp.List[p;a] -> (Pattern(parse_term [] p),parse_act a) :: suite *)
+     (* 				     | _ -> failwith "parse_act : second error" *)
+     (* 				   end )patact_liste [])  in  *)
+     (* Split(id,liste_folder) *)
   | Sexp.List [Sexp.Atom "->";t] -> Return(parse_term [] t)
-  | _ -> failwith "parse_act : your pattern don't have a good shape" 
+  | _ -> failwith ("parse_act : your action don't have a good shape" ^ Sexp.to_string str)
 
 
 let rec parse_type_definition str l = 
   match str with 
-  | Sexp.List [Sexp.Atom "def";Sexp.List def;Sexp.List[p;a]] -> 
-     {def = Sexp.to_string (Sexp.List def);patAct = (Pattern(parse_term [] p),parse_act a)} :: l
-(*   | Sexp.List [elem] -> parse_type_definition elem l 
-  | Sexp.List [Sexp.List elem; suite] -> 
+  | Sexp.List [Sexp.Atom "def";Sexp.List def;clause] -> 
+     {def = Sexp.to_string (Sexp.List def);patAct = parse_clause clause} :: l
+  | Sexp.List [elem] -> parse_type_definition elem l 
+(*  | Sexp.List [Sexp.List elem; suite] -> 
      let liste = parse_type_definition (Sexp.List elem) l in 
      parse_type_definition suite liste *)
   | _ -> failwith ("parse_type_definition : your definition don't have a good shape: \n " ^ Sexp.to_string str)
@@ -77,17 +85,19 @@ let read_definition str =
 
 (* let read_def_pattern t = parse_def_pattern_match (Sexp.of_string t) *)
 
-let rec pretty_print_patact l = 
-  match l with 
-  | (Pattern(p),a) -> "(" ^ pretty_print_inTm p [] ^ " " ^ pretty_print_act a ^ ")"
-and pretty_print_patactListe l = 
+let rec pretty_print_act a = 
+  match a with 
+  | Split(id,l) -> "(<= " ^ id ^ " " ^ pretty_print_clause_liste l ^ ")"
+  | Return(t) -> "(<- " ^ " " ^ pretty_print_inTm t [] ^ ")"
+and pretty_print_clause c = 
+  match c with 
+  | Clause(Pattern(p),a) -> "(" ^ pretty_print_inTm p [] ^ " " ^ pretty_print_act a ^ ")"
+and pretty_print_clause_liste l = 
   match l with 
   | [] -> "" 
-  | elem :: suite ->  pretty_print_patact elem ^ " \n"^ pretty_print_patactListe suite
-and pretty_print_act userAct = 
-  match userAct with 
-  | Return(terme) -> "(-> " ^ pretty_print_inTm terme [] ^ ")" 
-  | Split(name,l) -> "(<= " ^ name ^ " \n" ^ pretty_print_patactListe l ^ ")"
+  | elem :: suite ->  pretty_print_clause elem ^ " \n"^ pretty_print_clause_liste suite
+and pretty_print_def userAct = 
+  "(def " ^ " " ^ userAct.def ^ " " ^ pretty_print_clause userAct.patAct ^ ")"
 
 (*
 let pretty_print_def userDef = 
@@ -102,11 +112,12 @@ let pretty_print_def userDef =
 (* Fonctions manipulants une user_def afin de la transformer en terme *)
 (* le premier est un terme faisant office de pattern et le second le terme à matcher *)
 (* fonction en cour de modification *)
+(* le truc de gauche c'est le pattern de l'utilisateur et a droite le terme *)
 let rec matching_inTm p t l =
   match (p,t) with 
   | (Abs(_,x1),Abs(_,x2)) -> matching_inTm x1 x2 l
   | (Pi(_,x1,y1),Pi(_,x2,y2)) -> begin match matching_inTm x1 x2 l with
-				       | Success(liste) -> matching_inTm y1 y2 liste 
+				       | Success(liste) -> matching_inTm y1 y2 liste  
 				       | Failed -> Failed
 				 end
   | (Sig(_,x1,y1),Sig(_,x2,y2)) -> begin match matching_inTm x1 x2 l with 
@@ -230,6 +241,15 @@ and matching_exTm p t l =
 	   | Failed -> Failed 
      end
   | _ -> Failed
+
+let rec match_pattern_liste liste_p goal = 
+  match liste_p with 
+  | [] -> liste_p
+  | p :: suite -> begin match matching_inTm p goal [] with 
+			| Success(liste) -> liste_p
+			| Failed -> []
+		  end
+  
 
 (* a partir d'une liste permet de remplacer les elements de l'utilisateur par les réels termes *)
 let rec change_name_liste terme l = 

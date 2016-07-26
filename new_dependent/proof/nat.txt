@@ -1,2 +1,2 @@
-((def plus (pi m N (pi n N))   ((plus m n) (<= m (  (plus 0 n) (-> n))   (plus (succ m) n) (-> (succ (plus m n)))))))
+((def (plus (pi m N (pi n N))) ((plus m n) (<= m ((plus 0 n) (-> n)) (plus (succ m) n) (-> (succ (plus m n)))))))
   	      	      	  	      

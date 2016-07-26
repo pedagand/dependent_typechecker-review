@@ -181,6 +181,9 @@ let rec go_n_son (Loc(t,p)) n = match n with
   | 0 -> go_down (Loc(t,p))
   | n -> go_n_son (go_right (Loc(t,p))) (n-1)
 
+  
+		 
+
 (* To print a location we need a function that return the location at the top of the entiere tree *)
 let rec go_to_the_top (Loc(t,p)) = 
   match p with 
@@ -195,6 +198,15 @@ let rec go_full_left (Loc(t,p)) =
   | Node([],up,right) -> (Loc(t,p))
   | Node(left,up,right) -> go_full_left (go_left (Loc(t,p)))
   | Top -> failwith "go_full_left : can't go left of a top"  
+
+let rec go_right_count (Loc(t,p)) n = 
+  match p with 
+  | Node(left,up,[]) -> n
+  | Node(left,up,right) -> go_right_count (go_right (Loc(t,p))) (n + 1)
+  | Top -> failwith "cont_son : can't count on a top" 
+and count_son arbre =   
+  go_right_count (go_full_left arbre) 0
+  
 
 (* Etant donné ma structuration de l'arbre, il suffit de remonter puis de faire un shift a gauche?*)
 let rec stop_when_def_inter arbre =   
@@ -275,8 +287,10 @@ let get_and_print_def arbre =
   let env = get_def arbre [] in 
   print_def env
 
-
-
+  
+  
+  
+  
 
 
 
@@ -344,10 +358,7 @@ let pretty_print_state_proof (Loc(t,p)) =
 		   pretty_print_item (Item(x)) 
   | Section(x) -> pretty_print_tree_liste x 0 
 	
-  
-
-
-
+ 
 
 
 
@@ -452,6 +463,19 @@ let verif_and_push_up_item (Loc(t,p)) =
     arbre    
   else (Loc(t,p))
  *)
+
+
+let rec create_liste_goal l n arbre = 
+  match n with 
+  | 0 -> l 
+  | n -> let son = go_n_son arbre n in 
+	 let liste = (get_type_focus son) :: l in 
+	 create_liste_goal liste (n - 1) arbre
+and liste_me_goal arbre = 
+  let n = count_son arbre in   
+  create_liste_goal [] n arbre
+
+
 
 let rec verif_and_push_up_item (Loc(t,p)) =     
   let terme_to_put = get_terme_item (Loc(t,p)) in   

@@ -327,43 +327,59 @@ let return terme hole (Loc(t,p)) =
   let arbre = complete_focus_terme (Loc(t,p)) terme hole in
   verif arbre
   
-  
+let son (Loc(t,p)) = 
+  let num = ask_the_son () in 
+  go_n_son (Loc(t,p)) num  
+
+let count_son_tact arbre = 
+  let n = count_son arbre in 
+  let () = Printf.printf "Il y a %d fils ici" n in 
+  arbre
+
 let nothing (Loc(t,p)) = (Loc(t,p))
 			   
 (* ------------------ ici c'est pour le chargement des defintions *)
-let rec patAct_to_terme arbre pattern_match  = 
-  let goal_terme = get_type_item arbre in
-  match pattern_match with 
-  | [] -> arbre 
-  | (Pattern(p),act) :: suite -> let liste = begin 
-				     match matching_inTm p goal_terme [] with 
-				     | Success(l) -> l
-				     | Failed ->  []
-				   end in 
-				 begin 
-				   match act with 
-				   | Split(name,patActListe) -> patAct_to_terme (split name arbre) suite 
-				   | Return(t) -> let terme = change_name_liste t liste in 
-						  return terme 1 arbre
-				 end
-				 
+(* let rec patAct_to_terme arbre pattern_match  =  *)
+(*   let goal_terme = get_type_item arbre in *)
+(*   match pattern_match with  *)
+(*   | [] -> arbre  *)
+(*   | (Pattern(p),act) :: suite -> let liste = begin  *)
+(* 				     match matching_inTm p goal_terme [] with  *)
+(* 				     | Success(l) -> l *)
+(* 				     | Failed ->  [] *)
+(* 				   end in  *)
+(* 				 begin  *)
+(* 				   match act with  *)
+(* 				   | Split(name,patActListe) -> patAct_to_terme (split name arbre) suite  *)
+(* 				   | Return(t) -> let terme = change_name_liste t liste in  *)
+(* 						  return terme 1 arbre *)
+(* 				 end *)			
+	   
+let rec act_to_terme arbre a = 
+  match a with 
+  | _ -> failwith "attend" 
+and clause_to_terme arbre c = 
+  match c with 
+  | Clause(Pattern(p),a) -> let l = liste_me_goal arbre in 
+			    let pred = fun 
+			    
+			    
+			    
+			    
 			
 
 
 (* faire une fonction à coté qui permet de lire les fichiers *)
-let rec userDef_to_terme l arbre =  
+(* let rec userDef_to_terme l arbre =  
   match l with 
   | [] -> arbre
   | d :: suite ->
      let arbre = procedure_start_definition d.def arbre in 
      let arbre = intros arbre in 
-     let arbre = patAct_to_terme arbre [d.patAct] in 
-     arbre
+     let arbre = patAct_to_terme arbre d.patAct in 
+     arbre *)
 
   
-let son (Loc(t,p)) = 
-  let num = ask_the_son () in 
-  go_n_son (Loc(t,p)) num
   
 
 
@@ -396,11 +412,14 @@ let rec file_to_string f l=
   (* maintenant il faut parser la réponse ect... *)
   let defs = read_definition res in 
   userDef_to_terme defs (Loc(t,p)) *)
-let load_def d (Loc(t,p)) = 
+
+
+
+ let load_def d (Loc(t,p)) = 
   let defs = read_definition d in 
-  userDef_to_terme defs (Loc(t,p))
+  userDef_to_terme defs (Loc(t,p)) 
   
-  
+ 
   
   
   
@@ -432,9 +451,10 @@ let choose_tactic () =
 		let () = Printf.printf "Enter the hole you wan't to complete \n" in 
 		let hole = int_of_string (read_line ()) in 
 		return terme hole
-  | "load" -> 
+(*  | "load" -> 
      let () = Printf.printf "\nEnter the name of the filename you wan't to load\n" in 
-     let fichier = read_line () in load_def fichier
+     let fichier = read_line () in load_def fichier *)
+  | "count son" -> count_son_tact
   | _ -> nothing
 
 (* --------------Idées-------------------*)
