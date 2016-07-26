@@ -242,12 +242,13 @@ and matching_exTm p t l =
      end
   | _ -> Failed
 
-let rec match_pattern_liste liste_p goal = 
-  match liste_p with 
-  | [] -> liste_p
-  | p :: suite -> begin match matching_inTm p goal [] with 
-			| Success(liste) -> liste_p
-			| Failed -> []
+
+let rec match_pattern_goal_liste liste_goal p n = 
+  match liste_goal with 
+  | [] -> (n,[])
+  | g :: suite -> begin match matching_inTm p g [] with 
+			| Success(liste) -> (n,liste)
+			| Failed -> match_pattern_goal_liste suite p (n + 1)
 		  end
   
 

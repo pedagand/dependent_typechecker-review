@@ -355,29 +355,50 @@ let nothing (Loc(t,p)) = (Loc(t,p))
 (* 						  return terme 1 arbre *)
 (* 				 end *)			
 	   
-let rec act_to_terme arbre a = 
+
+(* l'argument l est le mapping obtenue par le matching lors de l'évaluation de la clause *)
+let rec act_to_terme a map_match arbre = 
   match a with 
-  | _ -> failwith "attend" 
-and clause_to_terme arbre c = 
+  | Return(t) -> return t 1 arbre
+  | Split(id,clause_liste) -> let induct_var = begin 
+				  match change_name_liste (Inv(FVar(Global(id)))) map_match with 
+				  | Inv(FVar(Global(x))) -> x 
+				  | _ -> id
+				end in 
+			      let arbre = split induct_var arbre in 
+			      liste_clause_to_terme clause_liste arbre
+and clause_to_terme c arbre = 
   match c with 
-  | Clause(Pattern(p),a) -> let l = liste_me_goal arbre in 
-			    let pred = fun 
+  | Clause(Pattern(p),a) -> let l = liste_me_goal arbre in 			    
+			    let res_match = match_pattern_goal_liste l p 1 in 
+			    let map_var = 
+			      begin match res_match with 
+				    | (n,[]) -> failwith "clause_to_terme : this pattern match no goal so fail"
+				    | (n,map_var) -> map_var
+			    end in 
+			    let goal_number = 
+			      begin match res_match with 
+				    | (n,[]) -> failwith "clause_to_terme : this pattern match no goal so fail"
+				    | (n,map_var) -> n
+			    end in 
+			    (* c'est ici que je descend dans l'arbre (cela remontera tout seul avec les verif *)
+			    act_to_terme a map_var (go_n_son arbre goal_number)
+and liste_clause_to_terme liste_clause arbre =
+  match liste_clause with 
+  | [] -> arbre
+  | c :: suite -> let arbre = clause_to_terme c arbre in 
+		  liste_clause_to_terme suite arbre
 			    
-			    
-			    
-			    
-			
-
-
+	    		     
 (* faire une fonction à coté qui permet de lire les fichiers *)
-(* let rec userDef_to_terme l arbre =  
+let rec userDefs_to_terme l arbre =  
   match l with 
   | [] -> arbre
   | d :: suite ->
      let arbre = procedure_start_definition d.def arbre in 
      let arbre = intros arbre in 
-     let arbre = patAct_to_terme arbre d.patAct in 
-     arbre *)
+     let arbre = clause_to_terme d.patAct arbre in 
+     arbre 
 
   
   
@@ -417,7 +438,7 @@ let rec file_to_string f l=
 
  let load_def d (Loc(t,p)) = 
   let defs = read_definition d in 
-  userDef_to_terme defs (Loc(t,p)) 
+  userDefs_to_terme defs (Loc(t,p)) 
   
  
   
