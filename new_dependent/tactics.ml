@@ -167,6 +167,16 @@ let intro_auto (Loc(t,p)) =
 
 let rec intros arbre = 
   let typ = get_type_item arbre in 
+  let terme = get_terme_item arbre in
+  let already_complete = 
+    begin 
+      match terme with 
+      | Abs(name,suite) -> true
+      | _ -> false
+    end in 
+  if already_complete 
+  then go_down (go_right arbre)
+  else
   begin
     match typ with 
     | (Pi(x,s,t)) -> intros (intro_auto arbre)
@@ -292,8 +302,9 @@ let split_iter (Loc(t,p)) induct_var =
 					     []) in 
   let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1)))]) in 
   let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Hole_inTm(1)))]) in
-  let terme = get_terme_item (Loc(t,p)) in  
-  let hole = int_of_string (ask_the_hole terme "iter") in
+(*  let terme = get_terme_item (Loc(t,p)) in  
+   JE TEST POUR VOIR SI EN METTANT SYST2MATIQUEMENT DANS LE 1 CA MARCHE let hole = int_of_string (ask_the_hole terme "iter") in *)
+  let hole = 1 in
   (* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *)
   let new_terme = Inv(Iter(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in
   let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in
@@ -329,9 +340,8 @@ let return terme hole (Loc(t,p)) =
   let arbre = complete_focus_terme (Loc(t,p)) terme hole in
   verif arbre
   
-let son (Loc(t,p)) = 
-  let num = ask_the_son () in 
-  go_n_son (Loc(t,p)) num  
+let son n (Loc(t,p)) = 
+  intros (go_n_son (Loc(t,p)) n)
 
 let count_son_tact arbre = 
   let n = count_son arbre in 
@@ -366,6 +376,32 @@ let rec pretty_print_goal_liste liste =
   
 (*-----------------------------Fin--------------------------------------*)
 
+ let rec create_liste_goal l n arbre = 
+  match n with 
+  | 0 -> l 
+  | n -> let son = intros (go_n_son arbre n) in 
+	 let liste = (get_type_focus son) :: l in 
+	 create_liste_goal liste (n - 1) arbre
+and liste_me_goal arbre = 
+  let n = count_son arbre in   
+  begin match n with
+	| 0 -> (get_type_focus arbre) :: []
+	| n -> create_liste_goal [] n arbre
+  end 
+    
+    
+(* cette fonction ira nécéssairement dans le premier but si il en existe plusieurs *)
+(* let rec go_throught_lambda (Loc(t,p)) = 
+  match t with 
+  | Item(Variable(name,terme)) -> go_throught_lambda (go_down (go_right(Loc(t,p))))
+  | Item(Intermediaire(n,name,terme)) -> 
+     begin 
+      match terme with 
+      | Abs(nom,suite) -> go_throught_lambda (go_down (go_right (Loc(t,p))))
+      | _ -> (Loc(t,p))
+    end
+  | _ -> go_down (Loc(t,p)) *)
+
 (* l'argument l est le mapping obtenue par le matching lors de l'évaluation de la clause *)
 let rec act_to_terme a map_match arbre = 
   match a with 
@@ -379,13 +415,14 @@ let rec act_to_terme a map_match arbre =
 			      liste_clause_to_terme clause_liste arbre
 and clause_to_terme c arbre = 
   match c with 
-  | Clause(Pattern(p),a) -> let l = liste_me_goal arbre in 			    
+  | Clause(Pattern(p),a) -> let () = Printf.printf "\nClause_to_term: start new clause with pattern: %s \n" (pretty_print_inTm p []) in 
+			    let l = liste_me_goal arbre in 			    
 			    let res_match = match_pattern_goal_liste l p 1 in 
 			    let map_var = 
 			      begin match res_match with 
 				    | (n,Failed) -> failwith 
-						  ("clause_to_terme : this pattern match no goal so fail" ^ pretty_print_inTm p [] 
-						  ^ "  " ^ pretty_print_goal_liste l)
+						  ("clause_to_terme : this pattern match no goal so fail p:" ^ pretty_print_inTm p [] 
+						  ^ " goal_liste :  " ^ pretty_print_goal_liste l)
 				    | (n,Success(map_var)) -> map_var
 			    end in 
 			    let goal_number = 
@@ -410,7 +447,7 @@ let rec userDefs_to_terme l arbre =
      let arbre = procedure_start_definition d.def arbre in 
      let arbre = intros arbre in 
      let arbre = clause_to_terme d.patAct arbre in 
-     arbre 
+     check arbre 
 
   
   
@@ -467,7 +504,8 @@ let choose_tactic () =
   | "up" -> proof_up 
   | "little up" -> go_up
   | "down" -> proof_down
-  | "son" -> son
+  | "son" -> let n = ask_the_son () in 
+	     son n
   | "left" -> go_left
   | "right" -> go_right
   | "print" -> print_to_screen_location

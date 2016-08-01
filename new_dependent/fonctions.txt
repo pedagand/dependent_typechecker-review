@@ -9,7 +9,14 @@ le ou et le "et" booléen
 
 
 les entiers -----------
-addition soustraction multiplication 
+addition:
+(lambda m (lambda n (iter (lambda x (((lambda m (lambda n N)) x) n)) m (lambda x (lambda y (succ y))) n))))
+ soustraction 
+
+multiplication 
+	       
+
+
 plus petit stric et pas strict (tous les comparateurs)
 
 Le prédécesseur 

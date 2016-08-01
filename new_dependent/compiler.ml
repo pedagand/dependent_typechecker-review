@@ -166,6 +166,7 @@ let rec matching_inTm p t l =
   | _ -> Failed 
 and matching_exTm p t l = 
   match (p,t) with 
+  | (Etiquette(x1),Etiquette(x2)) -> if x1 = x2 then Success(l) else Failed
   | (Ann(x1,y1),Ann(x2,y2)) -> begin match matching_inTm x1 x2 l with 
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
@@ -244,11 +245,13 @@ and matching_exTm p t l =
      end
   | _ -> Failed
 
-
+(* Printf are for debug *)
 let rec match_pattern_goal_liste liste_goal p n = 
   match liste_goal with 
-  | [] -> (n,Failed)
-  | g :: suite -> begin match matching_inTm p g [] with 
+  | [] -> let () = Printf.printf "\n match_pattern_goal_liste Now the list is empty \n" in (n,Failed)
+  | g :: suite -> let () = Printf.printf "\nDebug pattern_goal_liste goal: %s pattern: %s\n" (pretty_print_inTm g []) 
+					 (pretty_print_inTm p []) in 
+		  begin match matching_inTm p g [] with 
 			| Success(liste) -> (n,Success(liste))
 			| Failed -> match_pattern_goal_liste suite p (n + 1)
 		  end

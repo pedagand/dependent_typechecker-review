@@ -7,8 +7,9 @@ open Lambda
 *)
 
 (* le premier inTm correpond au type et le second au terme *)
+(* le string permet de stocker la definition que l'on va par la suite stocker dans les fichiers *) 
 type definition = 
-  | Complete of inTm * inTm
+  | Complete of inTm * inTm 
   | Incomplete of inTm * inTm
 
 (* le premier inTm correspond au type et le second au terme *)
@@ -165,7 +166,7 @@ let go_left (Loc(t,p)) = match p with
 let go_right (Loc(t,p)) = match p with
   | Top -> failwith "right of top"
   | Node(left,up,r::right) -> Loc(r,Node(t::left,up,right))
-  | _ -> failwith "right of last"
+  | _ -> (Loc(t,p)) (* failwith "right of last" *) (* je teste de faire marcher le programme sans les failwith *)
 		  
 		  
 let go_up (Loc(t,p)) = match p with
@@ -173,9 +174,9 @@ let go_up (Loc(t,p)) = match p with
   | Node(left,up,right) -> Loc(Section((List.rev left) @ (t::right)),up)
 			      
 let go_down (Loc(t,p)) = match t with
-    Item(_) -> failwith "down of item"
+    Item(_) -> (Loc(t,p)) (* failwith "down of item" *)
   | Section(t1::trees) -> Loc(t1,Node([],p,trees))
-  | _ -> failwith "down of empty"
+  | _ -> (Loc(t,p)) (* failwith "down of empty" *)
 
 let rec go_n_son (Loc(t,p)) n = match n with    
   | 0 -> go_down (Loc(t,p))
@@ -206,6 +207,8 @@ let rec go_right_count (Loc(t,p)) n =
   | Top -> failwith "cont_son : can't count on a top" 
 and count_son arbre =   
   go_right_count (go_full_left arbre) 0
+
+  
   
 
 (* Etant donné ma structuration de l'arbre, il suffit de remonter puis de faire un shift a gauche?*)
@@ -465,15 +468,7 @@ let verif_and_push_up_item (Loc(t,p)) =
  *)
 
 
-let rec create_liste_goal l n arbre = 
-  match n with 
-  | 0 -> l 
-  | n -> let son = go_n_son arbre n in 
-	 let liste = (get_type_focus son) :: l in 
-	 create_liste_goal liste (n - 1) arbre
-and liste_me_goal arbre = 
-  let n = count_son arbre in   
-  create_liste_goal [] n arbre
+
 
 
 
