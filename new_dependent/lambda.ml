@@ -34,7 +34,7 @@ type inTm =
 (*=End *)
   | Pair of inTm * inTm 
   | Liste of inTm 
-  | Nil of inTm 
+  | Nil
   | Cons of inTm * inTm 
 (*=terme_vector *)
   | Vec of inTm * inTm
@@ -105,7 +105,7 @@ type value =
 (*=End *)
 (*=Value_liste *)
   | VListe of value 
-  | VNil of value 
+  | VNil
   | VCons of value * value 
 (*=End *)
   | VId of value * value * value 
@@ -252,7 +252,7 @@ let rec parse_term env t =
       | Sexp.List [Sexp.Atom "liste";alpha] -> 
 	 Liste(parse_term env alpha)
       | Sexp.List [Sexp.Atom "nil";alpha] -> 
-	 Nil(parse_term env alpha)
+	 Nil
       | Sexp.List [Sexp.Atom "cons"; a; xs] -> 
 	 Cons((parse_term env a),(parse_term env xs))
       | Sexp.List [Sexp.Atom "vec";alpha; n] -> 
@@ -332,7 +332,7 @@ let rec replace_hole_inTm terme tsub num =
   | False -> False 
   | Pair(x,y) -> Pair((replace_hole_inTm x tsub num),(replace_hole_inTm y tsub num))
   | Liste(alpha) -> Liste(replace_hole_inTm alpha tsub num)
-  | Nil(alpha) -> Nil(replace_hole_inTm alpha tsub num)
+  | Nil -> Nil
   | Cons(a,xs) -> Cons((replace_hole_inTm a tsub num),(replace_hole_inTm xs tsub num))
   | Vec(alpha,n) -> Vec((replace_hole_inTm alpha tsub num),(replace_hole_inTm n tsub num))
   | DNil(alpha) -> DNil(replace_hole_inTm alpha tsub num)
@@ -395,7 +395,7 @@ let rec replace_ref_etiq_inTm terme liste_ref =
   | False -> False 
   | Pair(x,y) -> Pair((replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
   | Liste(alpha) -> Liste(replace_ref_etiq_inTm  alpha liste_ref )
-  | Nil(alpha) -> Nil(replace_ref_etiq_inTm  alpha liste_ref )
+  | Nil -> Nil
   | Cons(a,xs) -> Cons((replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  xs liste_ref ))
   | Vec(alpha,n) -> Vec((replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  n liste_ref ))
   | DNil(alpha) -> DNil(replace_ref_etiq_inTm  alpha liste_ref )
@@ -444,7 +444,7 @@ let rec check_if_no_hole_inTm terme =
   | False -> true
   | Pair(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
   | Liste(alpha) -> check_if_no_hole_inTm alpha 
-  | Nil(alpha) -> check_if_no_hole_inTm alpha 
+  | Nil -> true
   | Cons(a,xs) -> check_if_no_hole_inTm a && check_if_no_hole_inTm xs 
   | Vec(alpha,n) -> check_if_no_hole_inTm alpha && check_if_no_hole_inTm n 
   | DNil(alpha) -> check_if_no_hole_inTm alpha 
@@ -495,7 +495,7 @@ let rec pretty_print_inTm t l =
   | False -> "false"
   | Pair(a,b) -> "(" ^ pretty_print_inTm a l ^ " , " ^ pretty_print_inTm b l ^ ")"
   | Liste(alpha) -> "(liste " ^ pretty_print_inTm alpha l ^ ")"
-  | Nil(alpha) -> "(nil " ^ pretty_print_inTm alpha l ^ ")"
+  | Nil -> "nil"
   | Cons(a,xs) -> "(cons " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
   | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm n l ^ ")"
   | DNil(alpha) -> "(dnil " ^ pretty_print_inTm alpha l ^ ")"
@@ -546,7 +546,7 @@ let rec substitution_inTm t tsub var =
   | False -> False 
   | Pair(x,y) -> Pair((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   | Liste(alpha) -> Liste(substitution_inTm alpha tsub var)
-  | Nil(alpha) -> Nil(substitution_inTm alpha tsub var)
+  | Nil -> Nil
   | Cons(a,xs) -> Cons((substitution_inTm a tsub var),(substitution_inTm xs tsub var))
   | Vec(alpha,n) -> Vec((substitution_inTm alpha tsub var),(substitution_inTm n tsub var))
   | DNil(alpha) -> DNil(substitution_inTm alpha tsub var)
@@ -595,7 +595,7 @@ let rec bound_var_inTm t i var =
   | False -> False 
   | Pair(x,y) -> Pair((bound_var_inTm x i var),(bound_var_inTm y i var))
   | Liste(alpha) -> Liste(bound_var_inTm alpha i var)
-  | Nil(alpha) -> Nil(bound_var_inTm alpha i var)
+  | Nil -> Nil
   | Cons(a,xs) -> Cons((bound_var_inTm a i var),(bound_var_inTm xs i var))
   | Vec(alpha,n) -> Vec((bound_var_inTm alpha i var),(bound_var_inTm n i var))
   | DNil(alpha) -> DNil(bound_var_inTm alpha i var)
@@ -646,7 +646,7 @@ let rec change_name_FVar_inTm t tsub =
   | False -> False 
   | Pair(x,y) -> Pair((change_name_FVar_inTm x tsub ),(change_name_FVar_inTm y tsub ))
   | Liste(alpha) -> Liste(change_name_FVar_inTm alpha tsub )
-  | Nil(alpha) -> Nil(change_name_FVar_inTm alpha tsub )
+  | Nil -> Nil
   | Cons(a,xs) -> Cons((change_name_FVar_inTm a tsub ),(change_name_FVar_inTm xs tsub ))
   | Vec(alpha,n) -> Vec((change_name_FVar_inTm alpha tsub ),(change_name_FVar_inTm n tsub ))
   | DNil(alpha) -> DNil(change_name_FVar_inTm alpha tsub )
@@ -722,7 +722,7 @@ let rec big_step_eval_inTm t envi =
   | Refl(a) -> VRefl(big_step_eval_inTm a envi)
   | Pair(x,y) -> VPair((big_step_eval_inTm x envi),(big_step_eval_inTm y envi))
   | Liste(a) -> VListe(big_step_eval_inTm a envi)
-  | Nil(a) -> VNil(big_step_eval_inTm a envi)
+  | Nil -> VNil
   | Cons(xs,a) -> VCons((big_step_eval_inTm xs envi),(big_step_eval_inTm a envi))
   | What(a) -> failwith "do not put a hole in a type, it make no sense"  
 and vapp v = 
@@ -751,7 +751,7 @@ and vifte(p,c,tHen,eLse) =
   | _ -> VNeutral(NIfte(p,c,tHen,eLse))
 and vfold(p,alpha,xs,f,a) = 
   match xs,f with 
-  | (VNil(alphi),VLam (name,fu)) -> a 
+  | (VNil,VLam (name,fu)) -> a 
   | (VCons(elem,suite),VLam (name,fu)) -> vapp(vapp((fu elem),xs),vfold(p,alpha,suite,f,a))
   | _ -> VNeutral(NFold(p,alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
@@ -833,7 +833,7 @@ let rec value_to_inTm i v =
   | VId(gA,a,b) -> Id((value_to_inTm i gA),(value_to_inTm i a),(value_to_inTm i b))
   | VRefl(a) -> Refl(value_to_inTm i a) 
   | VListe(a) -> Liste(value_to_inTm i a)
-  | VNil(a) -> Nil(value_to_inTm i a)
+  | VNil -> Nil
   | VCons(a,xs) -> Cons((value_to_inTm i a),(value_to_inTm i xs)) 
 and neutral_to_exTm i v = 
   match v with 
@@ -874,7 +874,7 @@ let rec equal_inTm t1 t2 =
   | (Id(x1,y1,z1),Id(x2,y2,z2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2
   | (Refl(a),Refl(b)) -> equal_inTm a b 
   | (Liste(a),Liste(b))-> equal_inTm a b
-  | (Nil(a),Nil(b)) -> equal_inTm a b 
+  | (Nil,Nil) -> true
   | (Cons(y1,z1),Cons(y2,z2)) -> equal_inTm y1 y2 && equal_inTm z1 z2				  
   | _ -> false 
 and equal_exTm t1 t2 = 
@@ -1293,13 +1293,10 @@ test le retour de la synthèse *)
 		  else create_report false (contexte_to_string contexte) steps "Liste : alpha seems to not be of type Star"
        | _ -> create_report false (contexte_to_string contexte) steps "Liste : ty must be VStar" 
      end
-  | Nil(alpha) -> 
+  | Nil -> 
      begin 
        match ty with 
-       | VListe(alpha_liste) -> if equal_inTm (value_to_inTm 0 (big_step_eval_inTm alpha [])) 
-					    (value_to_inTm 0 alpha_liste)
-				then create_report true (contexte_to_string contexte) steps "NO"
-				else create_report false (contexte_to_string contexte) steps "Nil : the 2 alpha seems to not be the same"
+       | VListe(alpha_liste) -> create_report true (contexte_to_string contexte) steps "NO"   
        | _ -> create_report false (contexte_to_string contexte) steps "Nil : ty must be VListe"       
      end
   | Cons(a,xs) -> 
@@ -1505,13 +1502,13 @@ and synth contexte exT steps =
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
   | Fold(p,alpha,xs,f,a) -> 
      let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
-     let type_p = (Pi(Global"a",Star,(Pi(Global"xs",Liste(Inv(BVar 0)),Star)))) in 
+     let type_p = Pi(Global"xs",Liste(Inv(BVar 0)),Star) in 
      let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
      let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
      let type_f = (Pi(Global"a",alpha,
 		      Pi(Global"xs",Liste(alpha),			 
-			 Pi(Global"NO",Inv(Appl(Appl(Ann(p,type_p),alpha),Inv(BVar 0))),
-			    Inv(Appl(Appl(Ann(p,type_p),alpha),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
+			 Pi(Global"NO",Inv(Appl(Ann(p,type_p),Inv(BVar 0))),
+			    Inv(Appl(Ann(p,type_p),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
      let check_f = check contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
      let check_a = check contexte a (big_step_eval_inTm alpha []) (pretty_print_exTm exT [] ^ ";") in 
      if res_debug check_alpha 
