@@ -9,6 +9,7 @@ let rec create_uper_type typ =
   match typ with 
   | Pi(n,s,t) -> Pi(n,s,(create_uper_type t))
   | Nat -> Star
+  | Bool -> Star
   | _ -> failwith "create_uper_type : only for pi at the moment"
 
 (* permet à partir d'un type ainsi que du return du type initial de crée un terme *)
@@ -22,6 +23,7 @@ let rec modifie_return_type typ return =
   match typ with
   | Pi(n,s,t) -> Pi(n,s,(modifie_return_type t return))
   | Nat -> return
+  | Bool -> return
   | _ -> failwith "modifie_return_type : mettre a jour la fonction au fur et à mesure pour quelle accepte tous les types"
 
 
@@ -67,12 +69,13 @@ let init_definition typ name =
   let () = Printf.printf "\nnew_term : %s" (pretty_print_inTm new_term []) in 
   let new_name = create_upper_name name new_typ  in 
   let () = Printf.printf "\nnew_name : %s\n" new_name in 
-  Definition(new_name,Complete(new_typ,new_term)) 
+  let new_save = "(def (" ^ name ^ (pretty_print_inTm new_typ []) ^ ")"in
+  Definition(new_name,Complete(new_typ,new_term),new_save) 
 
 let parse_definition def refe = 
   match def with 
   | Sexp.List[Sexp.Atom name;terme] -> let terme = parse_term [] terme in 
-     Definition(name,Incomplete(terme,Hole_inTm(1)))
+     Definition(name,Incomplete(terme,Hole_inTm(1)),"")
   | _ -> failwith "parse_definition : it seem's that your def is not good"
 
 
@@ -114,9 +117,9 @@ let intro (Loc(t,p)) =
   let terme_and_type = begin 
       match t with 
   | Item(Variable(name,terme)) -> failwith "intro : You can't intro something which is not a def"
-  | Item(Definition(name,Incomplete(typ,terme))) -> 
+  | Item(Definition(name,Incomplete(typ,terme),save)) -> 
      ((replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1),typ)
-  | Item(Intermediaire(n,typ,terme)) -> 
+  | Item(Intermediaire(n,typ,terme,save)) -> 
      ((replace_hole_inTm terme (Abs(Global var,Hole_inTm 1)) 1),typ)
   | _ -> failwith "intro : this case is supposed to be impossible" 
     end in 
@@ -135,7 +138,7 @@ let intro (Loc(t,p)) =
   let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
   let new_var = Item(Variable(var,var_type)) in
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
-  let new_son = Item(Intermediaire(1,new_type,Hole_inTm(1))) in 
+  let new_son = Item(Intermediaire(1,new_type,Hole_inTm(1),"")) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
 let intro_auto (Loc(t,p)) = 
@@ -162,7 +165,7 @@ let intro_auto (Loc(t,p)) =
   let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
   let new_var = Item(Variable(name_var,typ_var)) in
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
-  let new_son = Item(Intermediaire(1,new_typ,Hole_inTm(1))) in 
+  let new_son = Item(Intermediaire(1,new_typ,Hole_inTm(1),"")) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
 let rec intros arbre = 
@@ -186,23 +189,23 @@ let rec intros arbre =
 let procedure_start_definition typ_not_parsed arbre= 
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
-  | Definition(name,Incomplete(typ,terme)) -> 
+  | Definition(name,Incomplete(typ,terme),save) -> 
      let defi = init_definition typ name in 
      let first_def = Section([Item(defi)]) in      
      let arbre = (go_down(go_right(insert_right arbre first_def))) in 
      let first_def_type = begin 
 	 match defi with 
-	 | Definition(new_name,Complete(new_typ,new_term)) -> new_typ
+	 | Definition(new_name,Complete(new_typ,new_term),save) -> new_typ
 	 | _ -> failwith "procedure_start_definition : it's impossible"
        end in 
       let liste_var = liste_me_var first_def_type in  
       let second_def = begin
 	  match second_def with 
-	  | Definition(name,Incomplete(typ,term)) -> Definition(name,Incomplete(
+	  | Definition(name,Incomplete(typ,term),save) -> Definition(name,Incomplete(
 									 modifie_return_type typ (Inv(
 											       (make_application 
 												 (Etiquette(create_upper_name name typ))
-												  liste_var))),term))
+												  liste_var))),term),save)
 	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
 	end in
       let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
@@ -220,10 +223,10 @@ let axiome var (Loc(t,p))  =
       begin 
       match (Loc(t,p)) with 
       | (Loc(Item(Variable(name,terme)),p)) -> failwith "axiome : You can't intro something which is not a def or intermediaire"
-      | (Loc(Item(Definition(name,Incomplete(typ,terme))),p)) -> 
-	 (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)))),p))
-      | (Loc(Item(Intermediaire(n,typ,terme)),p)) -> 
-	 (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1))),p))
+      | (Loc(Item(Definition(name,Incomplete(typ,terme),save)),p)) -> 
+	 (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)),save)),p))
+      | (Loc(Item(Intermediaire(n,typ,terme,save)),p)) -> 
+	 (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1),save)),p))
       | _ -> failwith "axiome : this case is supposed to be impossible" 
       end in 
     verif_and_push_up_item new_arbre
@@ -233,19 +236,19 @@ let axiome var (Loc(t,p))  =
 let check (Loc(t,p)) = 
   let typ = begin 
       match t with 
-      | Item(Definition(name,Incomplete(typ,terme))) -> typ
+      | Item(Definition(name,Incomplete(typ,terme),save)) -> typ
       | _ -> failwith "check : you can't check something else than an incomplete definition" 
     end in 
   let terme = 
     begin 
       match t with 
-      | Item(Definition(name,Incomplete(typ,terme))) -> terme
+      | Item(Definition(name,Incomplete(typ,terme),save)) -> terme
       | _ -> failwith "check : you can't check something else than an incomplete definition" 
     end in 
   let name = 
     begin 
       match t with 
-      | Item(Definition(name,Incomplete(typ,terme))) -> name
+      | Item(Definition(name,Incomplete(typ,terme),save)) -> name
       | _ -> failwith "check : you can't check something else than an incomplete definition" 
     end in 
   if check_if_no_hole_inTm terme 
@@ -258,7 +261,7 @@ let check (Loc(t,p)) =
       let steps = get_steps_report res_check in 
       if res_debug res_check 
       then let () = Printf.printf "\n\n\n STEPS :\n %s \n\n\n\n\n" steps in 
-		   replace_item (Loc(t,p)) (Item(Definition(name,Complete(final_type,final_terme))))
+		   replace_item (Loc(t,p)) (Item(Definition(name,Complete(final_type,final_terme),"")))
       else let () = Printf.printf "\nIt Seems that your term is not well checked \n
 				   the terme is : %s \n
 				   and the type is : %s\n" (pretty_print_inTm final_terme []) (pretty_print_inTm final_type []) in 
@@ -288,6 +291,10 @@ let check (Loc(t,p)) =
 let create_iter_predicat returneType var_induct = 
   let predicat = Abs(Global "x",returneType) in 
   bound_var_inTm predicat 0 var_induct  
+
+let create_bool_predicat returneType var_induct = 
+  let predicat = Abs(Global"x",returneType) in 
+  bound_var_inTm predicat 0 var_induct  
   
   
   
@@ -300,8 +307,8 @@ let split_iter (Loc(t,p)) induct_var =
 					      (Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
-  let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1)))]) in 
-  let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Hole_inTm(1)))]) in
+  let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1),""))]) in 
+  let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Hole_inTm(1),""))]) in
 (*  let terme = get_terme_item (Loc(t,p)) in  
    JE TEST POUR VOIR SI EN METTANT SYST2MATIQUEMENT DANS LE 1 CA MARCHE let hole = int_of_string (ask_the_hole terme "iter") in *)
   let hole = 1 in
@@ -312,6 +319,20 @@ let split_iter (Loc(t,p)) induct_var =
   let arbre = insert_some_right arbre [first_goal;second_goal] in
   arbre
 
+let split_bool (Loc(t,p)) induct_var = 
+  let returne_type  = get_type_focus (Loc(t,p)) in 
+  let predicat = create_bool_predicat returne_type induct_var in
+  let condition_type = Bool in
+  let then_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Bool,Star)),True))) []) in 
+  let else_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Bool,Star)),False))) []) in 
+  let cond_goal = Section([Item(Intermediaire(1,condition_type,Hole_inTm(1),""))]) in 
+  let then_goal = Section([Item(Intermediaire(2,then_type,Hole_inTm(1),""))]) in 
+  let else_goal = Section([Item(Intermediaire(3,else_type,Hole_inTm(1),""))]) in 
+  let hole = 1 in 
+  let new_terme = Inv(Ifte(predicat,Hole_inTm(1),Hole_inTm(2),Hole_inTm(3))) in 
+  let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in 
+  let arbre = insert_some_right arbre [else_goal;then_goal;cond_goal] in
+  arbre
 (* let split_list (Loc(t,p)) induct_var = *)
   
   
@@ -323,6 +344,7 @@ let split induct_var (Loc(t,p)) =
   begin 
   match var_type with 
   | Nat -> split_iter (Loc(t,p)) induct_var
+  | Bool -> split_bool (Loc(t,p)) induct_var
   | _ -> failwith "split : you split on a var that has not a type recognise by the program"
   end
 
