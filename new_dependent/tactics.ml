@@ -384,9 +384,33 @@ let split induct_var (Loc(t,p)) =
 let verif (Loc(t,p)) = 
   verif_and_push_up_item (Loc(t,p))  
 
+let rec is_etiquette t = 
+  match t with 
+  | Appl(creuse,suite) -> is_etiquette creuse 
+  | FVar(Global(name)) -> true 
+  | _ -> false
+and is_tag t = 
+  match t with
+  | Inv(Appl(creuse,suite)) -> is_etiquette creuse
+  | Succ(x) -> is_etiquette (Ann(x,Nat))
+  | _ -> false
+
+let rec find_var_with_type arbre terme = 
+  let terme = post_parsing_pattern_inTm terme in
+  let env = get_env arbre [] in 
+  find_in_env env terme
+and find_in_env env terme = 
+  match env with 
+  | [] -> failwith "find_in_env: you return a terme that is not in the env"
+  | (name,typ) :: suite -> if equal_inTm typ terme then name else find_in_env suite terme 
+
 let return terme hole (Loc(t,p)) = 
-  let arbre = complete_focus_terme (Loc(t,p)) terme hole in
-  verif arbre
+  if is_tag  terme 
+  then let var = Inv(FVar(Global(find_var_with_type (Loc(t,p)) terme))) in
+       let arbre = complete_focus_terme (Loc(t,p)) var hole in 
+       verif arbre
+  else let arbre = complete_focus_terme (Loc(t,p)) terme hole in
+       verif arbre
   
 let son n (Loc(t,p)) = 
   intros (go_n_son (Loc(t,p)) n)

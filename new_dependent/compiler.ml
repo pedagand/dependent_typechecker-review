@@ -31,6 +31,7 @@ let set_patAct_userDef u p =
    
 (* lors du parse on va initialiser une structure de def *)
 
+
 let rec parse_clause str = 
   match str with 
   | Sexp.List [p;a] -> Clause(Pattern(post_parsing_pattern_inTm (parse_term [] p)),parse_act a)
