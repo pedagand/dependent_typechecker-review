@@ -296,7 +296,9 @@ let create_bool_predicat returneType var_induct =
   let predicat = Abs(Global"x",returneType) in 
   bound_var_inTm predicat 0 var_induct  
   
-  
+let create_liste_predicat returneType var_induct = 
+  let predicat = Abs(Global "x",returneType) in
+  bound_var_inTm predicat 0 var_induct  
   
 
 let split_iter (Loc(t,p)) induct_var = 
@@ -321,20 +323,37 @@ let split_iter (Loc(t,p)) induct_var =
 
 let split_bool (Loc(t,p)) induct_var = 
   let returne_type  = get_type_focus (Loc(t,p)) in 
+  let predicat_type = Pi(Global"x",Bool,Star) in
   let predicat = create_bool_predicat returne_type induct_var in
-  let condition_type = Bool in
-  let then_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Bool,Star)),True))) []) in 
-  let else_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Bool,Star)),False))) []) in 
-  let cond_goal = Section([Item(Intermediaire(1,condition_type,Hole_inTm(1),""))]) in 
-  let then_goal = Section([Item(Intermediaire(2,then_type,Hole_inTm(1),""))]) in 
-  let else_goal = Section([Item(Intermediaire(3,else_type,Hole_inTm(1),""))]) in 
+  let then_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,predicat_type),True))) []) in 
+  let else_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,predicat_type),False))) []) in 
+  let then_goal = Section([Item(Intermediaire(1,then_type,Hole_inTm(1),""))]) in 
+  let else_goal = Section([Item(Intermediaire(2,else_type,Hole_inTm(1),""))]) in 
   let hole = 1 in 
-  let new_terme = Inv(Ifte(predicat,Hole_inTm(1),Hole_inTm(2),Hole_inTm(3))) in 
+  let new_terme = Inv(Ifte(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in 
   let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in 
-  let arbre = insert_some_right arbre [else_goal;then_goal;cond_goal] in
+  let arbre = insert_some_right arbre [else_goal;then_goal] in
   arbre
-(* let split_list (Loc(t,p)) induct_var = *)
-  
+
+
+(* alpha is the type of the list which is called with *)
+let split_liste (Loc(t,p)) induct_var alpha = 
+  let returne_type = get_type_focus (Loc(t,p)) in 
+  let predicat_type = Pi(Global"x",Liste(alpha),Star) in
+  let predicat = create_liste_predicat returne_type induct_var in 
+  let f_type = value_to_inTm 0 (big_step_eval_inTm (Pi(Global"e",alpha,
+						       Pi(Global"xs",Liste(alpha),
+							  Pi(Global"h",Inv(Appl(Ann(predicat,predicat_type),Inv(BVar 0))),
+							     Inv(Appl(Ann(predicat,predicat_type),Cons(Inv(BVar 2),Inv(BVar 1)))))))) []) in
+  let nil_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,predicat_type),Nil))) []) in 
+  let f_goal = Section([Item(Intermediaire(1,f_type,Hole_inTm(1),""))]) in 
+  let nil_goal = Section([Item(Intermediaire(2,nil_type,Hole_inTm(1),""))]) in 
+  let hole = 1 in 
+  let new_terme = Inv(Fold(predicat,alpha,Inv(FVar(Global(induct_var))),Hole_inTm(1),Hole_inTm(2))) in 
+  let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in 
+  let arbre = insert_some_right arbre [nil_goal;f_goal] in 
+  arbre 
+ 
   
   
 
@@ -345,6 +364,7 @@ let split induct_var (Loc(t,p)) =
   match var_type with 
   | Nat -> split_iter (Loc(t,p)) induct_var
   | Bool -> split_bool (Loc(t,p)) induct_var
+  | Liste(alpha) -> split_liste (Loc(t,p)) induct_var alpha
   | _ -> failwith "split : you split on a var that has not a type recognise by the program"
   end
 
@@ -542,7 +562,7 @@ let choose_tactic () =
   | "return" -> let () = Printf.printf "Enter the terme you wan't to push on it \n" in
 		let terme = read (read_line ()) in 
 		let () = Printf.printf "Enter the hole you wan't to complete \n" in 
-		let hole = int_of_string (read_line ()) in 
+		let hole = 1 in (* int_of_string (read_line ()) in *)
 		return terme hole
   | "load" -> 
      let () = Printf.printf "\nEnter the name of the filename you wan't to load\n" in 

@@ -1,4 +1,5 @@
 open Lambda
+open Compiler
 
 (*
   To load in the OCaml toplevel:
@@ -51,7 +52,7 @@ let rec pretty_print_inTm_user terme l =
   | False -> "false"
   | Pair(a,b) -> "(" ^ pretty_print_inTm_user a l ^ " , " ^ pretty_print_inTm_user b l ^ ")"
   | Liste(alpha) -> "(liste " ^ pretty_print_inTm_user alpha l ^ ")"
-  | Nil(alpha) -> "(nil " ^ pretty_print_inTm_user alpha l ^ ")"
+  | Nil -> "nil"
   | Cons(a,xs) -> "(cons " ^ pretty_print_inTm_user a l ^ " " ^ pretty_print_inTm_user xs l ^ ")"
   | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm_user alpha l ^ " " ^ pretty_print_inTm_user n l ^ ")"
   | DNil(alpha) -> "(dnil " ^ pretty_print_inTm_user alpha l ^ ")"

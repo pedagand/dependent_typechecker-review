@@ -1,6 +1,6 @@
 open Lambda 
 open Sexplib
-open Zipper
+
 (* open Tactics *)
 
 type pattern = 
@@ -158,7 +158,7 @@ let rec matching_inTm p t l =
 				 end 
   | (Refl(a),Refl(b)) -> matching_inTm a b l
   | (Liste(a),Liste(b))-> matching_inTm a b l
-  | (Nil(a),Nil(b)) -> matching_inTm a b l 
+  | (Nil,Nil) -> Success(l)
   | (Cons(y1,z1),Cons(y2,z2)) -> begin match matching_inTm y1 y2 l with 
 				       | Success(liste) -> matching_inTm z1 z2 liste 
 				       | Failed -> Failed 
