@@ -1,5 +1,53 @@
 ((def (plus (pi m N (pi n N N))) ((PLUS m n) (<= m (((PLUS zero n) (-> n)) ((PLUS (succ m) n) (-> (lambda x (lambda y (succ y))))))))))
 ((def (plus (pi m N (pi n N N))) ((PLUS m n) (-> n))))
 
+
+(< Plus m n >) -> 
+(Plus m n)
+
+rajouter dans l'ast le terme qui identifie l'hypothèse de récursion
+
+il faut rajouter dans la stratégie de return un traitement pour verifier que l'utilisateur n'utilise pas (Plus m n) si c'est le cas 
+alors il faut considérer que c'est l'hypothèse d'induction
+
 (-> ((PLUS (succ m) n)) (-> (succ (PLUS m n))))))))))	
+
+
+
+
+moins 
+ici on va faire 10 - 5 
+let type_t = read "(pi n N (pi m N N))";;
+
+
+let t = Inv(Appl(Appl(Ann(t,type_t),Succ(Succ(Succ(Zero)))),Succ(Zero)));;
+let eval_t = big_step_eval_inTm t [];;
   	      	      	  	      
+//i hope this is the real t 
+let t = read "(lambda m (lambda n (iter (lambda x (((lambda m (lambda n N)) x) n)) m (lambda x1 (lambda x2 (iter (lambda x (((lambda m (lambda n N)) (succ x1)) x)) n (lambda x3 (lambda x4 x2)) (succ x1)))) zero)))";; 
+
+
+(lambda m 
+	(lambda n 
+		(iter (lambda x ((MOINS x) n)) 
+		      m 
+		      (lambda x1 
+		      	      (lambda x2 
+			      	      	 (iter (lambda x ((MOINS (succ x1)) x)) 
+					       n 
+					       (lambda x3 (lambda x4 x2)) 
+					       (succ x1)))) 
+		      zero))))
+
+
+(lambda m 
+	(lambda n 
+		(iter (lambda x (((lambda m (lambda n N)) x) n)) 
+		m 
+		(lambda x1 
+			(lambda x2 
+				(iter (lambda x (((lambda m (lambda n N)) (succ x1)) x)
+				n 
+				(lambda x3 (lambda x4 x2)) 
+				(succ x1))) 
+			zero)))

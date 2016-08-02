@@ -19,9 +19,9 @@ let inputs =
     ((Pair(Inv(FVar (Global "x")),Inv(FVar (Global "y")))),"(x , y)");
     (Sig(Global "x",Nat,Nat),"(sig x N N)");
     (Sig(Global "x",Nat,Inv(BVar 0)),"(sig x N x)");
-    (Cons(Zero,Nil(Nat)),"(cons zero (nil N))");
+    (Cons(Zero,Nil),"(cons zero nil)");
     (Liste(Nat),"(liste N)");
-    (Nil(Nat),"(nil N)");
+    (Nil,"nil");
     (Inv(DFold(Inv(FVar(Global "alpha")),Inv(FVar(Global "P")),Inv(FVar(Global "m")),Inv(FVar(Global "xs")),Inv(FVar(Global "f")),Inv(FVar(Global "a")))),"(dfold alpha P m xs f a)");
     (DCons(Zero,DNil(Nat)),"(dcons zero (dnil N))");
     (DNil(Nat),"(dnil N)");

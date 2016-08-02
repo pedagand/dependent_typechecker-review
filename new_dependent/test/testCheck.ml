@@ -150,31 +150,28 @@ let inputs =
     ("(liste N)","*",true);
     ("(liste B)","*",true);
     ("(liste (-> * *))","*",true);
-    ("(nil N)","(liste N)",true);
-    ("(nil (-> N N))","(liste (-> N N))",true);
-    ("(cons zero (nil N))","(liste N)",true);
-    ("(cons true (nil B))","(liste B)",true);
-    ("(cons zero (cons (succ zero) (nil N)))","(liste N)",true);
-    ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",true);
-    ("(fold (lambda x (lambda y N)) N (cons zero (cons zero (cons zero (nil N)))) (lambda a (lambda xs (lambda no (+ (succ zero) no)))) zero)",
-     "N",true);
+    ("nil","(liste N)",true);
+    ("(cons zero nil)","(liste N)",true);
+    ("(cons true nil)","(liste B)",true);
+    ("(cons zero (cons (succ zero) nil))","(liste N)",true);
+    ("(cons zero (cons zero nil))","(liste N)",true);    
+    ("(cons (succ zero) (cons (succ zero) nil))","(liste N)",true);
+    ("(fold (lambda y N) N nil (lambda a (lambda xs (lambda no zero))) zero)","N",true);
+    ("(fold (lambda y N) N (cons (succ zero) (cons (succ zero) nil)) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",true);
+    ("(fold (lambda y N) N (cons zero (cons zero (cons zero nil))) (lambda a (lambda xs (lambda no (+ (succ zero) no)))) zero)", 
+     "N",true); 
 
 
     ("(liste zero)","*",false);
     ("(liste N)","N",false);
-    ("(nil N)","(liste B)",false);
-    ("(nil (-> N N))","(liste (-> B B))",false);
-    ("(nil (-> N N))","*",false);
-    ("(nil N)","(liste *)",false);
-    ("(cons true (nil N))","(liste N)",false);
-    ("(cons zero (nil N))","(liste B)",false);
+    ("(cons true nil)","(liste N)",false);
+    ("(cons zero nil)","(liste B)",false);
     ("(cons zero N)","(liste N)",false);
-    ("(cons zero (cons true (nil N)))","(liste N)",false);    
-    ("(cons zero (cons zero (nil B)))","(liste N)",false);    
-    ("(fold (lambda x (lambda y B)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",false);
-    ("(fold (lambda x (lambda y N)) B (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",false);
-    ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) true)","N",false);
-    ("(fold (lambda x (lambda y N)) N (cons (succ zero) (cons (succ zero) (nil N))) (lambda a (lambda xs (lambda no (+ a no)))) true)","N",false);
+    ("(cons zero (cons true nil))","(liste N)",false);    
+    ("(fold (lambda y B) N (cons (succ zero) (cons (succ zero) nil)) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",false);
+    ("(fold (lambda y N) B (cons (succ zero) (cons (succ zero) nil)) (lambda a (lambda xs (lambda no (+ a no)))) zero)","N",false);
+    ("(fold (lambda y N) N (cons (succ zero) (cons (succ zero) nil)) (lambda a (lambda xs (lambda no (+ a no)))) true)","N",false);
+    ("(fold (lambda y N) N (cons (succ zero) (cons (succ zero) nil)) (lambda a (lambda xs (lambda no (+ a no)))) true)","N",false);  
     
     
 

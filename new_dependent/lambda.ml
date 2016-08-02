@@ -201,6 +201,8 @@ let rec parse_term env t =
       | Sexp.Atom "B" -> Bool 
       | Sexp.Atom "true" -> True
       | Sexp.Atom "false" -> False
+      | Sexp.Atom "nil" -> 
+	 Nil
       | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
 	 Hole_inTm (int_of_string num)	 
       | Sexp.List [Sexp.Atom "ref";Sexp.Atom name] -> 
@@ -251,8 +253,6 @@ let rec parse_term env t =
 	 Pair((parse_term env a),(parse_term env b))
       | Sexp.List [Sexp.Atom "liste";alpha] -> 
 	 Liste(parse_term env alpha)
-      | Sexp.List [Sexp.Atom "nil";alpha] -> 
-	 Nil
       | Sexp.List [Sexp.Atom "cons"; a; xs] -> 
 	 Cons((parse_term env a),(parse_term env xs))
       | Sexp.List [Sexp.Atom "vec";alpha; n] -> 
@@ -1502,12 +1502,12 @@ and synth contexte exT steps =
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
   | Fold(p,alpha,xs,f,a) -> 
      let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
-     let type_p = Pi(Global"xs",Liste(Inv(BVar 0)),Star) in 
+     let type_p = Pi(Global"xs",Liste(alpha),Star) in 
      let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
      let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
      let type_f = (Pi(Global"a",alpha,
 		      Pi(Global"xs",Liste(alpha),			 
-			 Pi(Global"NO",Inv(Appl(Ann(p,type_p),Inv(BVar 0))),
+			 Pi(Global"NO",Inv(Appl(Ann(p,type_p),Liste(alpha))),
 			    Inv(Appl(Ann(p,type_p),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
      let check_f = check contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
      let check_a = check contexte a (big_step_eval_inTm alpha []) (pretty_print_exTm exT [] ^ ";") in 
@@ -1524,7 +1524,7 @@ and synth contexte exT steps =
 		 then
 		   begin 
 		     if res_debug check_a 
-		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),alpha),xs))) [])
+		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (big_step_eval_inTm (Inv(Appl(Ann(p,type_p),xs))) [])
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: a must be of type alpha") VStar
 		   end
 		 else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: f has the wrong type") VStar

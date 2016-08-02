@@ -299,14 +299,20 @@ let create_bool_predicat returneType var_induct =
 let create_liste_predicat returneType var_induct = 
   let predicat = Abs(Global "x",returneType) in
   bound_var_inTm predicat 0 var_induct  
-  
+ 
+
+let fresh_var  =
+  let c = ref 0 in
+  fun () -> incr c; "x" ^ string_of_int !c 
 
 let split_iter (Loc(t,p)) induct_var = 
+  let var_un = fresh_var () in
+  let var_deux = fresh_var () in
   let returne_type  = get_type_focus (Loc(t,p)) in 
   let predicat = create_iter_predicat returne_type induct_var in    
-  let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Zero))) []) in 
+  let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global var_un,Nat,Star)),Zero))) []) in 
   let first_goal_typ = value_to_inTm 0 (big_step_eval_inTm 
-					      (Pi(Global"x",Nat,Pi(Global"y",Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
+					      (Pi(Global var_un,Nat,Pi(Global var_deux,Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
   let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1),""))]) in 
