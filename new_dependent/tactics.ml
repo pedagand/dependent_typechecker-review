@@ -112,7 +112,7 @@ let ask_the_son () =
 
 
 (* -------------- Ensemble des tactics ------------ *)
-let intro (Loc(t,p)) = 
+let intro (Loc(t,p),d) = 
   let var = ask_variable_name () in 
   let terme_and_type = begin 
       match t with 
@@ -135,14 +135,14 @@ let intro (Loc(t,p)) =
   let new_terme = begin match terme_and_type with 
   | (terme,_) -> terme
   end in 
-  let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
+  let arbre = complete_focus_terme (Loc(t,p),d) new_terme 1 in
   let new_var = Item(Variable(var,var_type)) in
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
   let new_son = Item(Intermediaire(1,new_type,Hole_inTm(1),"")) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
-let intro_auto (Loc(t,p)) = 
-  let typ = get_type_item (Loc(t,p)) in 
+let intro_auto (Loc(t,p),d) = 
+  let typ = get_type_item (Loc(t,p),d) in 
   let name_var = 
     begin 
       match typ with 
@@ -162,15 +162,15 @@ let intro_auto (Loc(t,p)) =
       | _ -> failwith "intro_auto : it's not possible to intro something else then a pi"
     end in 
   let new_terme = Abs(Global(name_var),Hole_inTm 1) in 
-  let arbre = complete_focus_terme (Loc(t,p)) new_terme 1 in
+  let arbre = complete_focus_terme (Loc(t,p),d) new_terme 1 in
   let new_var = Item(Variable(name_var,typ_var)) in
   let arbre = go_down(go_right(insert_right arbre (Section([new_var])))) in
   let new_son = Item(Intermediaire(1,new_typ,Hole_inTm(1),"")) in 
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
-let rec intros arbre = 
-  let typ = get_type_item arbre in 
-  let terme = get_terme_item arbre in
+let rec intros (Loc(t,p),d) = 
+  let typ = get_type_item (Loc(t,p),d) in 
+  let terme = get_terme_item (Loc(t,p),d) in
   let already_complete = 
     begin 
       match terme with 
@@ -178,21 +178,22 @@ let rec intros arbre =
       | _ -> false
     end in 
   if already_complete 
-  then go_down (go_right arbre)
+  then go_down (go_right (Loc(t,p),d))
   else
   begin
     match typ with 
-    | (Pi(x,s,t)) -> intros (intro_auto arbre)
-    | _ -> arbre
+    | (Pi(x,s,tp)) -> intros (intro_auto (Loc(t,p),d)) 
+    | _ -> (Loc(t,p),d)
   end
-
-let procedure_start_definition typ_not_parsed arbre= 
+(* LOL *)
+let procedure_start_definition typ_not_parsed (Loc(t,p),d) = 
+  let d = set_def_userDef d typ_not_parsed in
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
   | Definition(name,Incomplete(typ,terme),save) -> 
-     let defi = init_definition typ name in 
+     let defi = init_definition typ name in  
      let first_def = Section([Item(defi)]) in      
-     let arbre = (go_down(go_right(insert_right arbre first_def))) in 
+     let arbre = (go_down(go_right(insert_right (Loc(t,p),d) first_def))) in 
      let first_def_type = begin 
 	 match defi with 
 	 | Definition(new_name,Complete(new_typ,new_term),save) -> new_typ
@@ -209,14 +210,15 @@ let procedure_start_definition typ_not_parsed arbre=
 	  | _ -> failwith "procedure_start_definition : if this case happend i eat myself"
 	end in
       let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
-      let arbre = intros arbre in
-      arbre
+      let (Loc(t,p),d) = intros arbre in
+      let d = set_patAct_userDef d (Clause(Pattern(get_type_item (Loc(t,p),d)),Hole(1))) in
+      (Loc(t,p),d)
   | _ -> failwith "procedure_start_definition : something goes wrong during the creation of the definition"
 
   
 
-let axiome var (Loc(t,p))  = 
-  let env = get_env (Loc(t,p)) [] in 
+let axiome var (Loc(t,p),d) = 
+  let env = get_env (Loc(t,p),d) [] in 
   if is_in_env env var 
   then begin 
     let new_arbre = 
@@ -224,16 +226,16 @@ let axiome var (Loc(t,p))  =
       match (Loc(t,p)) with 
       | (Loc(Item(Variable(name,terme)),p)) -> failwith "axiome : You can't intro something which is not a def or intermediaire"
       | (Loc(Item(Definition(name,Incomplete(typ,terme),save)),p)) -> 
-	 (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)),save)),p))
+	 (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1)),save)),p),d)
       | (Loc(Item(Intermediaire(n,typ,terme,save)),p)) -> 
-	 (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1),save)),p))
+	 (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme (Inv(FVar (Global(var)))) 1),save)),p),d)
       | _ -> failwith "axiome : this case is supposed to be impossible" 
       end in 
     verif_and_push_up_item new_arbre
     end 
-  else (Loc(t,p))
+  else (Loc(t,p),d)
 
-let check (Loc(t,p)) = 
+let check (Loc(t,p),d) = 
   let typ = begin 
       match t with 
       | Item(Definition(name,Incomplete(typ,terme),save)) -> typ
@@ -253,19 +255,23 @@ let check (Loc(t,p)) =
     end in 
   if check_if_no_hole_inTm terme 
   then begin
-      let final_terme = replace_ref_etiq_inTm terme (get_def (Loc(t,p)) []) in 
+      let final_terme = replace_ref_etiq_inTm terme (get_def (Loc(t,p),d) []) in 
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-      let final_type = replace_ref_etiq_inTm typ (get_def (Loc(t,p)) []) in 
+      let final_type = replace_ref_etiq_inTm typ (get_def (Loc(t,p),d) []) in 
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
       let res_check = check [] final_terme (big_step_eval_inTm final_type []) "" in 
       let steps = get_steps_report res_check in 
       if res_debug res_check 
       then let () = Printf.printf "\n\n\n STEPS :\n %s \n\n\n\n\n" steps in 
-		   replace_item (Loc(t,p)) (Item(Definition(name,Complete(final_type,final_terme),"")))
+	   let () = Printf.printf "Please choose a file to save your def Il faut que je complète cette partie quand je saurais faire
+				   les entrées sorties\n" in 	   
+	   let file = read_line () in 
+	   let () = Printf.printf "\n%s\n" (pretty_print_def d) in
+		   replace_item (Loc(t,p),d) (Item(Definition(name,Complete(final_type,final_terme),"")))
       else let () = Printf.printf "\nIt Seems that your term is not well checked \n
 				   the terme is : %s \n
 				   and the type is : %s\n" (pretty_print_inTm final_terme []) (pretty_print_inTm final_type []) in 
-	   (Loc(t,p))
+	   (Loc(t,p),d)
     end
   else failwith "check : you can't check if there are at least one hole in your term" 
 
@@ -305,16 +311,19 @@ let fresh_var  =
   let c = ref 0 in
   fun () -> incr c; "x" ^ string_of_int !c 
 
-let split_iter (Loc(t,p)) induct_var = 
+let split_iter (Loc(t,p),d) induct_var = 
   let var_un = fresh_var () in
   let var_deux = fresh_var () in
-  let returne_type  = get_type_focus (Loc(t,p)) in 
+  let returne_type  = get_type_focus (Loc(t,p),d) in 
   let predicat = create_iter_predicat returne_type induct_var in    
   let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global var_un,Nat,Star)),Zero))) []) in 
   let first_goal_typ = value_to_inTm 0 (big_step_eval_inTm 
 					      (Pi(Global var_un,Nat,Pi(Global var_deux,Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
+(* find_return_type typ a faire après pour les userDef EN RENTRANT DE LA PAUSE FAIRE LA FONCTION QUI ENLEVE LES TROUS DE ACT*)
+  let spl = Split(induct_var,complete_clause d.patAct (Return(second_goal_typ)) in
+  let d = set_pointeur_userDef d (complete_act d.patAct spl) in
   let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1),""))]) in 
   let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Hole_inTm(1),""))]) in
 (*  let terme = get_terme_item (Loc(t,p)) in  
@@ -322,13 +331,13 @@ let split_iter (Loc(t,p)) induct_var =
   let hole = 1 in
   (* ici on va modifier le terme sur le focus pour le transformer en Iter avec deux trous *)
   let new_terme = Inv(Iter(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in
-  let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in
+  let arbre = complete_focus_terme (Loc(t,p),d) new_terme hole in
   (* maintenant on va insérer dans l'arbre deux nouvelles sections correspondants au deux nouveux goals *)
   let arbre = insert_some_right arbre [first_goal;second_goal] in
   arbre
 
-let split_bool (Loc(t,p)) induct_var = 
-  let returne_type  = get_type_focus (Loc(t,p)) in 
+let split_bool (Loc(t,p),d) induct_var = 
+  let returne_type  = get_type_focus (Loc(t,p),d) in 
   let predicat_type = Pi(Global"x",Bool,Star) in
   let predicat = create_bool_predicat returne_type induct_var in
   let then_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,predicat_type),True))) []) in 
@@ -337,14 +346,14 @@ let split_bool (Loc(t,p)) induct_var =
   let else_goal = Section([Item(Intermediaire(2,else_type,Hole_inTm(1),""))]) in 
   let hole = 1 in 
   let new_terme = Inv(Ifte(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in 
-  let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in 
-  let arbre = insert_some_right arbre [else_goal;then_goal] in
-  arbre
+  let (Loc(t,p),d) = complete_focus_terme (Loc(t,p),d) new_terme hole in 
+  let (Loc(t,p),d) = insert_some_right (Loc(t,p),d) [else_goal;then_goal] in
+  (Loc(t,p),d)
 
 
 (* alpha is the type of the list which is called with *)
-let split_liste (Loc(t,p)) induct_var alpha = 
-  let returne_type = get_type_focus (Loc(t,p)) in 
+let split_liste (Loc(t,p),d) induct_var alpha = 
+  let returne_type = get_type_focus (Loc(t,p),d) in 
   let predicat_type = Pi(Global"x",Liste(alpha),Star) in
   let predicat = create_liste_predicat returne_type induct_var in 
   let f_type = value_to_inTm 0 (big_step_eval_inTm (Pi(Global"e",alpha,
@@ -356,21 +365,21 @@ let split_liste (Loc(t,p)) induct_var alpha =
   let nil_goal = Section([Item(Intermediaire(2,nil_type,Hole_inTm(1),""))]) in 
   let hole = 1 in 
   let new_terme = Inv(Fold(predicat,alpha,Inv(FVar(Global(induct_var))),Hole_inTm(1),Hole_inTm(2))) in 
-  let arbre = complete_focus_terme (Loc(t,p)) new_terme hole in 
+  let arbre = complete_focus_terme (Loc(t,p),d) new_terme hole in 
   let arbre = insert_some_right arbre [nil_goal;f_goal] in 
-  arbre 
+  arbre
  
   
   
 
-let split induct_var (Loc(t,p)) = 
-  let env = get_env (Loc(t,p)) [] in 
+let split induct_var (Loc(t,p),d) = 
+  let env = get_env (Loc(t,p),d) [] in 
   let var_type = return_type_var_env env induct_var in 
   begin 
   match var_type with 
-  | Nat -> split_iter (Loc(t,p)) induct_var
-  | Bool -> split_bool (Loc(t,p)) induct_var
-  | Liste(alpha) -> split_liste (Loc(t,p)) induct_var alpha
+  | Nat -> split_iter (Loc(t,p),d) induct_var
+  | Bool -> split_bool (Loc(t,p),d) induct_var
+  | Liste(alpha) -> split_liste (Loc(t,p),d) induct_var alpha
   | _ -> failwith "split : you split on a var that has not a type recognise by the program"
   end
 
@@ -381,8 +390,8 @@ let split induct_var (Loc(t,p)) =
 
 
   
-let verif (Loc(t,p)) = 
-  verif_and_push_up_item (Loc(t,p))  
+let verif (Loc(t,p),d) = 
+  (verif_and_push_up_item (Loc(t,p),d))
 
 let rec is_etiquette t = 
   match t with 
@@ -395,32 +404,32 @@ and is_tag t =
   | Succ(x) -> is_etiquette (Ann(x,Nat))
   | _ -> false
 
-let rec find_var_with_type arbre terme = 
+let rec find_var_with_type (Loc(t,p),d) terme = 
   let terme = post_parsing_pattern_inTm terme in
-  let env = get_env arbre [] in 
+  let env = get_env (Loc(t,p),d) [] in 
   find_in_env env terme
 and find_in_env env terme = 
   match env with 
   | [] -> failwith "find_in_env: you return a terme that is not in the env"
   | (name,typ) :: suite -> if equal_inTm typ terme then name else find_in_env suite terme 
 
-let return terme hole (Loc(t,p)) = 
+let return terme hole (Loc(t,p),d) = 
   if is_tag  terme 
-  then let var = Inv(FVar(Global(find_var_with_type (Loc(t,p)) terme))) in
-       let arbre = complete_focus_terme (Loc(t,p)) var hole in 
+  then let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in
+       let arbre = complete_focus_terme (Loc(t,p),d) var hole in 
        verif arbre
-  else let arbre = complete_focus_terme (Loc(t,p)) terme hole in
+  else let arbre = complete_focus_terme (Loc(t,p),d) terme hole in
        verif arbre
   
-let son n (Loc(t,p)) = 
-  intros (go_n_son (Loc(t,p)) n)
+let son n (Loc(t,p),d) = 
+  intros (go_n_son (Loc(t,p),d) n)
 
-let count_son_tact arbre = 
-  let n = count_son arbre in 
+let count_son_tact (Loc(t,p),d) = 
+  let n = count_son (Loc(t,p),d) in 
   let () = Printf.printf "Il y a %d fils ici" n in 
-  arbre
+  (Loc(t,p),d)
 
-let nothing (Loc(t,p)) = (Loc(t,p))
+let nothing (Loc(t,p),d) = (Loc(t,p),d)
 			   
 (* ------------------ ici c'est pour le chargement des defintions *)
 (* let rec patAct_to_terme arbre pattern_match  =  *)
@@ -448,17 +457,17 @@ let rec pretty_print_goal_liste liste =
   
 (*-----------------------------Fin--------------------------------------*)
 
- let rec create_liste_goal l n arbre = 
+ let rec create_liste_goal l n (Loc(t,p),d) = 
   match n with 
   | 0 -> l 
-  | n -> let son = intros (go_n_son arbre n) in 
+  | n -> let son = intros (go_n_son (Loc(t,p),d) n) in 
 	 let liste = (get_type_focus son) :: l in 
-	 create_liste_goal liste (n - 1) arbre
-and liste_me_goal arbre = 
-  let n = count_son arbre in   
+	 create_liste_goal liste (n - 1) (Loc(t,p),d)
+and liste_me_goal (Loc(t,p),d) = 
+  let n = count_son (Loc(t,p),d) in   
   begin match n with
-	| 0 -> (get_type_focus arbre) :: []
-	| n -> create_liste_goal [] n arbre
+	| 0 -> (get_type_focus (Loc(t,p),d)) :: []
+	| n -> create_liste_goal [] n (Loc(t,p),d)
   end 
     
     
@@ -475,25 +484,26 @@ and liste_me_goal arbre =
   | _ -> go_down (Loc(t,p)) *)
 
 (* l'argument l est le mapping obtenue par le matching lors de l'évaluation de la clause *)
-let rec act_to_terme a map_match arbre = 
+let rec act_to_terme a map_match (Loc(t,p),d) = 
   match a with 
-  | Return(t) -> return t 1 arbre
+  | Return(ter) -> return ter 1 (Loc(t,p),d)
   | Split(id,clause_liste) -> let induct_var = begin 
 				  match change_name_liste (Inv(FVar(Global(id)))) map_match with 
 				  | Inv(FVar(Global(x))) -> x 
 				  | _ -> id
 				end in 
-			      let arbre = split induct_var arbre in 
-			      liste_clause_to_terme clause_liste arbre
-and clause_to_terme c arbre = 
+			      let (Loc(t,p),d) = split induct_var (Loc(t,p),d) in 
+			      liste_clause_to_terme clause_liste (Loc(t,p),d)
+  | Hole(x) -> failwith "act_to_terme : this is not possible that a hole appear here"
+and clause_to_terme c (Loc(t,p),d)= 
   match c with 
-  | Clause(Pattern(p),a) -> let () = Printf.printf "\nClause_to_term: start new clause with pattern: %s \n" (pretty_print_inTm p []) in 
-			    let l = liste_me_goal arbre in 			    
-			    let res_match = match_pattern_goal_liste l p 1 in 
+  | Clause(Pattern(pa),a) -> let () = Printf.printf "\nClause_to_term: start new clause with pattern: %s \n" (pretty_print_inTm pa []) in 
+			    let l = liste_me_goal (Loc(t,p),d) in 			    
+			    let res_match = match_pattern_goal_liste l pa 1 in 
 			    let map_var = 
 			      begin match res_match with 
 				    | (n,Failed) -> failwith 
-						  ("clause_to_terme : this pattern match no goal so fail p:" ^ pretty_print_inTm p [] 
+						  ("clause_to_terme : this pattern match no goal so fail p:" ^ pretty_print_inTm pa [] 
 						  ^ " goal_liste :  " ^ pretty_print_goal_liste l)
 				    | (n,Success(map_var)) -> map_var
 			    end in 
@@ -503,20 +513,21 @@ and clause_to_terme c arbre =
 				    | (n,Success(map_var)) -> n
 			    end in 
 			    (* c'est ici que je descend dans l'arbre (cela remontera tout seul avec les verif *)
-			    act_to_terme a map_var (go_n_son arbre goal_number)
-and liste_clause_to_terme liste_clause arbre =
+			    act_to_terme a map_var (go_n_son (Loc(t,p),d) goal_number)
+  | Clause_Top -> failwith "clause_to_term : this is not supposed to happend"
+and liste_clause_to_terme liste_clause (Loc(t,p),d) =
   match liste_clause with 
-  | [] -> arbre
-  | c :: suite -> let arbre = clause_to_terme c arbre in 
+  | [] -> (Loc(t,p),d)
+  | c :: suite -> let arbre = clause_to_terme c (Loc(t,p),d) in 
 		  liste_clause_to_terme suite arbre
 			    
 
 (* faire une fonction à coté qui permet de lire les fichiers *)
-let rec userDefs_to_terme l arbre =  
+let rec userDefs_to_terme l (Loc(t,p),d) =  
   match l with 
-  | [] -> arbre
+  | [] -> (Loc(t,p),d)
   | d :: suite ->
-     let arbre = procedure_start_definition d.def arbre in 
+     let arbre = procedure_start_definition d.def (Loc(t,p),d) in 
      let arbre = intros arbre in 
      let arbre = clause_to_terme d.patAct arbre in 
      check arbre 
@@ -530,9 +541,9 @@ let rec userDefs_to_terme l arbre =
 let def typ_not_parsed arbre = 
   procedure_start_definition typ_not_parsed arbre
 
-let contexte_def (Loc(t,p)) = 
-  let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p))) in 
-  (Loc(t,p))
+let contexte_def (Loc(t,p),d) = 
+  let () = Printf.printf "\nEnsemble des definitions : %s\n" (get_and_print_def (Loc(t,p),d)) in 
+  (Loc(t,p),d)
 
 let rec file_to_string f l= 
    try 
@@ -557,9 +568,9 @@ let rec file_to_string f l=
 
 
 
- let load_def d (Loc(t,p)) = 
-  let defs = read_definition d in 
-  userDefs_to_terme defs (Loc(t,p)) 
+ let load_def defs (Loc(t,p),d) = 
+  let defs = read_definition defs in 
+  userDefs_to_terme defs (Loc(t,p),d) 
   
  
   

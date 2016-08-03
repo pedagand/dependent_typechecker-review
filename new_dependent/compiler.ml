@@ -1,6 +1,7 @@
 open Lambda 
 open Sexplib
 
+
 (* open Tactics *)
 
 type pattern = 
@@ -15,19 +16,41 @@ type matching =
 type act = 
   | Return of inTm 
   | Split of string * clause list
+  | Hole of int
 and clause = 
   | Clause of pattern * act
+  | Clause_Top
 
 type userDefinition = 
   {    
     def : string;
     patAct : clause;
+    pointeur : int;
   }
 
+
+let rec complete_act a sub indice= 
+  match a with 
+  | Hole x -> if indice = x then sub else Hole x
+  | Split(str,l) -> Split(str,(complete_act_liste l sub indice))
+  | Return(x) -> Return(x)
+and complete_act_liste l sub indice = 
+  match l with 
+    | [] -> []
+    | Clause(p,a) :: suite -> Clause(p,(complete_act a sub indice)) :: complete_act_liste suite sub indice
+    | Clause_Top :: suite-> failwith "complete act_list this is not supposed to happend" 
+and complete_clause c sub indice =
+  match c with
+  | Clause(p,a) -> Clause(p,(complete_act a sub indice))
+  | Clause_Top -> failwith "complete_clause : this is not possible"	     
+
+
 let set_def_userDef u d = 
-  {def = d; patAct = u.patAct}
+  {def = d; patAct = u.patAct;pointeur = u.pointeur}
 let set_patAct_userDef u p = 
-  {def = u.def; patAct = p}
+  {def = u.def; patAct = p;pointeur = u.pointeur}
+let set_pointeur_userDef u p = 
+  {def = u.def; patAct = u.patAct; pointeur = p}
    
 (* lors du parse on va initialiser une structure de def *)
 
@@ -54,10 +77,11 @@ and post_parsing_pattern_exTm t =
   | _ -> failwith "post_parsing_pattern : it seem's that it don't work"
 
 
+(* j'initialise le pointeur à 1!!! *)
 let rec parse_type_definition str l = 
   match str with 
   | Sexp.List [Sexp.Atom "def";Sexp.List def;clause] -> 
-     {def = Sexp.to_string (Sexp.List def);patAct = parse_clause clause} :: l
+     {def = Sexp.to_string (Sexp.List def);patAct = parse_clause clause;pointeur = 1} :: l
   | Sexp.List [elem] -> parse_type_definition elem l 
 (*  | Sexp.List [Sexp.List elem; suite] -> 
      let liste = parse_type_definition (Sexp.List elem) l in 
@@ -92,9 +116,11 @@ let rec pretty_print_act a =
   match a with 
   | Split(id,l) -> "(<= " ^ id ^ " " ^ pretty_print_clause_liste l ^ ")"
   | Return(t) -> "(<- " ^ " " ^ pretty_print_inTm t [] ^ ")"
+  | Hole(x) -> "_" ^ string_of_int x
 and pretty_print_clause c = 
   match c with 
   | Clause(Pattern(p),a) -> "(" ^ pretty_print_inTm p [] ^ " " ^ pretty_print_act a ^ ")"
+  | Clause_Top -> failwith "pretty_print_clause : this is not supposed to hapend"
 and pretty_print_clause_liste l = 
   match l with 
   | [] -> "" 

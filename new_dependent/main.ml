@@ -1,15 +1,16 @@
 open Tactics
 open Zipper
+open Compiler
 
-
-let rec main (Loc(t,p)) =   
-  let () = Printf.printf "%s\n" (pretty_print_state_proof (Loc(t,p))) in
-  let arbre = ((choose_tactic ())(Loc(t,p))) in 
+let rec main ((Loc(t,p)),d) =   
+  let () = Printf.printf "%s\n" (pretty_print_state_proof (Loc(t,p),d)) in
+  let arbre = ((choose_tactic ()) (Loc(t,p),d)) in 
   (* ici je mettrais les traitements post techniques *)
   main arbre
 	 
 
 
+(* be carefull always init pointeur to 1 *)
+let defi = {def = "";patAct = Clause_Top;pointeur = 1}
 
-
-let arbre = main (Loc(Section([]),Node([],Top,[])))
+let arbre = main ((Loc(Section([]),Node([],Top,[]))),defi)

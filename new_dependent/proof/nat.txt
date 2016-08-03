@@ -18,14 +18,16 @@ test du terme + suivant :
 let plus_type = read "(pi m N (pi n N N))";;
 let plus =  read "(lambda m (lambda n (iter (lambda x (((lambda m (lambda n N)) x) n)) m (lambda x1 (lambda x2 (succ x2))) n)))";;
 let cinq = read "(number 5)";;
-let six = read "(number 6)";;
-let t = Inv(Appl(Appl(Ann(plus,plus_type),six),cinq));;
+let dix = read "(number 10)";;
+let t = Inv(Appl(Appl(Ann(plus,plus_type),dix),cinq));;
 big_step_eval_inTm t [];;
 
 //mnt au tour du moins
 let t = read "(lambda m (lambda n (iter (lambda x (((lambda m (lambda n N)) x) n)) m (lambda x1 (lambda x2 
       	     	      		  (iter (lambda x (((lambda m (lambda n N)) (succ x1)) x)) n (lambda x3 (lambda x4 x4)) (succ x1)))) zero)))";;
 
+//en courl
+et t = read "(lambda m (lambda n (iter (lambda x (((lambda m (lambda n N)) x) n)) m (lambda x1 (lambda x2 (iter (lambda x (((lambda m (lambda n N)) (succ x1)) x)) n (lambda x3 (lambda x4 (succ x4))) (succ x1)))) zero)))";;
 
 
 moins 

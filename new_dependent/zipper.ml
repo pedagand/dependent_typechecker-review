@@ -1,5 +1,5 @@
 open Lambda
-open Compiler
+
 
 (*
   To load in the OCaml toplevel:
@@ -116,8 +116,8 @@ let rec pretty_print_node nod =
   | Top -> "Top"
 
 
-let pretty_print_location loc = 
-  match loc with 
+let pretty_print_location (Loc(t,p),d) = 
+  match Loc(t,p) with 
   | Loc(pointeur,Top) -> "\nZip : " ^ pretty_print_tree pointeur ^ "Top\n"
   | Loc(pointeur,chemin) -> "Zip : \n" ^ pretty_print_tree pointeur ^ "\n Path : \n" ^ pretty_print_node chemin
 
@@ -127,30 +127,30 @@ let pretty_print_location loc =
 
 
 (* Fonction avec effets de bords nécéssaire pour l'affichage *)
-let print_to_screen_location loc = 
-  let () = Printf.printf "\nstart printing : \n %s \nstop printing\n" (pretty_print_location loc) in 
-  loc
+let print_to_screen_location (Loc(t,p),d) = 
+  let () = Printf.printf "\nstart printing : \n %s \nstop printing\n" (pretty_print_location (Loc(t,p),d)) in 
+  (Loc(t,p),d)
 		     
-let get_terme_item tree = 
-  match tree with 
+let get_terme_item (Loc(t,p),d) = 
+  match Loc(t,p) with 
   | Loc(Item(Variable(name,typ)),t) -> failwith "this is a variable it don't have terme" 
   | Loc(Item(Definition(name,Incomplete(typ,terme),save)),t) -> terme     
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> terme     
   | _ -> failwith "get item : it's not possible to get this..." 
-let get_type_item tree = 
-  match tree with 
+let get_type_item (Loc(t,p),d) = 
+  match Loc(t,p) with 
   | Loc(Item(Variable(name,typ)),t) -> typ
   | Loc(Item(Definition(name,Incomplete(typ,terme),save)),t) -> typ
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> typ
   | _ -> failwith "get_type_item : it's not possible to get this..." 
-let get_num_Inter tree = 
-  match tree with 					
+let get_num_Inter (Loc(t,p),d) = 
+  match Loc(t,p) with 					
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> n
   | _ -> failwith "get_num_Inter : you can't ask for a num if you are no on Inter" 					 
 
 (* fonctions permettants de savoir quand s'arreter *)
-let know_def_inter tree = 
-  match tree with 
+let know_def_inter (Loc(t,p),d) = 
+  match Loc(t,p) with 
   | Loc(Item(Variable(name,typ)),t) -> failwith "know_def_inter: this case is supposed to be impossible"
   | Loc(Item(Definition(name,Incomplete(typ,terme),save)),t) -> false
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> true
@@ -159,95 +159,95 @@ let know_def_inter tree =
   
   
 (* -----------Fonctions de navigation---------------*)
-let go_left (Loc(t,p)) = match p with
+let go_left (Loc(t,p),d) = match p with
   | Top -> failwith "left of top"
-  | Node(l::left,up,right) -> Loc(l,Node(left,up,t::right))
+  | Node(l::left,up,right) -> (Loc(l,Node(left,up,t::right)),d)
   | Node([],up,right) -> failwith "left of first"
 				  
-let go_right (Loc(t,p)) = match p with
+let go_right (Loc(t,p),d) = match p with
   | Top -> failwith "right of top"
-  | Node(left,up,r::right) -> Loc(r,Node(t::left,up,right))
-  | _ -> (Loc(t,p)) (* failwith "right of last" *) (* je teste de faire marcher le programme sans les failwith *)
+  | Node(left,up,r::right) -> (Loc(r,Node(t::left,up,right)),d)
+  | _ -> (Loc(t,p),d) (* failwith "right of last" *) (* je teste de faire marcher le programme sans les failwith *)
 		  
 		  
-let go_up (Loc(t,p)) = match p with
+let go_up ((Loc(t,p)),d) = match p with
   | Top -> failwith "up of top"
-  | Node(left,up,right) -> Loc(Section((List.rev left) @ (t::right)),up)
+  | Node(left,up,right) -> (Loc(Section((List.rev left) @ (t::right)),up),d)
 			      
-let go_down (Loc(t,p)) = match t with
-    Item(_) -> (Loc(t,p)) (* failwith "down of item" *)
-  | Section(t1::trees) -> Loc(t1,Node([],p,trees))
-  | _ -> (Loc(t,p)) (* failwith "down of empty" *)
+let go_down (Loc(t,p),d) = match t with
+    Item(_) -> (Loc(t,p),d) (* failwith "down of item" *)
+  | Section(t1::trees) -> (Loc(t1,Node([],p,trees)),d)
+  | _ -> (Loc(t,p),d) (* failwith "down of empty" *)
 
-let rec go_n_son (Loc(t,p)) n = match n with    
-  | 0 -> go_down (Loc(t,p))
-  | n -> go_n_son (go_right (Loc(t,p))) (n-1)
+let rec go_n_son (Loc(t,p),d) n = match n with    
+  | 0 -> go_down (Loc(t,p),d)
+  | n -> go_n_son (go_right (Loc(t,p),d)) (n-1)
 
   
 		 
 
 (* To print a location we need a function that return the location at the top of the entiere tree *)
-let rec go_to_the_top (Loc(t,p)) = 
+let rec go_to_the_top (Loc(t,p),d) = 
   match p with 
-    Top -> (Loc(t,p))
-  | _ -> go_up (Loc(t,p))
+    Top -> (Loc(t,p),d)
+  | _ -> go_up (Loc(t,p),d)
 
 
 (* pour le down faire attention, ça il faut donner un numéro du nombre de lefts a faire, ce qui nécéssitera donc une fonction permettant
 de compter le nombre de fils *)
-let rec go_full_left (Loc(t,p)) = 
+let rec go_full_left (Loc(t,p),d) = 
   match p with 
-  | Node([],up,right) -> (Loc(t,p))
-  | Node(left,up,right) -> go_full_left (go_left (Loc(t,p)))
+  | Node([],up,right) -> (Loc(t,p),d)
+  | Node(left,up,right) -> go_full_left (go_left (Loc(t,p),d))
   | Top -> failwith "go_full_left : can't go left of a top"  
 
-let rec go_right_count (Loc(t,p)) n = 
+let rec go_right_count (Loc(t,p),d) n = 
   match p with 
   | Node(left,up,[]) -> n
-  | Node(left,up,right) -> go_right_count (go_right (Loc(t,p))) (n + 1)
+  | Node(left,up,right) -> go_right_count (go_right (Loc(t,p),d)) (n + 1)
   | Top -> failwith "cont_son : can't count on a top" 
-and count_son arbre =   
-  go_right_count (go_full_left arbre) 0
+and count_son (Loc(t,p),d) =   
+  go_right_count (go_full_left (Loc(t,p),d)) 0
 
   
   
 
 (* Etant donné ma structuration de l'arbre, il suffit de remonter puis de faire un shift a gauche?*)
-let rec stop_when_def_inter arbre =   
-  match arbre with 
-  | Loc(_,Top) -> arbre
-  | Loc(Item(Variable(name,terme)),p) -> stop_when_def_inter (go_up arbre)
-  | Loc(Item(Definition(name,terme,save)),p) -> arbre
-  | Loc(Item(Intermediaire(n,name,terme,save)),p) -> arbre
-  | Loc(Section(x),p) -> stop_when_def_inter (go_full_left arbre)
+let rec stop_when_def_inter (Loc(t,p),d) =   
+  match (Loc(t,p)) with 
+  | Loc(_,Top) -> (Loc(t,p),d)
+  | Loc(Item(Variable(name,terme)),p) -> stop_when_def_inter (go_up (Loc(t,p),d))
+  | Loc(Item(Definition(name,terme,save)),p) -> (Loc(t,p),d)
+  | Loc(Item(Intermediaire(n,name,terme,save)),p) -> (Loc(t,p),d)
+  | Loc(Section(x),p) -> stop_when_def_inter (go_full_left (Loc(t,p),d))
 
-let proof_up arbre = 
-  let arbre = go_up arbre in 
+let proof_up (Loc(t,p),d) = 
+  let arbre = go_up (Loc(t,p),d) in 
   stop_when_def_inter arbre
 
-let rec go_right_n_times (Loc(t,p)) n = 
+let rec go_right_n_times (Loc(t,p),d) n = 
   match n with 
-  | 0 -> (Loc(t,p))
-  | n -> go_right_n_times (go_right (Loc(t,p))) (n-1)
-let go_down_n_son arbre n =  
-  let arbre = go_down arbre  in
+  | 0 -> (Loc(t,p),d)
+  | n -> go_right_n_times (go_right (Loc(t,p),d)) (n-1)
+let go_down_n_son (Loc(t,p),d) n =  
+  let arbre = go_down (Loc(t,p),d)  in
   go_right_n_times arbre n
 
 
-let proof_down arbre = 
+let proof_down (Loc(t,p),d) = 
   let () = Printf.printf "\n Put the number of the son where you wan't to go\n" in 
   let num = read_line () in 
-  go_down_n_son arbre (int_of_string num)
+  go_down_n_son (Loc(t,p),d) (int_of_string num)
 
 (*fonction préliminaire permettant de descendre dans l'arbre tous les PI pour la creation de userDef *)
-let rec go_down_until_pi (Loc(t,p)) = 
+let rec go_down_until_pi (Loc(t,p),d) = 
   match t with
-  | Item(Variable(name,terme)) -> go_down_until_pi(go_down(go_right(Loc(t,p))))
-  | Item(Definition(typ,terme,save)) -> go_down_until_pi(go_down(go_right(Loc(t,p))))
+  | Item(Variable(name,terme)) -> go_down_until_pi(go_down(go_right(Loc(t,p),d)))
+  | Item(Definition(typ,terme,save)) -> go_down_until_pi(go_down(go_right(Loc(t,p),d)))
   | Item(Intermediaire(n,typ,terme,save)) -> begin 
       match typ with 
-      | Pi(_,_,_) -> go_down_until_pi(go_down(go_right(Loc(t,p))))
-      | _ -> (Loc(t,p))
+      | Pi(_,_,_) -> go_down_until_pi(go_down(go_right(Loc(t,p),d)))
+      | _ -> (Loc(t,p),d)
     end
   | _ -> failwith "supposed not to append" 
 
@@ -272,12 +272,12 @@ and get_def_tree_liste tree_liste env =
   | Item(Definition(name,Complete(typ,terme),save)) :: [] -> ((name,typ,terme) :: env)
   | Item(Definition(name,Complete(typ,terme),save)) :: suite -> get_def_tree_liste suite ((name,typ,terme) :: env)
   | other :: suite -> get_def_tree_liste suite env
-and get_def (Loc(t,p)) env = 
+and get_def (Loc(t,p),d) env = 
   match t,p with 
   | (Section(x),Top) -> get_def_tree_liste x env
   | (Item(x),Top) -> get_def_item x env
-  | (Section(x),p) -> get_def (go_up(Loc(t,p))) (get_def_tree_liste x env)
-  | (Item(x),p) -> get_def (go_up(Loc(t,p))) (get_def_item x env)
+  | (Section(x),p) -> get_def (go_up(Loc(t,p),d)) (get_def_tree_liste x env)
+  | (Item(x),p) -> get_def (go_up(Loc(t,p),d)) (get_def_item x env)
 
 let rec print_def env = 
   match env with 
@@ -287,8 +287,8 @@ let rec print_def env =
 
  
 (* A TEEEEEEEEEEESSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTEEEEEEEEEERRRRRRRRR *)
-let get_and_print_def arbre = 
-  let env = get_def arbre [] in 
+let get_and_print_def (Loc(t,p),d) = 
+  let env = get_def (Loc(t,p),d) [] in 
   print_def env
 
   
@@ -312,12 +312,12 @@ and get_env_tree_liste tree_liste env =
   | (Item(Variable(name,typ))) :: suite -> get_env_tree_liste suite ((name,typ) :: env) 
   | other :: suite -> get_env_tree_liste suite env
   | [] -> env
-and get_env (Loc(t,p)) env =
+and get_env (Loc(t,p),d) env =
   match t,p with 
   | (Section(x),Top) -> get_env_tree_liste x env
   | (Item(x),Top) -> get_env_item x env
-  | (Section(x),p) -> get_env (go_up (Loc(t,p))) (get_env_tree_liste x env)
-  | (Item(x),p) -> get_env (go_up (Loc(t,p))) (get_env_item x env)
+  | (Section(x),p) -> get_env (go_up (Loc(t,p),d)) (get_env_tree_liste x env)
+  | (Item(x),p) -> get_env (go_up (Loc(t,p),d)) (get_env_item x env)
 		    
 let rec return_type_var_env env var = 
   match env with 
@@ -330,8 +330,8 @@ let rec print_env env =
   | [] -> ""
   | (name,typ) :: suite -> "(" ^ name ^ " : " ^ pretty_print_inTm_user typ [] ^ ") " ^ print_env suite
 
-let get_and_print_env arbre = 
-  let env = get_env arbre [] in 
+let get_and_print_env (Loc(t,p),d) = 
+  let env = get_env (Loc(t,p),d) [] in 
   print_env env
 
 let rec is_in_env env var = 
@@ -353,8 +353,8 @@ let rec pretty_print_tree_liste tree_liste n=
   | [] -> "" 
   | Item(x) :: suite -> "\n" ^ string_of_int n ^ " : \n" ^ pretty_print_item (Item(x)) ^ "\n" ^ pretty_print_tree_liste suite (n + 1)
   | Section(x) :: suite -> "\n " ^ string_of_int n ^ " Section \n" ^ pretty_print_tree_liste suite (n+1)
-let pretty_print_state_proof (Loc(t,p)) = 
-  let env = get_and_print_env (Loc(t,p)) in
+let pretty_print_state_proof (Loc(t,p),d) = 
+  let env = get_and_print_env (Loc(t,p),d) in
   match t with 
   | Item(x) -> "---------Environment : ------------\n" ^ 
 		 env ^ 
@@ -370,26 +370,27 @@ let pretty_print_state_proof (Loc(t,p)) =
 (*------------------Fonctions de manipulation --------------*)
 
 
-let replace_item (Loc(t,p)) tsub = 
+let replace_item (Loc(t,p),d) tsub = 
   match t with 
-  | Item(_) -> Loc(tsub,p)
+  | Item(_) -> (Loc(tsub,p),d)
   | _ -> failwith "replac_item : you are supposed to change an item" 
 
-let complete_focus_terme (Loc(t,p)) tsub num = 
+let complete_focus_terme (Loc(t,p),d) tsub num = 
   match t with 
-  | Item(Intermediaire(n,typ,terme,save)) -> Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme tsub num),save)),p)
-  | Item(Definition(name,Complete(typ,terme),save)) -> Loc(Item(Definition(name,Complete(typ,(replace_hole_inTm terme tsub num)),save)),p)
-  | Item(Definition(name,Incomplete(typ,terme),save)) -> Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme tsub num)),save)),p)
+  | Item(Intermediaire(n,typ,terme,save)) -> (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme tsub num),save)),p),d)
+  | Item(Definition(name,Complete(typ,terme),save)) -> (Loc(Item(Definition(name,Complete(typ,(replace_hole_inTm terme tsub num)),save)),p),d)
+  | Item(Definition(name,Incomplete(typ,terme),save)) -> 
+     (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme tsub num)),save)),p),d)
   | _ -> failwith "complete_focus_terme : you can't get the type of something else than an item"
 
-let get_type_focus (Loc(t,p)) = 
+let get_type_focus (Loc(t,p),d) = 
   match t with 
   | Item(Intermediaire(n,typ,terme,save)) -> typ
   | Item(Definition(name,Complete(typ,terme),save)) -> typ
   | Item(Definition(name,Incomplete(typ,terme),save)) -> typ
   | _ -> failwith "get_type_focus : you can't get the type of something else than an item"
 
-let get_terme_focus (Loc(t,p)) = 
+let get_terme_focus (Loc(t,p),d) = 
   match t with 
   | Item(Intermediaire(n,typ,terme,save)) -> terme
   | Item(Definition(name,Complete(typ,terme),save)) -> terme
@@ -397,32 +398,33 @@ let get_terme_focus (Loc(t,p)) =
   | _ -> failwith "get_terme_focus : you can't get the type of something else than an item"
  
 
-let insert_right (Loc(t,p)) r = match p with
+let insert_right (Loc(t,p),d) r = match p with
     Top -> failwith "insert of top"
-  | Node(left,up,right) -> Loc(t,Node(left,up,r::right))
+  | Node(left,up,right) -> (Loc(t,Node(left,up,r::right)),d)
 
-let insert_left (Loc(t,p)) l = match p with
+let insert_left (Loc(t,p),d) l = match p with
 Top -> failwith "insert of top"
-| Node(left,up,right) -> Loc(t,Node(l::left,up,right))
+| Node(left,up,right) -> (Loc(t,Node(l::left,up,right)),d)
 
-let insert_down (Loc(t,p)) t1 = 
+let insert_down (Loc(t,p),d) t1 = 
   match t with
   | Item(_) -> failwith "down of item"
-  | Section(sons) -> Loc(t1,Node([],p,sons))
+  | Section(sons) -> (Loc(t1,Node([],p,sons)),d)
 
 
 (* mettre les elements dans le sens normale de leur insertion, exemple : en argument liste [1;2;3] ils seront rangés en [1];[2];[3] *)
-let rec insert_some_right (Loc(t,p)) liste_section_or_item = 
+let rec insert_some_right (Loc(t,p),d) liste_section_or_item = 
   match liste_section_or_item with 
-  | [] -> (Loc(t,p))
-  | elem :: suite -> insert_some_right (insert_right (Loc(t,p)) elem) suite 
+  | [] -> (Loc(t,p),d)
+  | elem :: suite -> let (Loc(t,p),d) = insert_right (Loc(t,p),d) elem in 
+		     insert_some_right (Loc(t,p),d) suite 
 
 (* la fonction de delete tente tout d'abord de positionner le curseur a droite, sinon a gauche et sinon crée une section vide *)
-let delete (Loc(_,p)) = match p with
+let delete (Loc(_,p),d) = match p with
 Top -> failwith "delete of top"
-| Node(left,up,r::right) -> Loc(r,Node(left,up,right))
-| Node(l::left,up,[]) -> Loc(l,Node(left,up,[]))
-| Node([],up,[]) -> Loc(Section[],up)
+| Node(left,up,r::right) -> (Loc(r,Node(left,up,right)),d)
+| Node(l::left,up,[]) -> (Loc(l,Node(left,up,[])),d)
+| Node([],up,[]) -> (Loc(Section[],up),d)
 
       
 
@@ -473,26 +475,26 @@ let verif_and_push_up_item (Loc(t,p)) =
 
 
 
-let rec verif_and_push_up_item (Loc(t,p)) =     
-  let terme_to_put = get_terme_item (Loc(t,p)) in   
-  if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p))
+let rec verif_and_push_up_item (Loc(t,p),d) =     
+  let terme_to_put = get_terme_item (Loc(t,p),d) in   
+  if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p),d)
   then     
     begin 
-    let trou = get_num_Inter (Loc(t,p)) in 
-    let arbre = proof_up (Loc(t,p)) in 
+    let trou = get_num_Inter (Loc(t,p),d) in 
+    let arbre = proof_up (Loc(t,p),d) in 
     let terme_to_fullfill = get_terme_item arbre in 
     let terme = replace_hole_inTm terme_to_fullfill terme_to_put trou in 
     let arbre = 
       begin 
 	match arbre with 
-	| Loc(Item(Intermediaire(n,x,y,save)),p) -> replace_item arbre (Item(Intermediaire(n,x,terme,save)))
-	| Loc(Item(Definition(name,Incomplete(typ,terme_sup),save)),p) -> 
+	| (Loc(Item(Intermediaire(n,x,y,save)),p),d) -> replace_item arbre (Item(Intermediaire(n,x,terme,save)))
+	| (Loc(Item(Definition(name,Incomplete(typ,terme_sup),save)),p),d) -> 
 	   replace_item arbre (Item(Definition(name,Incomplete(typ,terme),save)))
 	| _ -> failwith "verif_and_push_up_item : this case is supposed to be impossible" 
       end in 
     verif_and_push_up_item arbre
     end
-  else (Loc(t,p))  
+  else (Loc(t,p),d)
   
 
 
