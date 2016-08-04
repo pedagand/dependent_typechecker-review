@@ -1,24 +1,41 @@
 Booléens ---------
-negation pour les booléens:
+-----------negation pour les booléens:
 
-implication pour les booléens:
+goal : (pi a B ((lambda a B) a))
+(lambda a (ifte (lambda x ((lambda a B) x)) a false true)))
 
-
-	    
-
-
+(def (neg (pi a B B)) ((NEG a) (<= a (((NEG true) (->  false)) ((NEG false) (->  true)) ))))
 
 
+-----------implication pour les booléens:
+POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
+(IDEE SUR LE BUG : peut etre qu'il faut simplement réinitialiser la variable du compteur des def a chaque fois que on a sauvegarder un truc)
 
-le ou exclusif 
+goal : (pi a B (pi b B (((lambda a (lambda b B)) a) b)))
+ (lambda a (lambda b (ifte (lambda x (((lambda a (lambda b B)) x) b)) a (ifte (lambda x (((lambda a (lambda b B)) true) x)) b true false) true))))
+		       	 
+----------ou exclusif 
+ goal : (pi a B (pi b B (((lambda a (lambda b B)) a) b)))
+ (lambda a (lambda b (ifte (lambda x (((lambda a (lambda b B)) x) b)) a (ifte (lambda x (((lambda a (lambda b B)) true) x)) b false true) (ifte (lambda x (((lambda a (lambda b B)) false) x)) b true false)))))
 
-le ou et le "et" booléen
+---------ou et le 
+goal : (pi a B (pi b B (((lambda a (lambda b B)) a) b)))
+ (lambda a (lambda b (ifte (lambda x (((lambda a (lambda b B)) x) b)) a true (ifte (lambda x (((lambda a (lambda b B)) false) x)) b true false)))))
+
+---------et
+goal : (pi a B (pi b B (((lambda a (lambda b B)) a) b)))
+(lambda a (lambda b (ifte (lambda x (((lambda a (lambda b B)) x) b)) a (ifte (lambda x (((lambda a (lambda b B)) true) x)) b true false) false))))
 
 
-les entiers -----------
+
+
+
+
+-------------------------------------les entiers -----------
 addition:
-(lambda m (lambda n (iter (lambda x (((lambda m (lambda n N)) x) n)) m (lambda x (lambda y (succ y))) n))))
- soustraction 
+ goal : (pi x N (pi y N (((lambda x (lambda y N)) x) y)))
+ (lambda x (lambda y (iter (lambda x (((lambda x (lambda y N)) x) y)) x (lambda x1 (lambda x2 (succ x2))) y)))
+ soustraction  
 
 multiplication 
 	       
