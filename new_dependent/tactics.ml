@@ -30,7 +30,7 @@ let rec modifie_return_type typ return =
 (* permet de parcourir un pi type jusqu'au bout afin d'en connaitre le type de retour *)
 let rec find_return_type typ = 
   match typ with 
-  | Pi(n,s,t) -> find_return_type t 
+  | Pi(n,s,t) -> let t = substitution_inTm t (FVar n) 0in find_return_type t 
   | x -> x
 
 (* permet de donner la liste des variables présentes dans le théorème *)
@@ -55,6 +55,10 @@ let make_application (terme : exTm) liste_var =
   let () = Printf.printf "\nLISTE DE VAR  %s \n" (List.fold_right (fun x y -> x ^ " " ^ y) liste_var "") in
   if liste_var = [] then terme
   else List.fold_left (fun x y -> Appl(x,Inv(FVar(Global(y))))) terme liste_var
+
+let make_application_terme (terme : exTm) liste_terme = 
+  if liste_terme = [] then terme
+  else List.fold_left (fun x y -> Appl(x,y)) terme liste_terme 
 
 
 
@@ -89,6 +93,20 @@ let rec ask_variable_name ()=
       | _ -> var
       end 
   
+let rec ask_liste_var l = 
+  let () = Printf.printf "\nPut a var per line\n" in 
+  let var = read_line () in
+  match var with 
+  | "" -> l
+  | str -> ask_liste_var (var :: l)
+
+let rec ask_liste_terme l = 
+  let () = Printf.printf "\nPut a terme per line\n" in 
+  let var = read_line () in  
+  match var with 
+  | "" -> l
+  | str -> let var = read var in ask_liste_terme (var :: l)
+
 let ask_predicat typ =
   let () = Printf.printf "\n Please give the predicate you wan't to use for this split of type : %s \n" typ in 
   let pred = read_line () in pred
@@ -321,9 +339,13 @@ let split_iter (Loc(t,p),d) induct_var =
 					      (Pi(Global var_un,Nat,Pi(Global var_deux,Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Inv(BVar 0))),
 					Inv(Appl(Ann(predicat,Pi(Global"x",Nat,Star)),Succ(Inv(BVar 1)))))))
 					     []) in 
-(* find_return_type typ a faire après pour les userDef EN RENTRANT DE LA PAUSE FAIRE LA FONCTION QUI ENLEVE LES TROUS DE ACT*)
-  let spl = Split(induct_var,complete_clause d.patAct (Return(second_goal_typ)) in
-  let d = set_pointeur_userDef d (complete_act d.patAct spl) in
+(* find_return_type typ a faire après pour les userDef EN RENTRANT DE LA PAUSE FAIRE LA FONCTION QUI ENLEVE LES TROUS DE ACT *)
+  let clause_un = Clause(Pattern(find_return_type first_goal_typ),Hole(d.pointeur + 1)) in 
+  let clause_deux = Clause(Pattern(find_return_type second_goal_typ),Hole(d.pointeur + 2)) in   
+  let liste_clause = [clause_un;clause_deux] in
+  let spl = (Split(induct_var,liste_clause)) in
+  let d = set_patAct_userDef d (complete_clause d.patAct spl d.pointeur) in
+(*   let d = set_pointeur_userDef d (d.pointeur + 1) in JE PENSE QUE CETTE LIGNE N4EST PAS NECESSAIRE *)
   let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Hole_inTm(1),""))]) in 
   let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Hole_inTm(1),""))]) in
 (*  let terme = get_terme_item (Loc(t,p)) in  
@@ -344,6 +366,14 @@ let split_bool (Loc(t,p),d) induct_var =
   let else_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,predicat_type),False))) []) in 
   let then_goal = Section([Item(Intermediaire(1,then_type,Hole_inTm(1),""))]) in 
   let else_goal = Section([Item(Intermediaire(2,else_type,Hole_inTm(1),""))]) in 
+  (* start the save of the def *)
+  let clause_un = Clause(Pattern(find_return_type then_type),Hole(d.pointeur + 1)) in 
+  let clause_deux = Clause(Pattern(find_return_type else_type),Hole(d.pointeur + 2)) in   
+  let liste_clause = [clause_un;clause_deux] in
+  let spl = (Split(induct_var,liste_clause)) in
+  let d = set_patAct_userDef d (complete_clause d.patAct spl d.pointeur) in
+(*   let d = set_pointeur_userDef d (d.pointeur + 1) in MEME JUSTIFICATION QUE POUR SPLIT ITER *)
+  (* end *)
   let hole = 1 in 
   let new_terme = Inv(Ifte(predicat,Inv(FVar(Global induct_var)),Hole_inTm(1),Hole_inTm(2))) in 
   let (Loc(t,p),d) = complete_focus_terme (Loc(t,p),d) new_terme hole in 
@@ -389,8 +419,9 @@ let split induct_var (Loc(t,p),d) =
   
 
 
-  
+  (* C'est un test mais a chaque fois que je vérifie un terme je vais decrémenter le compteur de 1 *)
 let verif (Loc(t,p),d) = 
+  let d = set_pointeur_userDef d (d.pointeur - 1) in
   (verif_and_push_up_item (Loc(t,p),d))
 
 let rec is_etiquette t = 
@@ -413,8 +444,10 @@ and find_in_env env terme =
   | [] -> failwith "find_in_env: you return a terme that is not in the env"
   | (name,typ) :: suite -> if equal_inTm typ terme then name else find_in_env suite terme 
 
+
 let return terme hole (Loc(t,p),d) = 
-  if is_tag  terme 
+  let d = set_patAct_userDef d (complete_clause d.patAct (Return terme) d.pointeur) in
+  if is_tag terme 
   then let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in
        let arbre = complete_focus_terme (Loc(t,p),d) var hole in 
        verif arbre
@@ -422,8 +455,18 @@ let return terme hole (Loc(t,p),d) =
        verif arbre
   
 let son n (Loc(t,p),d) = 
+  let d = set_pointeur_userDef d (d.pointeur + n) in
   intros (go_n_son (Loc(t,p),d) n)
 
+let eval (Loc(t,p),d) = 
+  let typ = get_type_item (Loc(t,p),d) in
+  let terme = Ann((get_terme_item (Loc(t,p),d)),typ) in
+  let liste_terme = ask_liste_terme [] in 
+  let appl_t = make_application_terme terme liste_terme in
+  let eval_t = value_to_inTm 0 (big_step_eval_inTm (Inv(appl_t)) [])  in 
+  let () = Printf.printf "\nVoici l'évaluation de votre terme : \n %s \nEND EVAL\n" (pretty_print_inTm eval_t []) in
+  (Loc(t,p),d)
+  
 let count_son_tact (Loc(t,p),d) = 
   let n = count_son (Loc(t,p),d) in 
   let () = Printf.printf "Il y a %d fils ici" n in 
@@ -609,6 +652,7 @@ let choose_tactic () =
      let () = Printf.printf "\nEnter the name of the filename you wan't to load\n" in 
      let fichier = read_line () in load_def fichier
   | "count son" -> count_son_tact
+  | "eval" -> eval
   | _ -> nothing
 
 (* --------------Idées-------------------*)

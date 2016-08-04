@@ -136,12 +136,14 @@ let get_terme_item (Loc(t,p),d) =
   | Loc(Item(Variable(name,typ)),t) -> failwith "this is a variable it don't have terme" 
   | Loc(Item(Definition(name,Incomplete(typ,terme),save)),t) -> terme     
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> terme     
+  | Loc(Item(Definition(name,Complete(typ,terme),save)),t) -> terme     
   | _ -> failwith "get item : it's not possible to get this..." 
 let get_type_item (Loc(t,p),d) = 
   match Loc(t,p) with 
   | Loc(Item(Variable(name,typ)),t) -> typ
   | Loc(Item(Definition(name,Incomplete(typ,terme),save)),t) -> typ
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> typ
+  | Loc(Item(Definition(name,Complete(typ,terme),save)),t) -> typ
   | _ -> failwith "get_type_item : it's not possible to get this..." 
 let get_num_Inter (Loc(t,p),d) = 
   match Loc(t,p) with 					

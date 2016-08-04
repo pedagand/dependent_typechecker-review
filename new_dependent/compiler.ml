@@ -32,12 +32,12 @@ type userDefinition =
 let rec complete_act a sub indice= 
   match a with 
   | Hole x -> if indice = x then sub else Hole x
-  | Split(str,l) -> Split(str,(complete_act_liste l sub indice))
+  | Split(str,l) -> Split(str,(complete_clause_liste l sub indice))
   | Return(x) -> Return(x)
-and complete_act_liste l sub indice = 
+and complete_clause_liste l sub indice = 
   match l with 
     | [] -> []
-    | Clause(p,a) :: suite -> Clause(p,(complete_act a sub indice)) :: complete_act_liste suite sub indice
+    | Clause(p,a) :: suite -> Clause(p,(complete_act a sub indice)) :: complete_clause_liste suite sub indice
     | Clause_Top :: suite-> failwith "complete act_list this is not supposed to happend" 
 and complete_clause c sub indice =
   match c with
@@ -114,8 +114,8 @@ let read_definition str =
 
 let rec pretty_print_act a = 
   match a with 
-  | Split(id,l) -> "(<= " ^ id ^ " " ^ pretty_print_clause_liste l ^ ")"
-  | Return(t) -> "(<- " ^ " " ^ pretty_print_inTm t [] ^ ")"
+  | Split(id,l) -> "(<= " ^ id ^ " (" ^ pretty_print_clause_liste l ^ "))"
+  | Return(t) -> "(-> " ^ " " ^ pretty_print_inTm t [] ^ ")"
   | Hole(x) -> "_" ^ string_of_int x
 and pretty_print_clause c = 
   match c with 
@@ -124,9 +124,9 @@ and pretty_print_clause c =
 and pretty_print_clause_liste l = 
   match l with 
   | [] -> "" 
-  | elem :: suite ->  pretty_print_clause elem ^ " \n"^ pretty_print_clause_liste suite
+  | elem :: suite ->  pretty_print_clause elem ^ " "^ pretty_print_clause_liste suite
 and pretty_print_def userAct = 
-  "(def " ^ " " ^ userAct.def ^ " " ^ pretty_print_clause userAct.patAct ^ ")"
+  "(def " ^ userAct.def ^ " " ^ pretty_print_clause userAct.patAct ^ ")"
 
 (*
 let pretty_print_def userDef = 
