@@ -5,6 +5,8 @@
 (def  (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS zero) n) (->  (succ x2))) (((PLUS (succ x1)) n) (->  n)) ))))
 (def (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS (succ x1)) n) (->  (succ x2))) (((PLUS zero) n) (->  n)) ))))
 
+((def (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS (succ x1)) n) (->  (succ x2))) (((PLUS zero) n) (->  n)) )))))
+
 (< Plus m n >) -> 
 (Plus m n)
 

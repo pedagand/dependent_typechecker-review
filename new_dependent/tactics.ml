@@ -187,6 +187,7 @@ let intro_auto (Loc(t,p),d) =
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
 let rec intros (Loc(t,p),d) = 
+  let () = Printf.printf "Enter in intro with this tree \n %s \n" (pretty_print_state_proof (Loc(t,p),d)) in
   let typ = get_type_item (Loc(t,p),d) in 
   let terme = get_terme_item (Loc(t,p),d) in
   let already_complete = 
@@ -196,7 +197,7 @@ let rec intros (Loc(t,p),d) =
       | _ -> false
     end in 
   if already_complete 
-  then go_down (go_right (Loc(t,p),d))
+  then (go_down (go_right (Loc(t,p),d))) (* ici je peux rajouter une intro ? *)
   else
   begin
     match typ with 
@@ -204,6 +205,7 @@ let rec intros (Loc(t,p),d) =
     | _ -> (Loc(t,p),d)
   end
 (* LOL *)
+
 let procedure_start_definition typ_not_parsed (Loc(t,p),d) = 
   let d = set_def_userDef d typ_not_parsed in
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
@@ -332,7 +334,7 @@ let fresh_var  =
 let split_iter (Loc(t,p),d) induct_var = 
   let var_un = fresh_var () in
   let var_deux = fresh_var () in
-  let returne_type  = get_type_focus (Loc(t,p),d) in 
+  let returne_type  = get_type_focus "split iter" (Loc(t,p),d) in 
   let predicat = create_iter_predicat returne_type induct_var in    
   let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(Global var_un,Nat,Star)),Zero))) []) in 
   let first_goal_typ = value_to_inTm 0 (big_step_eval_inTm 
@@ -359,7 +361,7 @@ let split_iter (Loc(t,p),d) induct_var =
   arbre
 
 let split_bool (Loc(t,p),d) induct_var = 
-  let returne_type  = get_type_focus (Loc(t,p),d) in 
+  let returne_type  = get_type_focus "split bool" (Loc(t,p),d) in 
   let predicat_type = Pi(Global"x",Bool,Star) in
   let predicat = create_bool_predicat returne_type induct_var in
   let then_type = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,predicat_type),True))) []) in 
@@ -383,7 +385,7 @@ let split_bool (Loc(t,p),d) induct_var =
 
 (* alpha is the type of the list which is called with *)
 let split_liste (Loc(t,p),d) induct_var alpha = 
-  let returne_type = get_type_focus (Loc(t,p),d) in 
+  let returne_type = get_type_focus "split_liste" (Loc(t,p),d) in 
   let predicat_type = Pi(Global"x",Liste(alpha),Star) in
   let predicat = create_liste_predicat returne_type induct_var in 
   let f_type = value_to_inTm 0 (big_step_eval_inTm (Pi(Global"e",alpha,
@@ -499,17 +501,19 @@ let rec pretty_print_goal_liste liste =
   | elem :: suite -> pretty_print_inTm elem [] ^ ";" ^ pretty_print_goal_liste suite
   
 (*-----------------------------Fin--------------------------------------*)
-
- let rec create_liste_goal l n (Loc(t,p),d) = 
+(* i need to focus on this if i wan't to debug *)
+let rec create_liste_goal l n (Loc(t,p),d) = 
+  let () = Printf.printf "Enter in the create_liste_goal with n %s\n" (string_of_int n)  in
   match n with 
   | 0 -> l 
-  | n -> let son = intros (go_n_son (Loc(t,p),d) n) in 
-	 let liste = (get_type_focus son) :: l in 
+  | n -> let s = intros (go_n_son (Loc(t,p),d) n) in (* intros (go_n_son (Loc(t,p),d) n) in *)
+	 let liste = (get_type_focus "create_liste_goal" s) :: l in 
 	 create_liste_goal liste (n - 1) (Loc(t,p),d)
 and liste_me_goal (Loc(t,p),d) = 
   let n = count_son (Loc(t,p),d) in   
+  let () = Printf.printf "liste_me_goal : %s\n" (string_of_int n) in 
   begin match n with
-	| 0 -> (get_type_focus (Loc(t,p),d)) :: []
+	| 0 -> (get_type_focus "liste_me_goal" (Loc(t,p),d)) :: []
 	| n -> create_liste_goal [] n (Loc(t,p),d)
   end 
     
@@ -528,8 +532,9 @@ and liste_me_goal (Loc(t,p),d) =
 
 (* l'argument l est le mapping obtenue par le matching lors de l'évaluation de la clause *)
 let rec act_to_terme a map_match (Loc(t,p),d) = 
+  let () = Printf.printf "\nact_to_terme %s \n" (pretty_print_act a) in
   match a with 
-  | Return(ter) -> return ter 1 (Loc(t,p),d)
+  | Return(ter) -> return ter 1 (intros (Loc(t,p),d))
   | Split(id,clause_liste) -> let induct_var = begin 
 				  match change_name_liste (Inv(FVar(Global(id)))) map_match with 
 				  | Inv(FVar(Global(x))) -> x 
@@ -542,6 +547,7 @@ and clause_to_terme c (Loc(t,p),d)=
   match c with 
   | Clause(Pattern(pa),a) -> let () = Printf.printf "\nClause_to_term: start new clause with pattern: %s \n" (pretty_print_inTm pa []) in 
 			    let l = liste_me_goal (Loc(t,p),d) in 			    
+			    let () = Printf.printf "list me goal done \n" in
 			    let res_match = match_pattern_goal_liste l pa 1 in 
 			    let map_var = 
 			      begin match res_match with 
@@ -556,7 +562,7 @@ and clause_to_terme c (Loc(t,p),d)=
 				    | (n,Success(map_var)) -> n
 			    end in 
 			    (* c'est ici que je descend dans l'arbre (cela remontera tout seul avec les verif *)
-			    act_to_terme a map_var (go_n_son (Loc(t,p),d) goal_number)
+			    act_to_terme a map_var ((go_n_son (Loc(t,p),d) goal_number)) (* l'erreur semble venir d'ici a cause de l'intro ??*)
   | Clause_Top -> failwith "clause_to_term : this is not supposed to happend"
 and liste_clause_to_terme liste_clause (Loc(t,p),d) =
   match liste_clause with 
@@ -615,8 +621,23 @@ let rec file_to_string f l=
   let defs = read_definition defs in 
   userDefs_to_terme defs (Loc(t,p),d) 
   
- 
+
+
+let load_terme terme name typ (Loc(t,p),d) =
+  let parse_terme = read terme in
+  let parse_typ = read typ in
+  let def = Definition(name,Complete(parse_typ,parse_terme),"") in
+  let first_def = Section([Item(def)]) in      
+  let arbre = (go_down(go_right(insert_right (Loc(t,p),d) first_def))) in 
+  arbre
   
+  
+let replace_def (Loc(t,p),d) = 
+  let terme = get_terme_item (Loc(t,p),d) in 
+  let env = get_def (Loc(t,p),d) [] in 
+  let terme = replace_ref_etiq_inTm terme env in 
+  let () = Printf.printf "\nThis is your terme with def replaced %s \n" (pretty_print_inTm terme []) in
+  (Loc(t,p),d)
   
   
   
@@ -653,6 +674,14 @@ let choose_tactic () =
      let fichier = read_line () in load_def fichier
   | "count son" -> count_son_tact
   | "eval" -> eval
+  | "load terme" -> 
+     let () = Printf.printf "\nChoose a name for this terme\n" in
+     let name = read_line () in
+     let () = Printf.printf "Enter the terme \n" in 
+     let terme = read_line () in 
+     let () = Printf.printf "Enter the typ\n" in 
+     let typ = read_line () in load_terme terme name typ 
+  | "replace def" -> replace_def
   | _ -> nothing
 
 (* --------------Idées-------------------*)

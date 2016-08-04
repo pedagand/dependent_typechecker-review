@@ -133,7 +133,7 @@ let print_to_screen_location (Loc(t,p),d) =
 		     
 let get_terme_item (Loc(t,p),d) = 
   match Loc(t,p) with 
-  | Loc(Item(Variable(name,typ)),t) -> failwith "this is a variable it don't have terme" 
+  | Loc(Item(Variable(name,typ)),t) -> failwith ("get_terme_item : this is a variable it don't have terme" ^ name)
   | Loc(Item(Definition(name,Incomplete(typ,terme),save)),t) -> terme     
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> terme     
   | Loc(Item(Definition(name,Complete(typ,terme),save)),t) -> terme     
@@ -385,12 +385,13 @@ let complete_focus_terme (Loc(t,p),d) tsub num =
      (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme tsub num)),save)),p),d)
   | _ -> failwith "complete_focus_terme : you can't get the type of something else than an item"
 
-let get_type_focus (Loc(t,p),d) = 
+let get_type_focus debug_string (Loc(t,p),d) = 
   match t with 
   | Item(Intermediaire(n,typ,terme,save)) -> typ
   | Item(Definition(name,Complete(typ,terme),save)) -> typ
   | Item(Definition(name,Incomplete(typ,terme),save)) -> typ
-  | _ -> failwith "get_type_focus : you can't get the type of something else than an item"
+  | Section(x) -> failwith ("get_type_focus : This is a section " ^ pretty_print_tree (Section(x)))
+  | _ -> failwith ("get_type_focus : you can't get the type of something else than an item " ^ debug_string)
 
 let get_terme_focus (Loc(t,p),d) = 
   match t with 

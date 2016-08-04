@@ -1,7 +1,14 @@
 Booléens ---------
-negation pour les booléens 
+negation pour les booléens:
 
-implication pour les booléens
+implication pour les booléens:
+
+
+	    
+
+
+
+
 
 le ou exclusif 
 
