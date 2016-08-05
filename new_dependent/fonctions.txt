@@ -32,12 +32,13 @@ goal : (pi a B (pi b B (((lambda a (lambda b B)) a) b)))
 
 
 -------------------------------------les entiers -----------
-addition:
- goal : (pi x N (pi y N (((lambda x (lambda y N)) x) y)))
+-------addition:
+goal : (pi x N (pi y N (((lambda x (lambda y N)) x) y)))
  (lambda x (lambda y (iter (lambda x (((lambda x (lambda y N)) x) y)) x (lambda x1 (lambda x2 (succ x2))) y)))
- soustraction  
 
-multiplication 
+------multiplication :
+
+
 	       
 
 

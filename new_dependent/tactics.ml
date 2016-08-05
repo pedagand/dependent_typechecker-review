@@ -255,7 +255,7 @@ let axiome var (Loc(t,p),d) =
     end 
   else (Loc(t,p),d)
 
-let check (Loc(t,p),d) = 
+let check (Loc(t,p),d) =   
   let typ = begin 
       match t with 
       | Item(Definition(name,Incomplete(typ,terme),save)) -> typ
@@ -275,11 +275,16 @@ let check (Loc(t,p),d) =
     end in 
   if check_if_no_hole_inTm terme 
   then begin
-      let final_terme = replace_ref_etiq_inTm terme (get_def (Loc(t,p),d) []) in 
+      let () = Printf.printf "Check : start to make treatment\n" in
+      let defs = get_def (Loc(t,p),d) [] in 
+      let final_terme = replace_ref_etiq_inTm terme defs in 
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-      let final_type = replace_ref_etiq_inTm typ (get_def (Loc(t,p),d) []) in 
+      let final_type = replace_ref_etiq_inTm typ defs in 
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
+      let () = Printf.printf "Check : This is the env used %s\n" (print_def defs) in
+      let () = Printf.printf "Check : LOL The terme juste before checking \n %s \n" (pretty_print_inTm final_terme []) in
       let res_check = check [] final_terme (big_step_eval_inTm final_type []) "" in 
+      let () = Printf.printf "Check as been proceed" in 
       let steps = get_steps_report res_check in 
       if res_debug res_check 
       then let () = Printf.printf "\n\n\n STEPS :\n %s \n\n\n\n\n" steps in 
@@ -423,6 +428,7 @@ let split induct_var (Loc(t,p),d) =
 
   (* C'est un test mais a chaque fois que je vérifie un terme je vais decrémenter le compteur de 1 *)
 let verif (Loc(t,p),d) = 
+  let () = Printf.printf "\nEnter in the verif \n" in
   let d = set_pointeur_userDef d (d.pointeur - 1) in
   (verif_and_push_up_item (Loc(t,p),d))
 
@@ -450,10 +456,14 @@ and find_in_env env terme =
 let return terme hole (Loc(t,p),d) = 
   let d = set_patAct_userDef d (complete_clause d.patAct (Return terme) d.pointeur) in
   if is_tag terme 
-  then let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in
-       let arbre = complete_focus_terme (Loc(t,p),d) var hole in 
+  then let () = Printf.printf "is_tag goign trhought then\n" in 
+       (* let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in *)
+       let arbre = complete_focus_terme (Loc(t,p),d) terme hole in 
+       let () = Printf.printf "finish the return\n" in
        verif arbre
-  else let arbre = complete_focus_terme (Loc(t,p),d) terme hole in
+  else let () = Printf.printf "is_tag goign trhought else\n" in 
+       let arbre = complete_focus_terme (Loc(t,p),d) terme hole in
+       let () = Printf.printf "finish the return\n" in
        verif arbre
   
 let son n (Loc(t,p),d) = 
@@ -666,7 +676,7 @@ let choose_tactic () =
   | "split" -> let induct_var = ask_induct_var () in split induct_var
   | "return" -> let () = Printf.printf "Enter the terme you wan't to push on it \n" in
 		let terme = read (read_line ()) in 
-		let () = Printf.printf "Enter the hole you wan't to complete \n" in 
+		(* let () = Printf.printf "Enter the hole you wan't to complete \n" in *)
 		let hole = 1 in (* int_of_string (read_line ()) in *)
 		return terme hole
   | "load" -> 
