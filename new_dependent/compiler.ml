@@ -120,7 +120,7 @@ let rec pretty_print_act a =
 and pretty_print_clause c = 
   match c with 
   | Clause(Pattern(p),a) -> "(" ^ pretty_print_inTm p [] ^ " " ^ pretty_print_act a ^ ")"
-  | Clause_Top -> failwith "pretty_print_clause : this is not supposed to hapend"
+  | Clause_Top -> ""
 and pretty_print_clause_liste l = 
   match l with 
   | [] -> "" 

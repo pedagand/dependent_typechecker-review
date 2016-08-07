@@ -32,71 +32,17 @@ type location = Loc of tree * path
 
   
 (* -----------------Fonctions d'affichage-------------- *)
-let rec pretty_print_inTm_user terme l = 
-  match terme with 
-  | Ref(name) -> name
-  | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
-  | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm_user x (str :: l) ^ ")"
-  | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
-  | Inv (x) ->  pretty_print_exTm_user x l
-  | Pi (Global(str),s,t) -> "(pi " ^ str ^ " " ^ pretty_print_inTm_user s l ^ " " ^ pretty_print_inTm_user t (str :: l) ^ ")"
-  | Pi (_,s,t) -> failwith "Pretty print Pi first arg must be a global"
-  | Sig(Global(str),a,b) -> "(sig " ^ str ^ " " ^ pretty_print_inTm_user a l ^ " " ^ pretty_print_inTm_user b (str :: l) ^ ")"
-  | Sig(_,a,b) -> failwith "Pretty print Sig first arg must be a global"
-  | Star -> "*"
-  | Succ n -> "(succ " ^ pretty_print_inTm_user n l ^ ")"
-  | Zero -> "zero"
-  | Nat -> "N" 
-  | Bool -> "B"
-  | True -> "true"
-  | False -> "false"
-  | Pair(a,b) -> "(" ^ pretty_print_inTm_user a l ^ " , " ^ pretty_print_inTm_user b l ^ ")"
-  | Liste(alpha) -> "(liste " ^ pretty_print_inTm_user alpha l ^ ")"
-  | Nil -> "nil"
-  | Cons(a,xs) -> "(cons " ^ pretty_print_inTm_user a l ^ " " ^ pretty_print_inTm_user xs l ^ ")"
-  | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm_user alpha l ^ " " ^ pretty_print_inTm_user n l ^ ")"
-  | DNil(alpha) -> "(dnil " ^ pretty_print_inTm_user alpha l ^ ")"
-  | DCons(a,xs) -> "(dcons " ^ pretty_print_inTm_user a l ^ " " ^ pretty_print_inTm_user xs l ^ ")"
-  | What(s)-> "(? " ^ s ^ ")"
-  | Id(bA,a,b) -> "(id " ^ pretty_print_inTm_user bA l ^ " " ^ pretty_print_inTm_user a l ^ " " ^ pretty_print_inTm_user b l ^ ")"
-  | Refl(a) -> "(refl " ^ pretty_print_inTm_user a l ^ ")"
-
-and pretty_print_exTm_user t l =
-  match t with 
-  | Hole_exTm(x) -> "(_ " ^ string_of_int x ^ ")"
-  | Ann(x,y) -> pretty_print_inTm_user x l 
-  | BVar(x) -> begin 
-      try List.nth l x with 
-	| Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong list is to short BVar de " ^ string_of_int x) 
-	| _ -> List.nth l x
-    end
-  | FVar (Global x) ->  x
-  | FVar (Quote x) -> string_of_int x 
-  | FVar (Bound x) -> string_of_int x
-  | Etiquette(x) -> x
-  | Appl(x,y) -> "(" ^ pretty_print_exTm_user x l ^ " " ^ pretty_print_inTm_user y l ^ ")"
-  | Iter(p,n,f,z) -> "(iter " ^ pretty_print_inTm_user p l ^ " " ^ pretty_print_inTm_user n l ^ " " ^ pretty_print_inTm_user f l ^ " " ^ pretty_print_inTm_user z l ^ ")"
-  | Ifte(p,c,tHen,eLse) -> "(ifte " ^ pretty_print_inTm_user p l ^ " " ^ pretty_print_inTm_user c l ^ " " ^ pretty_print_inTm_user tHen l ^ " " ^ pretty_print_inTm_user eLse l ^ ")"
-  | P0(x) -> "(p0 " ^ pretty_print_exTm_user x l ^ ")"
-  | P1(x) -> "(p1 " ^ pretty_print_exTm_user x l ^ ")"
-  |  DFold(alpha,p,n,xs,f,a) -> "(dfold " ^ pretty_print_inTm_user alpha l ^ " " ^ pretty_print_inTm_user p l ^ " " ^pretty_print_inTm_user n l ^ 
-				 " " ^ pretty_print_inTm_user xs l ^ " " ^ pretty_print_inTm_user f l ^ " " ^ pretty_print_inTm_user a l ^ ")"
-  | Trans(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm_user bA l ^ " " ^pretty_print_inTm_user p l ^ " " ^pretty_print_inTm_user a l ^ " " ^
-			     pretty_print_inTm_user b l ^ " " ^pretty_print_inTm_user q l ^ " " ^pretty_print_inTm_user x l ^ ")"
-  | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm_user bA l ^ " " ^ pretty_print_inTm_user alpha l ^ " " ^ pretty_print_inTm_user xs l ^ "  " ^ pretty_print_inTm_user f l ^ " " ^
-			 pretty_print_inTm_user a l ^ ")"
-
 
 let pretty_print_definition def = 
   match def with 
-  | Complete(typ,terme) -> "Complete \n goal : " ^ pretty_print_inTm_user typ [] ^ "\n " ^ pretty_print_inTm_user terme []
-  | Incomplete(typ,terme) -> "Incomplete \n goal : " ^ pretty_print_inTm_user typ [] ^ "\n" ^ pretty_print_inTm_user terme []
+  | Complete(typ,terme) -> "Complete \n goal : " ^ pretty_print_inTm typ [] ^ "\n " ^ pretty_print_inTm terme []
+  | Incomplete(typ,terme) -> "Incomplete \n goal : " ^ pretty_print_inTm typ [] ^ "\n" ^ pretty_print_inTm terme []
 
 let pretty_print_item_debug item = 
   match item with 
-  | Item(Variable(name,term)) -> "(Var " ^ name ^ " : " ^ pretty_print_inTm_user term [] ^ ")"
+  | Item(Variable(name,term)) -> "(Var " ^ name ^ " : " ^ pretty_print_inTm term [] ^ ")"
   | Item(Definition(name,def,save)) -> "(Def " ^ name ^ " \n " ^ pretty_print_definition def ^ ")"
-  | Item(Intermediaire(n,typ,terme,save)) -> "(Inter " ^ string_of_int n ^ " " ^ pretty_print_inTm_user typ [] ^ " " ^ pretty_print_inTm_user terme [] ^ ")"
+  | Item(Intermediaire(n,typ,terme,save)) -> "(Inter " ^ string_of_int n ^ " " ^ pretty_print_inTm typ [] ^ " " ^ pretty_print_inTm terme [] ^ ")"
   | Section(x) -> failwith "pretty_print_inTm_user : can't print a section" 
 
 let rec pretty_print_tree_liste tree_liste = 
@@ -284,7 +230,7 @@ and get_def (Loc(t,p),d) env =
 let rec print_def env = 
   match env with 
   | [] -> ""
-  | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm_user typ [] ^ " : " ^ pretty_print_inTm_user terme []
+  | (name,typ,terme) :: suite -> "(" ^ name ^ " :: " ^ pretty_print_inTm typ [] ^ " : " ^ pretty_print_inTm terme []
 				 ^ ")\n" ^ print_def suite
 
  
@@ -330,7 +276,7 @@ let rec return_type_var_env env var =
 let rec print_env env = 
   match env with 
   | [] -> ""
-  | (name,typ) :: suite -> "(" ^ name ^ " : " ^ pretty_print_inTm_user typ [] ^ ") " ^ print_env suite
+  | (name,typ) :: suite -> "(" ^ name ^ " : " ^ pretty_print_inTm typ [] ^ ") " ^ print_env suite
 
 let get_and_print_env (Loc(t,p),d) = 
   let env = get_env (Loc(t,p),d) [] in 
@@ -346,9 +292,9 @@ let rec is_in_env env var =
 (* affichage avec l'environnement de la preuve ect *)
 let pretty_print_item item = 
   match item with 
-  | Item(Variable(name,term)) -> "(Var " ^ name ^ " \n " ^ pretty_print_inTm_user term [] ^ ")"
+  | Item(Variable(name,term)) -> "(Var " ^ name ^ " \n " ^ pretty_print_inTm term [] ^ ")"
   | Item(Definition(name,def,save)) -> "(Def " ^ name ^ " \n " ^ pretty_print_definition def ^ ")"
-  | Item(Intermediaire(n,typ,terme,save)) -> "(Inter \n goal: " ^ pretty_print_inTm_user typ [] ^ "\n" ^ pretty_print_inTm_user terme [] ^ ")"
+  | Item(Intermediaire(n,typ,terme,save)) -> "(Inter \n goal: " ^ pretty_print_inTm typ [] ^ "\n" ^ pretty_print_inTm terme [] ^ ")"
   | Section(x) -> failwith "pretty_print_inTm_user : can't print a section" 
 let rec pretty_print_tree_liste tree_liste n= 
   match tree_liste with 

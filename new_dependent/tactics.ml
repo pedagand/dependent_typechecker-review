@@ -632,11 +632,17 @@ let rec file_to_string f l=
   userDefs_to_terme defs (Loc(t,p),d) 
   
 
+let parse_def_terme str (Loc(t,p),d) = 
+  match str with 
+  | Sexp.List [Sexp.Atom name; terme;typ] -> 
+     let parse_terme = parse_term [] terme in
+     let parse_typ = parse_term [] typ in 
+     Definition(name,Incomplete(parse_typ,parse_terme),"")
+  | _ -> failwith "your def doesn't have a good shape"
 
-let load_terme terme name typ (Loc(t,p),d) =
-  let parse_terme = read terme in
-  let parse_typ = read typ in
-  let def = Definition(name,Complete(parse_typ,parse_terme),"") in
+let load_terme str (Loc(t,p),d) =
+  let def = Sexp.of_string(str) in 
+  let def = parse_def_terme def (Loc(t,p),d) in
   let first_def = Section([Item(def)]) in      
   let arbre = (go_down(go_right(insert_right (Loc(t,p),d) first_def))) in 
   arbre
@@ -685,12 +691,8 @@ let choose_tactic () =
   | "count son" -> count_son_tact
   | "eval" -> eval
   | "load terme" -> 
-     let () = Printf.printf "\nChoose a name for this terme\n" in
-     let name = read_line () in
-     let () = Printf.printf "Enter the terme \n" in 
-     let terme = read_line () in 
-     let () = Printf.printf "Enter the typ\n" in 
-     let typ = read_line () in load_terme terme name typ 
+     let () = Printf.printf "\nPut the definition of the form (name (terme) (typ)) \n" in
+     let str = read_line () in load_terme str
   | "replace def" -> replace_def
   | _ -> nothing
 

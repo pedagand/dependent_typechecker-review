@@ -527,7 +527,8 @@ and pretty_print_exTm t l =
 			     pretty_print_inTm b l ^ " " ^pretty_print_inTm q l ^ " " ^pretty_print_inTm x l ^ ")"
   | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm xs l ^ "  " ^ pretty_print_inTm f l ^ " " ^
 			 pretty_print_inTm a l ^ ")"
-(*=substitution_inTm *)
+
+
 let rec substitution_inTm t tsub var = 
   match t with 
   | Ref(name) -> Ref(name)
@@ -852,12 +853,11 @@ and neutral_to_exTm i v =
   | NFold(p,alpha,xs,f,a) -> Fold((value_to_inTm i p),(value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
 
-
 let rec equal_inTm t1 t2 = 
   match (t1,t2) with 
   | (Abs(_,x1),Abs(_,x2)) -> equal_inTm x1 x2
-  | (Pi(_,x1,y1),Pi(_,x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
-  | (Sig(_,x1,y1),Sig(_,x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (Pi(_,x1,y1),Pi(_,x2,y2)) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
+  | (Sig(_,x1,y1),Sig(_,x2,y2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 
   | (Star,Star) -> true 
   | (Zero,Zero) -> true 
   | (Succ(n1),Succ(n2)) -> equal_inTm n1 n2
@@ -866,11 +866,11 @@ let rec equal_inTm t1 t2 =
   | (True,True) -> true 
   | (False,False) -> true 
   | (Inv(x1),Inv(x2)) -> equal_exTm x1 x2
-  | (Pair(x1,y1),Pair(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (Pair(x1,y1),Pair(x2,y2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 
   | (What(a),What(b)) -> true
-  | (Vec(x1,y1),Vec(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (Vec(x1,y1),Vec(x2,y2)) -> equal_inTm x1 x2 && equal_inTm y1 y2
   | (DNil x1,DNil x2) -> equal_inTm x1 x2 
-  | (DCons(x1,y1),DCons(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (DCons(x1,y1),DCons(x2,y2)) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
   | (Id(x1,y1,z1),Id(x2,y2,z2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2
   | (Refl(a),Refl(b)) -> equal_inTm a b 
   | (Liste(a),Liste(b))-> equal_inTm a b
@@ -879,28 +879,24 @@ let rec equal_inTm t1 t2 =
   | _ -> false 
 and equal_exTm t1 t2 = 
   match (t1,t2) with 
-  | (Ann(x1,y1),Ann(x2,y2)) -> if equal_inTm x1 x2 then equal_inTm y1 y2 else false
+  | (Ann(x1,y1),Ann(x2,y2)) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
   | (BVar(x1),BVar(x2)) -> x1 = x2 
   | (FVar(x1),FVar(x2)) -> x1 = x2
-  | (Appl(x1,y1),Appl(x2,y2)) -> if equal_exTm x1 x2 then equal_inTm y1 y2 else false
+  | (Appl(x1,y1),Appl(x2,y2)) -> equal_exTm x1 x2 && equal_inTm y1 y2 
   | (Iter(w1,x1,y1,z1),Iter(w2,x2,y2,z2)) -> 
-     if equal_inTm w1 w2 then (if equal_inTm x1 x2 then (if equal_inTm y1 y2 then equal_inTm z1 z2 else false) else false) else false
+     equal_inTm w1 w2 && equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2 
   | (Ifte(w1,x1,y1,z1),Ifte(w2,x2,y2,z2)) -> 
-     if equal_inTm w1 w2 then (if equal_inTm x1 x2 then (if equal_inTm y1 y2 then equal_inTm z1 z2 else false) else false) else false
+     equal_inTm w1 w2 && equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2 
   | (P0(x1),P0(x2)) -> equal_exTm x1 x2
   | (P1(x1),P1(x2)) -> equal_exTm x1 x2
-  | (DFold(alpha1,p1,n1,xs1,f1,a1),DFold(alpha2,p2,n2,xs2,f2,a2)) -> if equal_inTm alpha1 alpha2 then (if equal_inTm p1 p2 
-								     then (if equal_inTm p1 p2 then (if equal_inTm n1 n2 
-								     then (if equal_inTm xs1 xs2 then (if equal_inTm f1 f2 
-												       then equal_inTm a1 a2 else false)
-													else false) 
-												     else false) else false) 
-												       else false) else false
+  | (DFold(alpha1,p1,n1,xs1,f1,a1),DFold(alpha2,p2,n2,xs2,f2,a2)) -> equal_inTm alpha1 alpha2 && equal_inTm p1 p2 
+								     && equal_inTm p1 p2 && equal_inTm n1 n2 
+								     && equal_inTm xs1 xs2 && equal_inTm f1 f2 
+								     && equal_inTm a1 a2 
   | (Fold(p1,alpha1,xs1,f1,a1),Fold(p2,alpha2,xs2,f2,a2)) -> 
      equal_inTm p1 p2 && equal_inTm alpha1 alpha2 && equal_inTm xs1 xs2 && 
        equal_inTm f1 f2 && equal_inTm a1 a2  
-  | _ -> false
-							 
+  | _ -> false							 
 															      
 (*=check_head *)      
 let rec lcheck contexte ty inT =
@@ -1124,6 +1120,7 @@ let rec contexte_to_string contexte =
 
      
 let rec check contexte inT ty steps = 
+  let () = Printf.printf "\nStart to check the terme : %s" (pretty_print_inTm inT []) in
   match inT with
   | Ref(name) -> create_report false (contexte_to_string contexte) steps "check : there is a ref in the terme"
   | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
