@@ -32,24 +32,32 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 
 -------------------------------------les entiers -----------
 -------addition:
-goal : (pi x N (pi y N (((lambda x (lambda y N)) x) y)))	
- (lambda x (lambda y (iter (lambda x (((lambda x (lambda y N)) x) y)) x (lambda x1 (lambda x2 (succ x2))) y)))
+
+(plus (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 
 ------multiplication :
 
+(mult (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 
-	       
-
-
+	    
 plus petit stric et pas strict (tous les comparateurs)
 
-Le prédécesseur 
+----------Le prédécesseur 
+
+(pred (lambda m (p0 (iter (lambda x (sig y N N)) m (lambda x1 (lambda x2 ((p1 x2) , (succ (p1 x2))))) (zero , zero)))) (pi m N N))
+
 
 L'égalité entre deux entiers
 
 La soustraction
 
-l'exponentiel
+-----l'exponentiel
+
+!!!!!!!!!!!!!!!!! ici (exp 2 3) equivalent a 2 ^ 3!!!!!!!!!!!!
+
+(exp (lambda e (lambda m (iter (lambda x (((: (lambda e (lambda m N)) (pi e N (pi m N *))) x) m)) e (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N N))) x2) m))) (succ zero)))) (pi e N (pi m N (((: (lambda e (lambda m N)) (pi e N (pi m N *))) e) m))))
+
+
 
 la parité 
 

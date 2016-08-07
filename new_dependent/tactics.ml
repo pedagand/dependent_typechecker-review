@@ -412,8 +412,10 @@ let split_liste (Loc(t,p),d) induct_var alpha =
 let split induct_var (Loc(t,p),d) = 
   let env = get_env (Loc(t,p),d) [] in 
   let var_type = return_type_var_env env induct_var in 
+  let defs = get_def (Loc(t,p),d) [] in 
+  let final_typ = value_to_inTm 0 (big_step_eval_inTm (replace_ref_etiq_inTm var_type defs) []) in   
   begin 
-  match var_type with 
+  match final_typ with 
   | Nat -> split_iter (Loc(t,p),d) induct_var
   | Bool -> split_bool (Loc(t,p),d) induct_var
   | Liste(alpha) -> split_liste (Loc(t,p),d) induct_var alpha

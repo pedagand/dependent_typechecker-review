@@ -17,6 +17,7 @@ let inputs =
     ((Succ(Succ(Zero))),"(succ (succ zero))");
     ((Inv(Iter(Nat,Nat,Nat,Nat))),"(iter N N N N)");
     ((Pair(Inv(FVar (Global "x")),Inv(FVar (Global "y")))),"(x , y)");
+    ((Pair(Inv(P1(FVar(Global"x2"))),Succ(Inv(P1(FVar(Global"x2")))))),"((p1 x2) , (succ (p1 x2)))");
     (Sig(Global "x",Nat,Nat),"(sig x N N)");
     (Sig(Global "x",Nat,Inv(BVar 0)),"(sig x N x)");
     (Cons(Zero,Nil),"(cons zero nil)");

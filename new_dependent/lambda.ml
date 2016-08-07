@@ -1120,7 +1120,6 @@ let rec contexte_to_string contexte =
 
      
 let rec check contexte inT ty steps = 
-  let () = Printf.printf "\nStart to check the terme : %s" (pretty_print_inTm inT []) in
   match inT with
   | Ref(name) -> create_report false (contexte_to_string contexte) steps "check : there is a ref in the terme"
   | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
