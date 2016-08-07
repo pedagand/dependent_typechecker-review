@@ -10,6 +10,7 @@ let rec create_uper_type typ =
   | Pi(n,s,t) -> Pi(n,s,(create_uper_type t))
   | Nat -> Star
   | Bool -> Star
+  | Liste(alpha) -> Star
   | _ -> failwith "create_uper_type : only for pi at the moment"
 
 (* permet à partir d'un type ainsi que du return du type initial de crée un terme *)
@@ -24,6 +25,7 @@ let rec modifie_return_type typ return =
   | Pi(n,s,t) -> Pi(n,s,(modifie_return_type t return))
   | Nat -> return
   | Bool -> return
+  | Liste(alpha) -> return
   | _ -> failwith "modifie_return_type : mettre a jour la fonction au fur et à mesure pour quelle accepte tous les types"
 
 
@@ -475,7 +477,7 @@ let son n (Loc(t,p),d) =
 let eval (Loc(t,p),d) = 
   let typ = get_type_item (Loc(t,p),d) in
   let terme = Ann((get_terme_item (Loc(t,p),d)),typ) in
-  let liste_terme = ask_liste_terme [] in 
+  let liste_terme = List.rev (ask_liste_terme []) in 
   let appl_t = make_application_terme terme liste_terme in
   let eval_t = value_to_inTm 0 (big_step_eval_inTm (Inv(appl_t)) [])  in 
   let () = Printf.printf "\nVoici l'évaluation de votre terme : \n %s \nEND EVAL\n" (pretty_print_inTm eval_t []) in

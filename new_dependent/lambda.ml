@@ -525,8 +525,7 @@ and pretty_print_exTm t l =
 				 " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
   | Trans(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm bA l ^ " " ^pretty_print_inTm p l ^ " " ^pretty_print_inTm a l ^ " " ^
 			     pretty_print_inTm b l ^ " " ^pretty_print_inTm q l ^ " " ^pretty_print_inTm x l ^ ")"
-  | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm xs l ^ "  " ^ pretty_print_inTm f l ^ " " ^
-			 pretty_print_inTm a l ^ ")"
+  | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
 
 
 let rec substitution_inTm t tsub var = 
@@ -1498,15 +1497,19 @@ and synth contexte exT steps =
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
   | Fold(p,alpha,xs,f,a) -> 
      let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check alpha = %s \n" (string_of_bool(res_debug check_alpha)) in
      let type_p = Pi(Global"xs",Liste(alpha),Star) in 
      let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check p = %s \n" (string_of_bool(res_debug check_p)) in
      let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
      let type_f = (Pi(Global"a",alpha,
 		      Pi(Global"xs",Liste(alpha),			 
 			 Pi(Global"NO",Inv(Appl(Ann(p,type_p),Liste(alpha))),
 			    Inv(Appl(Ann(p,type_p),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
      let check_f = check contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
-     let check_a = check contexte a (big_step_eval_inTm alpha []) (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check f = %s \n" (string_of_bool(res_debug check_f)) in
+     let check_a = check contexte a (big_step_eval_inTm (Inv(Appl(Ann(p,type_p),Nil))) []) (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check a = %s \n" (string_of_bool(res_debug check_a)) in
      if res_debug check_alpha 
      then
        begin 
