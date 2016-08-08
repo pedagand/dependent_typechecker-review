@@ -1,6 +1,8 @@
 Booléens ---------
 -----------negation pour les booléens:
 	
+(def (neg (pi b B B)) ((NEG b) (<= b (((NEG true) (->  false)) ((NEG false) (->  true)) ))))
+
 (neg (lambda a (ifte (lambda x ((: (lambda a B) (pi a B *)) x)) a false true)) (pi a B ((: (lambda a B) (pi a B *)) a)))
  
 
@@ -8,6 +10,8 @@ Booléens ---------
 -----------implication pour les booléens:
 POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 (IDEE SUR LE BUG : peut etre qu'il faut simplement réinitialiser la variable du compteur des def a chaque fois que on a sauvegarder un truc)
+
+(def (impl (pi a B (pi b B B))) (((IMPL a) b) (<= a ((((IMPL true) b) (<= b ((((IMPL true) true) (->  true)) (((IMPL true) false) (->  false)) ))) (((IMPL false) b) (->  true)) ))))
 
 (impl (lambda a (lambda b (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) x) b)) a (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) true) x)) b true false) true))) (pi a B (pi b B (((: (lambda a (lambda b B)) (pi a B (pi b B *))) a) b))))
 		       	 
@@ -89,13 +93,19 @@ fonction qui double le nombre
 la tete (prend deux arguments le deuxième pour renvoyer quelque chose)
 la queue (comme le suite dans ocaml avec le pattern matching a :: suite)
 
--------------crée une liste de taille n avec que des x de type A
+---------crée une liste de taille n avec que des x de type A
 
 (initlistebool (lambda n (lambda e (iter (lambda x (((: (lambda n (lambda e (liste B))) (pi n N (pi e B *))) x) e)) n (lambda x1 (lambda x2 (cons e x2))) nil))) (pi n N (pi e B (((: (lambda n (lambda e (liste B))) (pi n N (pi e B *))) n) e))))
 
-la concaténation de deux listes
+---------la concaténation de deux listes
 
-inversion de liste
+(concatbool (lambda l (lambda j (fold (lambda x (((: (lambda l (lambda j (liste B))) (pi l (liste B) (pi j (liste B) *))) x) j)) B l (lambda e (lambda xs (lambda h (cons e h)))) j))) (pi l (liste B) (pi j (liste B) (((: (lambda l (lambda j (liste B))) (pi l (liste B) (pi j (liste B) *))) l) j))))
+
+--------isnill 
+
+(isnill (lambda l (fold (lambda x ((: (lambda l B) (pi l (liste B) *)) x)) B l (lambda e (lambda xs (lambda h false))) true)) (pi l (liste B) ((: (lambda l B) (pi l (liste B) *)) l)))
+
+---------inversion de liste
 
 le dernier élément de la liste
 

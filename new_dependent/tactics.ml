@@ -210,6 +210,7 @@ let rec intros (Loc(t,p),d) =
 
 let procedure_start_definition typ_not_parsed (Loc(t,p),d) = 
   let d = set_def_userDef d typ_not_parsed in
+  let d = set_pointeur_userDef d 1 in
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
   match second_def with 
   | Definition(name,Incomplete(typ,terme),save) -> 
@@ -433,7 +434,8 @@ let split induct_var (Loc(t,p),d) =
   (* C'est un test mais a chaque fois que je vérifie un terme je vais decrémenter le compteur de 1 *)
 let verif (Loc(t,p),d) = 
   let () = Printf.printf "\nEnter in the verif \n" in
-  let d = set_pointeur_userDef d (d.pointeur - 1) in
+  let n = get_num_Inter (Loc(t,p),d) in 
+  let d = set_pointeur_userDef d (d.pointeur - n) in
   (verif_and_push_up_item (Loc(t,p),d))
 
 let rec is_etiquette t = 
