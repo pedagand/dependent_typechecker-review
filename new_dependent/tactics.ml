@@ -258,7 +258,7 @@ let axiome var (Loc(t,p),d) =
     end 
   else (Loc(t,p),d)
 
-let check (Loc(t,p),d) =   
+let check file (Loc(t,p),d) =   
   let typ = begin 
       match t with 
       | Item(Definition(name,Incomplete(typ,terme),save)) -> typ
@@ -291,9 +291,6 @@ let check (Loc(t,p),d) =
       let steps = get_steps_report res_check in 
       if res_debug res_check 
       then let () = Printf.printf "\n\n\n STEPS :\n %s \n\n\n\n\n" steps in 
-	   let () = Printf.printf "Please choose a file to save your def Il faut que je complète cette partie quand je saurais faire
-				   les entrées sorties\n" in 	   
-	   let file = read_line () in 
 	   let () = Printf.printf "\n%s\n" (pretty_print_def d) in
 		   replace_item (Loc(t,p),d) (Item(Definition(name,Complete(final_type,final_terme),"")))
       else let () = Printf.printf "\nIt Seems that your term is not well checked \n
@@ -597,7 +594,7 @@ let rec userDefs_to_terme l (Loc(t,p),d) =
      let arbre = procedure_start_definition d.def (Loc(t,p),d) in 
      let arbre = intros arbre in 
      let arbre = clause_to_terme d.patAct arbre in 
-     check arbre 
+     check "" arbre 
 
   
   
@@ -638,9 +635,14 @@ let rec file_to_string f l=
  let load_def defs (Loc(t,p),d) = 
   let defs = read_definition defs in 
   userDefs_to_terme defs (Loc(t,p),d) 
-  
 
-let parse_def_terme str (Loc(t,p),d) = 
+let rec load_terme str (Loc(t,p),d) =
+  let def = Sexp.of_string(str) in 
+  let def = parse_def_terme def in
+  let first_def = Section([Item(def)]) in      
+  let arbre = (go_down(go_right(insert_right (Loc(t,p),d) first_def))) in   
+  check "" arbre  
+and parse_def_terme str  = 
   match str with 
   | Sexp.List [Sexp.Atom name; terme;typ] -> 
      let parse_terme = parse_term [] terme in
@@ -648,13 +650,25 @@ let parse_def_terme str (Loc(t,p),d) =
      Definition(name,Incomplete(parse_typ,parse_terme),"")
   | _ -> failwith "your def doesn't have a good shape"
 
-let load_terme str (Loc(t,p),d) =
-  let def = Sexp.of_string(str) in 
-  let def = parse_def_terme def (Loc(t,p),d) in
-  let first_def = Section([Item(def)]) in      
-  let arbre = (go_down(go_right(insert_right (Loc(t,p),d) first_def))) in 
+  
+let rec def_to_liste str = 
+  match str with 
+  | Sexp.List l -> List.fold_right (fun x li -> (parse_def_terme x) :: li) l []
+  | _ -> failwith "def_to_liste : your liste don't have a good shape" 
+let rec load_liste_terme l (Loc(t,p),d) = 
+  match l with 
+  | [] -> (Loc(t,p),d)
+  | elem :: suite -> 
+     let first_def = Section([Item(elem)]) in      
+     let arbre = (go_down(go_right(insert_right (Loc(t,p),d) first_def))) in   
+     load_liste_terme suite (check "" arbre)
+let load_fichier_terme str (Loc(t,p),d) = 
+  let def = Sexp.of_string(str) in
+  let liste_def = def_to_liste def in 
+  let arbre = load_liste_terme liste_def (Loc(t,p),d) in 
   arbre
   
+
   
 let replace_def (Loc(t,p),d) = 
   let terme = get_terme_item (Loc(t,p),d) in 
@@ -684,7 +698,9 @@ let choose_tactic () =
   | "verif" -> verif
   | "def" ->   let () = Printf.printf "\n\nEntrer une nouvelle définition à prouver : \n" in 
 	       let typ_not_parsed = read_line () in def typ_not_parsed
-  | "check" -> check
+  | "check" -> 	   let () = Printf.printf "Please choose a file to save your def Il faut que je complète cette partie quand je saurais faire
+					   les entrées sorties\n " in 	   
+		   let file = read_line () in check file
   | "contexte def" -> contexte_def
  (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
   | "split" -> let induct_var = ask_induct_var () in split induct_var
@@ -701,6 +717,10 @@ let choose_tactic () =
   | "load terme" -> 
      let () = Printf.printf "\nPut the definition of the form (name (terme) (typ)) \n" in
      let str = read_line () in load_terme str
+  | "load file" ->   
+     let () = Printf.printf "Dans la vraie vie je vais faire de la lecture de fichier mais la cc directement le contenu du fichier" in 
+     let str = read_line () in 
+     load_fichier_terme str 
   | "replace def" -> replace_def
   | _ -> nothing
 

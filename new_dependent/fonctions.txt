@@ -1,3 +1,7 @@
+!!!!!Questions!!!!!!!
+? Lorsque l'on demande une variable pour faire le split et que dans le contexte on a (var : pi x N B) par exemple... Esque l'on peut dire que l'on veut faire un split sur l'application suivante (var zero) comme ça ça nous fait un split ifte (je suis sur a 99% que on doit pouvoir faire ça)
+
+
 Booléens ---------
 -----------negation pour les booléens:
 	
@@ -76,6 +80,8 @@ plus petit stric et pas strict (tous les comparateurs)
 
 ------la parité 
 
+
+
 factorielle 
 
 le maximum et minimum de deux nombres 
@@ -83,7 +89,7 @@ le maximum et minimum de deux nombres
 fonction qui double le nombre
 
 -------la division par 2 entière (euclidienne)
-
+	  
 
 
 
@@ -92,6 +98,9 @@ fonction qui double le nombre
 -------la taille 
 
 (lengthbool (lambda l (fold (lambda x ((: (lambda l N) (pi l (liste B) *)) x)) B l (lambda e (lambda xs (lambda h (succ h)))) zero)) (pi l (liste B) ((: (lambda l N) (pi l (liste B) *)) l)))
+
+
+(lengthnat (lambda l (fold (lambda x ((: (lambda l N) (pi l (liste N) *)) x)) N l (lambda e (lambda xs (lambda h (succ h)))) zero)) (pi l (liste N) ((: (lambda l N) (pi l (liste N) *)) l)))
 
 
 la tete (prend deux arguments le deuxième pour renvoyer quelque chose)
@@ -111,7 +120,9 @@ la queue (comme le suite dans ocaml avec le pattern matching a :: suite)
 
 ---------inversion de liste
 
-le dernier élément de la liste
+---------le dernier élément de la liste
+
+
 
 le n-ième élément d'une liste
 
@@ -125,14 +136,22 @@ retourne l'indice du premier élément qui retourne true au predicat
 ça marche niquel ,exemple d'arguments: (cons zero (cons (number 2) (cons zero nil))) et (: (ref iszero) (pi n N B))  
 
 
-
 -------fonction qui compte le nombre d'éléments qui passent le prédicat 
+(nbfilter (lambda l (lambda p ((: (lambda l (fold (lambda x ((: (lambda l N) (pi l (liste N) *)) x)) N l (lambda e (lambda xs (lambda h (succ h)))) zero)) (pi li (liste N) N)) (((: (lambda l (lambda p (fold (lambda x (((: (lambda l (lambda p (liste N))) (pi l (liste N) (pi p (pi x N B) *))) x) p)) N l (lambda e (lambda xs (lambda h (ifte (lambda x (liste N)) (p e) (cons e h) h)))) nil))) (pi l (liste N) (pi p (pi x N B) (liste N)))) l) p)))) (pi l (liste N) (pi p (pi x N B) (((: (lambda l (lambda p N)) (pi l (liste N) (pi p (pi x N B) *))) l) p))))
+
 
 Exist : fonction qui retourne vrai si au moins un élément de la liste vérifie
 le prédicat
 
+faut faire avec la negation et le iszero et le ifte 
+
+
+
 Pourtout : qui retourne vrai si et seulement si tous les éléments de la liste 
 vérifient le prédicat
+
+
+
 
 drop : prend un entier n et une liste et jette les n premiers éléments de la liste
 
@@ -140,6 +159,8 @@ take : retourne les n premiers éléments de la liste (si la liste moins de n al
 
 l'égalité sur les listes : deux listes plus un prédicat permettant de tester 
 si les éléments de la liste sont égaux deux a deux selon le prédicat
+
+
 
 fonction zip qui prend deux listes et qui construit une liste des pairs.
 
