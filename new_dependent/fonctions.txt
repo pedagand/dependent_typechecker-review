@@ -1,14 +1,29 @@
 ??????Questions??????
 ? Lorsque l'on demande une variable pour faire le split et que dans le contexte on a (var : pi x N B) par exemple... Esque l'on peut dire que l'on veut faire un split sur l'application suivante (var zero) comme ça ça nous fait un split ifte (je suis sur a 99% que on doit pouvoir faire ça)
+?!?!?!?! POUR L'INSTANT JE LAISSE LES LABELS INTACTES DANS TOUTES LES FONCTIONS DONC IL FAUDRA TOUTES LES MODIFIERS DANS LE CAS CONTRAIRE
+
+
 !!!!!TODO!!!!!!!
 !Faire fonction eval_terme qui permet d'écrire une application et de l'evaluer
+!Faire le parsing et le pretty_print d'un label
+!faire une fonction qui génère des trou (ce seront des variables libres avec des id de la forme tr1 tr2 ect.... 
+
+
+
+//////////Reminder///////////////
+/pour faire comme avec la fonction qui permettait de modifier le nom d'une FVar il faut faire une abstraction suivis d'une substitution
+
 
 
 
 Booléens ---------
 -----------negation pour les booléens:
 	
-(def (neg (pi b B B)) ((NEG b) (<= b (((NEG true) (->  false)) ((NEG false) (->  true)) ))))
+(def (neg (pi b B B)) ((NEG b) (<= b
+     (((NEG true) (->  false)) 
+     ((NEG false) (->  true))))))
+
+
 
 (neg (lambda a (ifte (lambda x ((: (lambda a B) (pi a B *)) x)) a false true)) (pi a B ((: (lambda a B) (pi a B *)) a)))
  
@@ -44,7 +59,9 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 -------------------------------------les entiers -----------
 -------addition:
 
-(def (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS (succ x1)) n) (->  (succ x2))) (((PLUS zero) n) (->  n))))))
+(def (plus (pi m N (pi n N N))) (((PLUS m) n) 
+     (<= m ((((PLUS (succ x1)) n) (->  (succ x2))) (((PLUS zero) n) (->  n))))))
+
 
 (plus (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 
@@ -53,7 +70,10 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 (mult (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 
 	    
-plus petit stric et pas strict (tous les comparateurs)
+-----plus petit stric et pas strict (tous les comparateurs) : 
+(lz (lambda m (lambda n (ifte (lambda x B) ((: (lambda m (iter (lambda x ((: (lambda m B) (pi m N *)) x)) m (lambda x1 (lambda x2 false)) true)) (pi m N B)) (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 ((: (lambda m (p0 (iter (lambda x (sig y N N)) m (lambda x1 (lambda x2 ((p1 x2) , (succ (p1 x2))))) (zero , zero)))) (pi m N N)) x2))) n))) (pi m N (pi n N N))) n) m)) true false))) (pi m N (pi n N (((: (lambda m (lambda n B)) (pi m N (pi n N *))) m) n))))
+
+
 
 ----------Le prédécesseur 
 
@@ -93,7 +113,11 @@ plus petit stric et pas strict (tous les comparateurs)
 
 le maximum et minimum de deux nombres 
 
-fonction qui double le nombre
+
+
+------fonction qui double le nombr
+goal : (pi m N ((: (lambda m N) (pi m N *)) m))
+ (lambda m (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N N))) (succ (succ zero))) m)))
 
 -------la division par 2 entière (euclidienne)
 	  

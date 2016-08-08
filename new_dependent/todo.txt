@@ -1,0 +1,4 @@
+implémenter iterface de zipper et interface de tactic
+
+Méta tactique de débug
+adapter l'interface terminal et fichier pour utiliser ces interfaces

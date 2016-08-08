@@ -8,121 +8,91 @@ open Sexplib
   #require "oUnit";;
   #use "lambda.ml";;
 *)
-(* Je n'ai pas encore fait ce qui suit mais il faut le faire c'est important : j'ai mis un neutral pour les projections je pense que c'est normale vu que si l'on tente de réduire une projection appliquée à une
-variable il faut pouvoir la mettre en 'attente' *)
+
+type ident = string
 
 type name =
-  | Global of string 
+  | Global of ident
   | Bound of int 
   | Quote of int
 
-(*=inTm_head *) 
+
+type 'a binder = ident * 'a
+
+(* TODO :: supprimer les commentaires pour latex *)
 type inTm =
-  | Ref of string
-  (*=End *)
-  | Hole_inTm of int
-  (*=inTm *)
-  | Abs of name * inTm
+(*   | Ref of string (* TODO :: supprimer et faire en sorte que ce soit une FVAR *) *)
+(*   | Hole_inTm of int (* TODO :: supprimer et faire en sorte que ce soit une FVAR *) *)
+  | Abs of inTm binder (* TODO :: remplacer name par un ident *) (* Abs of inTm binder (cf photo) *)
   | Inv of exTm
-  | Pi of name * inTm * inTm 
+  | Pi of (inTm * inTm) binder (* le premier inTm est celui ou il ne peut pas y avoir de variables libres *)
   | Star
-(*=End *)
-(*=terme_nat *)
   | Zero
   | Succ of inTm
   | Nat
-(*=End *)
-  | Pair of inTm * inTm 
   | Liste of inTm 
   | Nil
   | Cons of inTm * inTm 
-(*=terme_vector *)
   | Vec of inTm * inTm
   | DNil of inTm
   | DCons of inTm * inTm 
-  (*=End *)
-  (*=what *)      
-  | What of string
-  (*=End *)
   | Id of inTm * inTm * inTm
-  | Refl (* TODO: remove *) of inTm 
-(*=exTm_head *) 
-(*=terme_bool *)				 
+  | Refl   
   | Bool
   | True 
   | False	
-(*=End *)
-  | Sig of name * inTm * inTm 		 
+  | Pair of inTm * inTm 
+  | Sig of (inTm * inTm) binder
 and exTm = 
-(*=End *)
-  | Hole_exTm of int 
-  | Etiquette of string
-(*=exTm *) 
+  | Label of ident * inTm 
   | Ann of inTm * inTm 
-  | BVar of int 
-  | FVar of name 
+  | Var of name 
   | Appl of exTm * inTm
-(*=End *)
-(*=terme_iter *)
   | Iter of inTm * inTm * inTm * inTm  
-(*=End *)
-  | Trans of inTm * inTm * inTm * inTm * inTm * inTm 
+  | Transp of inTm * inTm * inTm * inTm * inTm * inTm 
   | P0 of exTm
   | P1 of exTm 
-(*=terme_dfold *)
   | DFold of inTm * inTm * inTm * inTm * inTm * inTm 
-(*=End *)
   | Fold of inTm * inTm * inTm * inTm * inTm 
-(*=terme_ifte *)
   | Ifte of inTm * inTm * inTm * inTm 
-(*=End *)
  
-(*=value_head *)
+
+
+
+(* TODO :: faire du v_binder pour les VLam ect... *)
+(* TODO :: vérifier que tous les termes ont une valeur et inversement *)
 type value = 
-(*=End *)
-  | VLam of name * (value -> value)
+  | VLam of (value -> value) binder
   | VNeutral of neutral 
-(*=value_pi_star *)
   | VStar 
-  | VPi of name * value * (value -> value)
-  | VSig of value * (value -> value)
+  | VPi of (value * (value -> value)) binder
+  | VSig of (value * (value -> value)) binder
   | VPair of value * value
-(*=End *)
-(*=Value_Nat *)
   | VNat
   | VZero
   | VSucc of value
-(*=End*)
-(*=Value_Bool *)
   | VBool
   | VTrue
   | VFalse
-(*=End*)
-(*=Value_Vector *)
   | VVec of value * value 
   | VDNil of value
   | VDCons of value * value 
-(*=End *)
-(*=Value_liste *)
   | VListe of value 
   | VNil
   | VCons of value * value 
-(*=End *)
   | VId of value * value * value 
-  | VRefl of value 
+  | VRefl
 and neutral = 
-  | NEtiquette of string
+  | NLabel of string * value
   | NFree of name 
   | NApp of neutral * value 
   | NIter of value * value * value * value
   | NIfte of value * value * value * value
-(*=neutral_fold *)
   | NDFold of value * value * value * value * value * value 
   | NP0 of value
   | NP1 of value
   | NFold of value * value * value * value * value
-(*=End *)
-  | NTrans of value * value * value * value * value * value  
+  | NTransp of value * value * value * value * value * value  
 
 (*=debug *) 
 type debug = 
@@ -133,8 +103,10 @@ type debug =
   | Error of string
 and debug_synth = 
   | RetSynth of debug * value
-(*=End *)
-(* fonction pour les rapports d'erreurs *)
+
+
+
+(* fonction pour les rapports d'erreurs *) 
 let create_report s c e er= 
   Report(Success(s),Contexte(c),Steps(e),Error(er))
 
@@ -203,19 +175,18 @@ let rec parse_term env t =
       | Sexp.Atom "false" -> False
       | Sexp.Atom "nil" -> 
 	 Nil
-      | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
-	 Hole_inTm (int_of_string num)	 
-      | Sexp.List [Sexp.Atom "ref";Sexp.Atom name] -> 
-	 Ref(name)
-      | Sexp.List [Sexp.Atom "?";Sexp.Atom a] -> What a
+(*      | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
+	 Hole_inTm (int_of_string num)	 *)
+(*       | Sexp.List [Sexp.Atom "ref";Sexp.Atom name] -> 
+	 Ref(name) *)
       | Sexp.List [Sexp.Atom "succ"; n] -> 
 	 Succ(parse_term env n)
       | Sexp.List [Sexp.Atom "id";gA;a;b] -> 
 	 Id((parse_term env gA),(parse_term env a),(parse_term env b))
-      | Sexp.List[Sexp.Atom "refl";a] -> 
-	 Refl(parse_term env a)
+      | Sexp.Atom "refl" -> Refl
       | Sexp.List [Sexp.Atom "lambda"; Sexp.Atom var; body] -> 
-	 Abs(Global(var),(parse_term (Global(var)::env) body))
+         Abs(var,(parse_term (var::env) body))
+(* 	 Abs(Global(var),(parse_term (Global(var)::env) body)) *)
       | Sexp.List [Sexp.Atom "lambda"; Sexp.List vars ; body] -> 
 	 let vars = List.map (function 
 			       | Sexp.Atom v -> v
@@ -223,32 +194,32 @@ let rec parse_term env t =
 	 in 
 	 List.fold_right 
            (fun var b -> Abs(var,b))
-           (List.map (fun x -> Global(x)) vars)
-           (parse_term (List.append (List.rev ((List.map (fun x -> Global(x)) vars))) env) body)      
+           (List.map (fun x -> x) vars)
+           (parse_term (List.append (List.rev ((List.map (fun x -> x) vars))) env) body)      
       | Sexp.List [Sexp.Atom "->"; s ; t ] -> 
-	 Pi(Global("NO"),(parse_term env s),(parse_term (Global("NO") :: env) t))
+	 Pi("NO",((parse_term env s),(parse_term ("NO" :: env) t)))
       | Sexp.List [Sexp.Atom "pi"; Sexp.Atom var ; s ; t] -> 
-	 Pi(Global(var),(parse_term env s),(parse_term (Global(var)::env) t))        
+	 Pi(var,((parse_term env s),(parse_term (var::env) t)))        
       | Sexp.List [Sexp.Atom "pi";Sexp.List vars; s; t] -> 
 	 let vars = List.map (function 
 			       | Sexp.Atom v -> v
 			       | _ -> failwith "Parser pi invalide variable") vars 
 	 in 
 	 List.fold_right
-	   (fun var b -> Pi(var,(parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env) s),b))
-	   (List.map (fun x -> Global(x)) vars)
-	   (parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env) t)
+	   (fun var b -> Pi(var,((parse_term (List.append (List.rev (List.map (fun x -> x) vars)) env) s),b)))
+	   (List.map (fun x -> x) vars)
+	   (parse_term (List.append (List.rev (List.map (fun x -> x) vars)) env) t)
       | Sexp.List [Sexp.Atom "sig"; Sexp.Atom var ;a;b] ->
-	 Sig(Global(var),(parse_term env a),(parse_term (Global(var)::env) b))
+	 Sig(var,((parse_term env a),(parse_term (var::env) b)))
       | Sexp.List [Sexp.Atom "sig"; Sexp.List vars;a;b] ->
 	 let vars = List.map (function 
 			       | Sexp.Atom v -> v 
 			       | _ -> failwith "Parser sig invalide variable") vars
 	 in 
 	 List.fold_right 
-	   (fun var b -> Sig(var,(parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env) a),b))
-	   (List.map (fun x -> Global(x)) vars)
-	   (parse_term (List.append (List.rev (List.map (fun x -> Global(x)) vars)) env ) t)
+	   (fun var b -> Sig(var,((parse_term (List.append (List.rev (List.map (fun x -> x) vars)) env) a),b)))
+	   (List.map (fun x -> x) vars)
+	   (parse_term (List.append (List.rev (List.map (fun x -> x) vars)) env ) t)
       | Sexp.List [a;Sexp.Atom ",";b] -> 
 	 Pair((parse_term env a),(parse_term env b))
       | Sexp.List [Sexp.Atom "liste";alpha] -> 
@@ -278,19 +249,19 @@ let rec parse_term env t =
 and parse_exTm env t = 
   let rec lookup_var env n v
     = match env with
-    | [] -> FVar v
-    | w :: env when v = w -> BVar n
+    | [] -> Var(Global v)
+    | w :: env when v = w -> Var(Bound n)
     | _ :: env -> lookup_var env (n+1) v 
   in
   match t with 
-  | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
-     Hole_exTm (int_of_string num)
+(*  | Sexp.List [Sexp.Atom"_"; Sexp.Atom num] ->
+     Hole_exTm (int_of_string num) *)
   | Sexp.List [Sexp.Atom "p0";x] ->
      P0(parse_exTm env x)
   | Sexp.List [Sexp.Atom "p1";x] ->
      P1(parse_exTm env x)
-  | Sexp.List [Sexp.Atom reference] -> 
-     Etiquette(reference)      
+(*   | Sexp.List [Sexp.Atom reference] -> 
+     Etiquette(reference)      *)
   | Sexp.List [Sexp.Atom "iter"; p ; n ; f ; z] ->
      Iter((parse_term env p),(parse_term env n),(parse_term env f),(parse_term env z))
   | Sexp.List [Sexp.Atom ":" ;x; t] -> 
@@ -298,8 +269,8 @@ and parse_exTm env t =
   | Sexp.List [Sexp.Atom "dfold";alpha;p;n;xs;f;a] -> 
      DFold((parse_term env alpha),(parse_term env p),(parse_term env n),(parse_term env xs),(parse_term env f),(parse_term env a))
   | Sexp.List [Sexp.Atom "trans"; gA;p;a;b;q;x] ->
-     Trans((parse_term env gA),(parse_term env p),(parse_term env a),(parse_term env b),(parse_term env q),(parse_term env x))
-  | Sexp.Atom v -> lookup_var env 0 (Global(v))
+     Transp((parse_term env gA),(parse_term env p),(parse_term env a),(parse_term env b),(parse_term env q),(parse_term env x))
+  | Sexp.Atom v -> lookup_var env 0 v
   | Sexp.List [Sexp.Atom "ifte"; p;c;tHen;eLse] ->
      Ifte((parse_term env p),(parse_term env c),(parse_term env tHen),(parse_term env eLse))
   | Sexp.List [Sexp.Atom "fold";a_t;alpha;xs;f;a] -> 
@@ -312,55 +283,6 @@ and parse_exTm env t =
   | _ -> failwith "erreur de parsing" 
 
 let read t = parse_term [] (Sexp.of_string t)
-
-(* Fonction de remplacement des holes dans les termes *)
-let rec replace_hole_inTm terme tsub num = 
-  match terme with 
-  | Ref(name) -> Ref(name)
-  | Hole_inTm(x) -> if x = num then tsub else Hole_inTm(x)
-  | Inv x -> Inv(replace_hole_exTm x tsub num)
-  | Abs(x,y) -> Abs(x,(replace_hole_inTm y tsub (num)))
-  | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(replace_hole_inTm x tsub num),(replace_hole_inTm y tsub (num)))
-  (*=End *)
-  | Sig(x,a,b) -> Sig(x,(replace_hole_inTm a tsub num),(replace_hole_inTm b tsub (num)))
-  | Zero -> Zero 
-  | Succ n -> Succ(replace_hole_inTm n tsub num)
-  | Nat -> Nat
-  | Bool -> Bool
-  | True -> True 
-  | False -> False 
-  | Pair(x,y) -> Pair((replace_hole_inTm x tsub num),(replace_hole_inTm y tsub num))
-  | Liste(alpha) -> Liste(replace_hole_inTm alpha tsub num)
-  | Nil -> Nil
-  | Cons(a,xs) -> Cons((replace_hole_inTm a tsub num),(replace_hole_inTm xs tsub num))
-  | Vec(alpha,n) -> Vec((replace_hole_inTm alpha tsub num),(replace_hole_inTm n tsub num))
-  | DNil(alpha) -> DNil(replace_hole_inTm alpha tsub num)
-  | DCons(a,xs) -> DCons((replace_hole_inTm a tsub num),(replace_hole_inTm a tsub num))
-  | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((replace_hole_inTm gA tsub num),(replace_hole_inTm a tsub num),(replace_hole_inTm b tsub num))
-  | Refl(a) -> Refl(replace_hole_inTm a tsub num)
-(*=replace_hole_exTm *)
-and replace_hole_exTm  terme tsub num = 
-  match terme with 
-    (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
-  | Hole_exTm(x) -> if x = num then Ann(tsub,Star) else Hole_exTm(x)
-  | Etiquette(x) -> Etiquette(x)
-  | FVar x -> FVar x
-  | BVar x -> BVar x
-  | Appl(x,y) -> Appl((replace_hole_exTm x tsub num),(replace_hole_inTm y tsub num))
-  | Ann(x,y) -> Ann((replace_hole_inTm x tsub num),(replace_hole_inTm y tsub num))
-  (*=End *)
-  | Iter(p,n,f,a) -> Iter((replace_hole_inTm p tsub num),(replace_hole_inTm n tsub num),(replace_hole_inTm f tsub num),(replace_hole_inTm a tsub num))
-  | Ifte(p,c,tHen,eLse) -> Ifte((replace_hole_inTm p tsub num),(replace_hole_inTm c tsub num),(replace_hole_inTm tHen tsub num),(replace_hole_inTm eLse tsub num))
-  | P0(x) -> P0(replace_hole_exTm x tsub num)
-  | P1(x) -> P1(replace_hole_exTm x tsub num)
-  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_hole_inTm alpha tsub num),(replace_hole_inTm p tsub num),(replace_hole_inTm n tsub num),
-				     (replace_hole_inTm xs tsub num),(replace_hole_inTm f tsub num),(replace_hole_inTm a tsub num))
-  | Trans(gA,p,a,b,q,x) -> Trans((replace_hole_inTm gA tsub num),(replace_hole_inTm p tsub num),(replace_hole_inTm a tsub num),
-				 (replace_hole_inTm b tsub num),(replace_hole_inTm q tsub num),(replace_hole_inTm x tsub num))
-  | Fold(gA,alpha,xs,f,a) -> Fold((replace_hole_inTm gA tsub num),(replace_hole_inTm alpha tsub num),(replace_hole_inTm xs tsub num),(replace_hole_inTm f tsub num),
-			    (replace_hole_inTm a tsub num))
 
 (* prend en argument une liste de ref ainsi qu'un nom et retourne le terme associé au nom si celui ci existe *)
 (*-----------LOLOLOL surement à changer quand le moment viendra---------------------*)
@@ -375,117 +297,64 @@ let rec def_is_in_the_liste_exTm env name_to_find =
   | (name,typ,terme) :: suite -> 
      if name = name_to_find then Ann(terme,typ) else def_is_in_the_liste_exTm suite name_to_find
 
-(* fonction prenant en argument une liste de def ainsi qu'un terme et retourne le terme ou toutes les occurences de la Etiquette on été modifiés 
-utilise is_in_the_list qui est une fonction dans le zipper *)
-let rec replace_ref_etiq_inTm terme liste_ref = 
-  match terme with 
-  | Ref(name) -> def_is_in_the_liste_inTm liste_ref name
-  | Hole_inTm(x) -> failwith "replace_ref_etiq_inTm  : you can't have a hole when you are replacing the ref" 
-  | Inv x -> Inv(replace_ref_etiq_exTm x liste_ref)
-  | Abs(x,y) -> Abs(x,(replace_ref_etiq_inTm  y liste_ref ))
-  | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref))
-  (*=End *)
-  | Sig(x,a,b) -> Sig(x,(replace_ref_etiq_inTm  a liste_ref),(replace_ref_etiq_inTm  b liste_ref ))
-  | Zero -> Zero 
-  | Succ n -> Succ(replace_ref_etiq_inTm  n liste_ref)
-  | Nat -> Nat
-  | Bool -> Bool
-  | True -> True 
-  | False -> False 
-  | Pair(x,y) -> Pair((replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
-  | Liste(alpha) -> Liste(replace_ref_etiq_inTm  alpha liste_ref )
-  | Nil -> Nil
-  | Cons(a,xs) -> Cons((replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  xs liste_ref ))
-  | Vec(alpha,n) -> Vec((replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  n liste_ref ))
-  | DNil(alpha) -> DNil(replace_ref_etiq_inTm  alpha liste_ref )
-  | DCons(a,xs) -> DCons((replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  a liste_ref ))
-  | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((replace_ref_etiq_inTm  gA liste_ref ),(replace_ref_etiq_inTm  a liste_ref ),(replace_ref_etiq_inTm  b liste_ref ))
-  | Refl(a) -> Refl(replace_ref_etiq_inTm  a liste_ref )
-and replace_ref_etiq_exTm terme liste_ref  = 
-  match terme with 
-    (* Attention c'est pas bon du tout de mettre cette annotation, c'est une solution temporaire *)
-  | Hole_exTm(x) -> failwith "replace_ref_etiq_exTm : I just say before that you can't check something which is not finish, how did you manage that"
-  | Etiquette(name) -> def_is_in_the_liste_exTm liste_ref name
-  | FVar x -> FVar x
-  | BVar x -> BVar x
-  | Appl(x,y) -> Appl((replace_ref_etiq_exTm x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
-  | Ann(x,y) -> Ann((replace_ref_etiq_inTm  x liste_ref ),(replace_ref_etiq_inTm  y liste_ref ))
-  (*=End *)
-  | Iter(p,n,f,a) -> Iter((replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  n liste_ref ),(replace_ref_etiq_inTm  f liste_ref ),(replace_ref_etiq_inTm  a liste_ref ))
-  | Ifte(p,c,tHen,eLse) -> Ifte((replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  c liste_ref ),(replace_ref_etiq_inTm  tHen liste_ref ),(replace_ref_etiq_inTm  eLse liste_ref ))
-  | P0(x) -> P0(replace_ref_etiq_exTm x liste_ref )
-  | P1(x) -> P1(replace_ref_etiq_exTm x liste_ref )
-  | DFold(alpha,p,n,xs,f,a) -> DFold((replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  n liste_ref ),
-				     (replace_ref_etiq_inTm  xs liste_ref ),(replace_ref_etiq_inTm  f liste_ref ),(replace_ref_etiq_inTm  a liste_ref ))
-  | Trans(gA,p,a,b,q,x) -> Trans((replace_ref_etiq_inTm  gA liste_ref ),(replace_ref_etiq_inTm  p liste_ref ),(replace_ref_etiq_inTm  a liste_ref ),
-				 (replace_ref_etiq_inTm  b liste_ref ),(replace_ref_etiq_inTm  q liste_ref ),(replace_ref_etiq_inTm  x liste_ref ))
-  | Fold(gA,alpha,xs,f,a) -> Fold((replace_ref_etiq_inTm  gA liste_ref ),(replace_ref_etiq_inTm  alpha liste_ref ),(replace_ref_etiq_inTm  xs liste_ref ),(replace_ref_etiq_inTm  f liste_ref ),
-			    (replace_ref_etiq_inTm  a liste_ref ))
 
 
-(*Fonction pour vérifier si il n'y a plus de holes dans le terme, renvoie true si pas de trou *)
-let rec check_if_no_hole_inTm terme = 
+let rec is_var_in_inTm terme var = 
   match terme with 
-  | Ref(name) -> true
-  | Hole_inTm(x) -> false
-  | Inv x -> check_if_no_hole_exTm x 
-  | Abs(x,y) -> check_if_no_hole_inTm y 
-  | Star -> true 
-  | Pi(v,x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
+  | Inv x -> is_var_in_exTm x var
+  | Abs(x,y) -> is_var_in_inTm y var 
+  | Star -> false
+  | Pi(v,(x,y)) -> is_var_in_inTm x var || is_var_in_inTm y var
   (*=End *)
-  | Sig(x,a,b) -> check_if_no_hole_inTm a && check_if_no_hole_inTm b 
-  | Zero -> true 
-  | Succ n -> check_if_no_hole_inTm n 
-  | Nat -> true
-  | Bool -> true
-  | True -> true 
-  | False -> true
-  | Pair(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
-  | Liste(alpha) -> check_if_no_hole_inTm alpha 
-  | Nil -> true
-  | Cons(a,xs) -> check_if_no_hole_inTm a && check_if_no_hole_inTm xs 
-  | Vec(alpha,n) -> check_if_no_hole_inTm alpha && check_if_no_hole_inTm n 
-  | DNil(alpha) -> check_if_no_hole_inTm alpha 
-  | DCons(a,xs) -> check_if_no_hole_inTm a && check_if_no_hole_inTm a 
-  | What(a) -> true 
-  | Id(gA,a,b) -> check_if_no_hole_inTm gA && check_if_no_hole_inTm a && check_if_no_hole_inTm b 
-  | Refl(a) -> check_if_no_hole_inTm a 
-and check_if_no_hole_exTm terme = 
+  | Sig(x,(a,b)) -> is_var_in_inTm a var || is_var_in_inTm b var
+  | Zero -> false
+  | Succ n -> is_var_in_inTm n var
+  | Nat -> false
+  | Bool -> false
+  | True -> false
+  | False -> false
+  | Pair(x,y) -> is_var_in_inTm x var || is_var_in_inTm y var
+  | Liste(alpha) -> is_var_in_inTm alpha var
+  | Nil -> false
+  | Cons(a,xs) -> is_var_in_inTm a var || is_var_in_inTm xs var
+  | Vec(alpha,n) -> is_var_in_inTm alpha var || is_var_in_inTm n var
+  | DNil(alpha) -> is_var_in_inTm alpha var
+  | DCons(a,xs) -> is_var_in_inTm a var || is_var_in_inTm a var
+  | Id(gA,a,b) -> is_var_in_inTm gA var || is_var_in_inTm a var || is_var_in_inTm b var
+  | Refl -> false
+and is_var_in_exTm terme var = 
   match terme with 
-  | Hole_exTm(x) -> false
-  | FVar x -> true
-  | BVar x -> true
-  | Etiquette(x) -> true
-  | Appl(x,y) -> check_if_no_hole_exTm x && check_if_no_hole_inTm y 
-  | Ann(x,y) -> check_if_no_hole_inTm x && check_if_no_hole_inTm y 
-  (*=End *)
-  | Iter(p,n,f,a) -> check_if_no_hole_inTm p && check_if_no_hole_inTm n && check_if_no_hole_inTm f && check_if_no_hole_inTm a 
-  | Ifte(p,c,tHen,eLse) -> check_if_no_hole_inTm p && check_if_no_hole_inTm c  && check_if_no_hole_inTm tHen && check_if_no_hole_inTm eLse 
-  | P0(x) -> check_if_no_hole_exTm x 
-  | P1(x) -> check_if_no_hole_exTm x 
-  | DFold(alpha,p,n,xs,f,a) -> check_if_no_hole_inTm alpha && check_if_no_hole_inTm p && check_if_no_hole_inTm n &&
-				 check_if_no_hole_inTm xs && check_if_no_hole_inTm f && check_if_no_hole_inTm a 
-  | Trans(gA,p,a,b,q,x) -> check_if_no_hole_inTm gA && check_if_no_hole_inTm p && check_if_no_hole_inTm a && 
-				 check_if_no_hole_inTm b && check_if_no_hole_inTm q && check_if_no_hole_inTm x 
-  | Fold(gA,alpha,xs,f,a) -> check_if_no_hole_inTm gA && check_if_no_hole_inTm alpha && check_if_no_hole_inTm xs && 
-				  check_if_no_hole_inTm f && check_if_no_hole_inTm a 
-				 
+  | Label(n,t) -> false (* je considère qu'il ne peut pas y avoir de trous dans un label *)
+  | Var x -> x = var 
+  | Appl(x,y) -> is_var_in_exTm x var || is_var_in_inTm y var
+  | Ann(x,y) -> is_var_in_inTm x var || is_var_in_inTm y var
+  | Iter(p,n,f,a) -> is_var_in_inTm p var || is_var_in_inTm n var || is_var_in_inTm f var || is_var_in_inTm a var
+  | Ifte(p,c,tHen,eLse) -> is_var_in_inTm p var || is_var_in_inTm c var || is_var_in_inTm tHen var || is_var_in_inTm eLse var
+  | P0(x) -> is_var_in_exTm x var
+  | P1(x) -> is_var_in_exTm x var
+  | DFold(alpha,p,n,xs,f,a) -> is_var_in_inTm alpha var || is_var_in_inTm p var || is_var_in_inTm n var ||
+				 is_var_in_inTm xs var || is_var_in_inTm f var || is_var_in_inTm a var
+  | Transp(gA,p,a,b,q,x) -> is_var_in_inTm gA var || is_var_in_inTm p var || is_var_in_inTm a var || 
+				 is_var_in_inTm b var || is_var_in_inTm q var || is_var_in_inTm x var
+  | Fold(gA,alpha,xs,f,a) -> is_var_in_inTm gA var || is_var_in_inTm alpha var || is_var_in_inTm xs var || 
+				  is_var_in_inTm f var || is_var_in_inTm a var
+
+
+(* check_if_no_hole_inTm : ident liste -> inTm -> bool *)
+let rec check_if_no_elem_inTm l terme = (* TODO :: faire cette fonction mais avec une liste de var *)
+  match l with 
+  | [] -> true
+  | elem :: suite -> not(is_var_in_inTm terme elem) && check_if_no_elem_inTm suite terme
+
 
 
  
 let rec pretty_print_inTm t l = 
   match t with 
-  | Ref(name) -> "(ref " ^ name ^ ")"
-  | Hole_inTm(x) -> "(_ " ^ string_of_int x ^ ")"
-  | Abs(Global(str),x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm x (str :: l) ^ ")"
-  | Abs(_,x) -> failwith "Pretty print Abs first arg must be a global"
+  | Abs(str,x) -> "(lambda " ^ str ^ " " ^ pretty_print_inTm x (str :: l) ^ ")"
   | Inv (x) ->  pretty_print_exTm x l
-  | Pi (Global(str),s,t) -> "(pi " ^ str ^ " " ^ pretty_print_inTm s l ^ " " ^ pretty_print_inTm t (str :: l) ^ ")"
-  | Pi (_,s,t) -> failwith "Pretty print Pi first arg must be a global"
-  | Sig(Global(str),a,b) -> "(sig " ^ str ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm b (str :: l) ^ ")"
-  | Sig(_,a,b) -> failwith "Pretty print Sig first arg must be a global"
+  | Pi (str,(s,t)) -> "(pi " ^ str ^ " " ^ pretty_print_inTm s l ^ " " ^ pretty_print_inTm t (str :: l) ^ ")"
+  | Sig(str,(a,b)) -> "(sig " ^ str ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm b (str :: l) ^ ")"
   | Star -> "*"
   | Succ n -> "(succ " ^ pretty_print_inTm n l ^ ")"
   | Zero -> "zero"
@@ -500,22 +369,19 @@ let rec pretty_print_inTm t l =
   | Vec(alpha,n) -> "(vec " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm n l ^ ")"
   | DNil(alpha) -> "(dnil " ^ pretty_print_inTm alpha l ^ ")"
   | DCons(a,xs) -> "(dcons " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm xs l ^ ")"
-  | What(s)-> "(? " ^ s ^ ")"
   | Id(bA,a,b) -> "(id " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm a l ^ " " ^ pretty_print_inTm b l ^ ")"
-  | Refl(a) -> "(refl " ^ pretty_print_inTm a l ^ ")"
+  | Refl -> "refl"
 and pretty_print_exTm t l =
   match t with 
-  | Hole_exTm(x) -> "(_ " ^ string_of_int x ^ ")"
   | Ann(x,y) ->  "(: " ^ pretty_print_inTm x l ^ " " ^ pretty_print_inTm y l ^ ")"
-  | BVar(x) -> begin 
-      try List.nth l x with 
-	| Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong list is to short BVar de " ^ string_of_int x) 
-	| _ -> List.nth l x
-    end
-  | Etiquette(x) -> x
-  | FVar (Global x) ->  x
-  | FVar (Quote x) -> string_of_int x 
-  | FVar (Bound x) -> string_of_int x
+  | Var (Global x) ->  x
+  | Var (Quote x) -> string_of_int x 
+  | Var (Bound x) ->       
+     begin
+       try List.nth l x with 
+       | Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong list is to short BVar de " ^ string_of_int x) 
+       | _ -> List.nth l x
+     end
   | Appl(x,y) -> "(" ^ pretty_print_exTm x l ^ " " ^ pretty_print_inTm y l ^ ")"
   | Iter(p,n,f,z) -> "(iter " ^ pretty_print_inTm p l ^ " " ^ pretty_print_inTm n l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm z l ^ ")"
   | Ifte(p,c,tHen,eLse) -> "(ifte " ^ pretty_print_inTm p l ^ " " ^ pretty_print_inTm c l ^ " " ^ pretty_print_inTm tHen l ^ " " ^ pretty_print_inTm eLse l ^ ")"
@@ -523,21 +389,23 @@ and pretty_print_exTm t l =
   | P1(x) -> "(p1 " ^ pretty_print_exTm x l ^ ")"
   |  DFold(alpha,p,n,xs,f,a) -> "(dfold " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm p l ^ " " ^pretty_print_inTm n l ^ 
 				 " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
-  | Trans(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm bA l ^ " " ^pretty_print_inTm p l ^ " " ^pretty_print_inTm a l ^ " " ^
+  | Transp(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm bA l ^ " " ^pretty_print_inTm p l ^ " " ^pretty_print_inTm a l ^ " " ^
 			     pretty_print_inTm b l ^ " " ^pretty_print_inTm q l ^ " " ^pretty_print_inTm x l ^ ")"
   | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
+  | _ -> failwith "TODO refléchir et faire le parsing ainsi que le pretty_print d'un label"
 
-
-let rec substitution_inTm t tsub var = 
+(* TODO :: faire une fonction qui appelle celle ci avec les bons paramètres CF tableau *)
+let rec subst_inTm (t : inTm binder) tsub = 
   match t with 
-  | Ref(name) -> Ref(name)
-  | Hole_inTm(x) -> Hole_inTm x
+  | (name,terme) -> substitution_inTm terme tsub 0
+and substitution_inTm t tsub var = 
+  match t with 
   | Inv x -> Inv(substitution_exTm x tsub var)
   | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
   | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(substitution_inTm x tsub var),(substitution_inTm y tsub (var+1)))
+  | Pi(v,(x,y)) -> Pi(v,((substitution_inTm x tsub var),(substitution_inTm y tsub (var+1))))
   (*=End *)
-  | Sig(x,a,b) -> Sig(x,(substitution_inTm a tsub var),(substitution_inTm b tsub (var+1)))
+  | Sig(v,(x,y)) -> Sig(v,((substitution_inTm x tsub var),(substitution_inTm y tsub (var+1))))
   | Zero -> Zero 
   | Succ n -> Succ(substitution_inTm n tsub var)
   | Nat -> Nat
@@ -551,17 +419,14 @@ let rec substitution_inTm t tsub var =
   | Vec(alpha,n) -> Vec((substitution_inTm alpha tsub var),(substitution_inTm n tsub var))
   | DNil(alpha) -> DNil(substitution_inTm alpha tsub var)
   | DCons(a,xs) -> DCons((substitution_inTm a tsub var),(substitution_inTm a tsub var))
-  | What(a) -> What(a)
   | Id(gA,a,b) -> Id((substitution_inTm gA tsub var),(substitution_inTm a tsub var),(substitution_inTm b tsub var))
-  | Refl(a) -> Refl(substitution_inTm a tsub var)
+  | Refl -> Refl
 (*=substitution_exTm *)
 and substitution_exTm  t tsub var = 
   match t with 
-  | Hole_exTm(x) -> Hole_exTm x
-  | FVar x -> FVar x
-  | BVar x when x = var -> tsub
-  | BVar x -> BVar x
-  | Etiquette x -> Etiquette x 
+  | Var(Bound n) -> if n = var then tsub else Var(Bound n)
+  | Var(x)  -> Var(x)
+  | Label (x,t) -> Label(x,substitution_inTm t tsub var)
   | Appl(x,y) -> Appl((substitution_exTm x tsub var),(substitution_inTm y tsub var))
   | Ann(x,y) -> Ann((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   (*=End *)
@@ -571,22 +436,22 @@ and substitution_exTm  t tsub var =
   | P1(x) -> P1(substitution_exTm x tsub var)
   | DFold(alpha,p,n,xs,f,a) -> DFold((substitution_inTm alpha tsub var),(substitution_inTm p tsub var),(substitution_inTm n tsub var),
 				     (substitution_inTm xs tsub var),(substitution_inTm f tsub var),(substitution_inTm a tsub var))
-  | Trans(gA,p,a,b,q,x) -> Trans((substitution_inTm gA tsub var),(substitution_inTm p tsub var),(substitution_inTm a tsub var),
+  | Transp(gA,p,a,b,q,x) -> Transp((substitution_inTm gA tsub var),(substitution_inTm p tsub var),(substitution_inTm a tsub var),
 				 (substitution_inTm b tsub var),(substitution_inTm q tsub var),(substitution_inTm x tsub var))
   | Fold(gA,alpha,xs,f,a) -> Fold((substitution_inTm gA tsub var),(substitution_inTm alpha tsub var),(substitution_inTm xs tsub var),(substitution_inTm f tsub var),
 			    (substitution_inTm a tsub var))
 
 (* Utilisation de la fonction, si on a un terme de la forme (lambda ....) et que l'on souhaite binder sur le lambda en cour il faut mettre 0 *)
-let rec bound_var_inTm t i var = 
+(* cree une fonction  abstraction pour l'interface : ident -> inTm -> inTm binder *)
+let rec abstract name terme = Abs(name,(bound_var_inTm terme 0 name))
+and bound_var_inTm t i var = 
   match t with 
-  | Ref(name) -> Ref(name)
-  | Hole_inTm(x) -> Hole_inTm x
   | Inv x -> Inv(bound_var_exTm x i var)
   | Abs(x,y) -> Abs(x,(bound_var_inTm y (i + 1) var))
   | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(bound_var_inTm x i var),(bound_var_inTm y (i + 1) var))
+  | Pi(v,(x,y)) -> Pi(v,((bound_var_inTm x i var),(bound_var_inTm y (i + 1) var)))
   (*=End *)
-  | Sig(x,a,b) -> Sig(x,(bound_var_inTm a i var),(bound_var_inTm b (i + 1) var))
+  | Sig(x,(a,b)) -> Sig(x,((bound_var_inTm a i var),(bound_var_inTm b (i + 1) var)))
   | Zero -> Zero 
   | Succ n -> Succ(bound_var_inTm n i var)
   | Nat -> Nat
@@ -600,19 +465,14 @@ let rec bound_var_inTm t i var =
   | Vec(alpha,n) -> Vec((bound_var_inTm alpha i var),(bound_var_inTm n i var))
   | DNil(alpha) -> DNil(bound_var_inTm alpha i var)
   | DCons(a,xs) -> DCons((bound_var_inTm a i var),(bound_var_inTm a i var))
-  | What(a) -> What(a)
   | Id(gA,a,b) -> Id((bound_var_inTm gA i var),(bound_var_inTm a i var),(bound_var_inTm b i var))
-  | Refl(a) -> Refl(bound_var_inTm a i var)
+  | Refl -> Refl
 (*=replace_var_exTm *)
 and bound_var_exTm  t i var = 
   match t with 
-  | Hole_exTm(x) -> Hole_exTm x
-(* ici i - 1 parceque on va forcément traverser un premier lambda et que c'est mieux si on doit mettre 0 pour binder sur le premier lambda 
-plustot que de mettre -1 comme argument *)
-  | FVar(Global x) -> begin if x = var then BVar(i - 1) else FVar(Global x) end 
-  | FVar(x) -> FVar(x)
-  | BVar x -> BVar x
-  | Etiquette x -> Etiquette x 
+  | Var(Global x) -> begin if x = var then Var(Bound(i - 1)) else Var(Global x) end 
+  | Var(x) -> Var(x)
+  | Label(name,term) -> Label(name,term)
   | Appl(x,y) -> Appl((bound_var_exTm x i var),(bound_var_inTm y i var))
   | Ann(x,y) -> Ann((bound_var_inTm x i var),(bound_var_inTm y i var))
   (*=End *)
@@ -622,109 +482,43 @@ plustot que de mettre -1 comme argument *)
   | P1(x) -> P1(bound_var_exTm x i var)
   | DFold(alpha,p,n,xs,f,a) -> DFold((bound_var_inTm alpha i var),(bound_var_inTm p i var),(bound_var_inTm n i var),
 				     (bound_var_inTm xs i var),(bound_var_inTm f i var),(bound_var_inTm a i var))
-  | Trans(gA,p,a,b,q,x) -> Trans((bound_var_inTm gA i var),(bound_var_inTm p i var),(bound_var_inTm a i var),
+  | Transp(gA,p,a,b,q,x) -> Transp((bound_var_inTm gA i var),(bound_var_inTm p i var),(bound_var_inTm a i var),
 				 (bound_var_inTm b i var),(bound_var_inTm q i var),(bound_var_inTm x i var))
   | Fold(gA,alpha,xs,f,a) -> Fold((bound_var_inTm gA i var),(bound_var_inTm alpha i var),(bound_var_inTm xs i var),(bound_var_inTm f i var),
 			    (bound_var_inTm a i var))
 
  
-let rec change_name_FVar_inTm t tsub = 
-  match t with 
-  | Ref(name) -> Ref(name)
-  | Hole_inTm(x) -> Hole_inTm x
-  | Inv x -> Inv(change_name_FVar_exTm x tsub)
-  | Abs(x,y) -> Abs(x,(change_name_FVar_inTm y tsub))
-  | Star -> Star
-  | Pi(v,x,y) -> Pi(v,(change_name_FVar_inTm x tsub),(change_name_FVar_inTm y tsub))
-  (*=End *)
-  | Sig(x,a,b) -> Sig(x,(change_name_FVar_inTm a tsub),(change_name_FVar_inTm b tsub ))
-  | Zero -> Zero 
-  | Succ n -> Succ(change_name_FVar_inTm n tsub)
-  | Nat -> Nat
-  | Bool -> Bool
-  | True -> True 
-  | False -> False 
-  | Pair(x,y) -> Pair((change_name_FVar_inTm x tsub ),(change_name_FVar_inTm y tsub ))
-  | Liste(alpha) -> Liste(change_name_FVar_inTm alpha tsub )
-  | Nil -> Nil
-  | Cons(a,xs) -> Cons((change_name_FVar_inTm a tsub ),(change_name_FVar_inTm xs tsub ))
-  | Vec(alpha,n) -> Vec((change_name_FVar_inTm alpha tsub ),(change_name_FVar_inTm n tsub ))
-  | DNil(alpha) -> DNil(change_name_FVar_inTm alpha tsub )
-  | DCons(a,xs) -> DCons((change_name_FVar_inTm a tsub ),(change_name_FVar_inTm a tsub ))
-  | What(a) -> What(a)
-  | Id(gA,a,b) -> Id((change_name_FVar_inTm gA tsub ),(change_name_FVar_inTm a tsub ),(change_name_FVar_inTm b tsub ))
-  | Refl(a) -> Refl(change_name_FVar_inTm a tsub )
-(*=change_name_FVar_exTm *)
-and change_name_FVar_exTm  t tsub = 
-  match t with 
-  | Hole_exTm(x) -> Hole_exTm x
-  | FVar(Global x) -> if x = tsub then FVar(Global(tsub)) else FVar(Global x )
-  | BVar x -> BVar x
-  | Etiquette x -> Etiquette x 
-  | Appl(x,y) -> Appl((change_name_FVar_exTm x tsub),(change_name_FVar_inTm y tsub))
-  | Ann(x,y) -> Ann((change_name_FVar_inTm x tsub),(change_name_FVar_inTm y tsub))
-  (*=End *)
-  | Iter(p,n,f,a) -> Iter((change_name_FVar_inTm p tsub),(change_name_FVar_inTm n tsub),(change_name_FVar_inTm f tsub),(change_name_FVar_inTm a tsub))
-  | Ifte(p,c,tHen,eLse) -> Ifte((change_name_FVar_inTm p tsub),(change_name_FVar_inTm c tsub),(change_name_FVar_inTm tHen tsub),(change_name_FVar_inTm eLse tsub))
-  | P0(x) -> P0(change_name_FVar_exTm x tsub)
-  | P1(x) -> P1(change_name_FVar_exTm x tsub)
-  | DFold(alpha,p,n,xs,f,a) -> DFold((change_name_FVar_inTm alpha tsub),(change_name_FVar_inTm p tsub),(change_name_FVar_inTm n tsub ),
-				     (change_name_FVar_inTm xs tsub ),(change_name_FVar_inTm f tsub ),(change_name_FVar_inTm a tsub ))
-  | Trans(gA,p,a,b,q,x) -> Trans((change_name_FVar_inTm gA tsub ),(change_name_FVar_inTm p tsub ),(change_name_FVar_inTm a tsub ),
-				 (change_name_FVar_inTm b tsub ),(change_name_FVar_inTm q tsub),(change_name_FVar_inTm x tsub))
-  | Fold(gA,alpha,xs,f,a) -> Fold((change_name_FVar_inTm gA tsub ),(change_name_FVar_inTm alpha tsub ),(change_name_FVar_inTm xs tsub),(change_name_FVar_inTm f tsub),
-			    (change_name_FVar_inTm a tsub))
-  | _ -> failwith "change_name_FVar : maybe i don't make the all function but i don't care"
-
 
 
 
 let vfree n = VNeutral(NFree n)
   
-(*=big_step_head *)
 let rec big_step_eval_inTm t envi = 
-(*=End *)
   match t with 
-  | Ref(name) -> failwith "big_step_eval_inTm : you can't eval a ref (maybe i will change this later and call the function on it to put all 
-			   the term at this place"
-  | Hole_inTm x -> failwith "Big_step_eval : You can't eval a Hole" 
-(*  | Etiquette x -> failwith "Big_step_eval : You can't eval a Def" *)
-(*=big_step_inv *)
   | Inv(i) -> big_step_eval_exTm i envi
-(*=End *)
-
   | Abs(x,y) -> VLam(x,function arg -> (big_step_eval_inTm y (arg::envi)))
-(*=big_step_new *)
   | Star -> VStar
-  | Pi (v,x,y) -> 
-     VPi (v,(big_step_eval_inTm x envi),
-	  (function arg -> (big_step_eval_inTm y (arg :: envi))))
-(*=End *)
-  | Sig (x,a,b) -> 
-     VSig ((big_step_eval_inTm a envi),
-	   (function arg -> (big_step_eval_inTm b (arg :: envi))))
-(*=big_step_nat *) 
+  | Pi (v,(x,y)) -> 
+     VPi (v,((big_step_eval_inTm x envi),
+	  (function arg -> (big_step_eval_inTm y (arg :: envi)))))
+  | Sig (x,(a,b)) -> 
+     VSig (x,((big_step_eval_inTm a envi),
+	   (function arg -> (big_step_eval_inTm b (arg :: envi)))))
   | Nat -> VNat
   | Zero -> VZero
   | Succ(n) -> VSucc(big_step_eval_inTm n envi)
-(*=End *)
-(*=big_step_bool *) 
   | Bool -> VBool
   | True -> VTrue 
   | False -> VFalse 
-(*=End *)
-(*=big_step_vec *) 
   | Vec(alpha,n) -> VVec((big_step_eval_inTm alpha envi),(big_step_eval_inTm n envi))
   | DNil(alpha) -> VDNil(big_step_eval_inTm alpha envi)
   | DCons(a,xs) -> VDCons((big_step_eval_inTm a envi),(big_step_eval_inTm xs envi))
-(*=End *)
   | Id(gA,a,b) -> VId((big_step_eval_inTm gA envi),(big_step_eval_inTm a envi),(big_step_eval_inTm b envi))
-  | Refl(a) -> VRefl(big_step_eval_inTm a envi)
+  | Refl -> VRefl
   | Pair(x,y) -> VPair((big_step_eval_inTm x envi),(big_step_eval_inTm y envi))
   | Liste(a) -> VListe(big_step_eval_inTm a envi)
   | Nil -> VNil
   | Cons(xs,a) -> VCons((big_step_eval_inTm xs envi),(big_step_eval_inTm a envi))
-  | What(a) -> failwith "do not put a hole in a type, it make no sense"  
 and vapp v = 
   match v with 
   | ((VLam (x,f)),v) -> f v
@@ -734,7 +528,7 @@ and vapp v =
 and vitter (p,n,f,a) =
   match n,f with
   | (VZero,VLam (name,fu)) -> a
-  | (VSucc(x),VLam (name,fu)) -> vapp(fu n,(vitter (p,x,f,a)))
+  | (VSucc(x),VLam (name,fu)) -> vapp(fu x,(vitter (p,x,f,a)))
   | _ -> VNeutral(NIter(p,n,f,a))
 (*=End *)
 (*=vfold *) 
@@ -752,28 +546,22 @@ and vifte(p,c,tHen,eLse) =
 and vfold(p,alpha,xs,f,a) = 
   match xs,f with 
   | (VNil,VLam (name,fu)) -> a 
-  | (VCons(elem,suite),VLam (name,fu)) -> vapp(vapp((fu elem),xs),vfold(p,alpha,suite,f,a))
+  | (VCons(elem,suite),VLam (name,fu)) -> vapp(vapp((fu elem),suite),vfold(p,alpha,suite,f,a))
   | _ -> VNeutral(NFold(p,alpha,xs,f,a))
 and big_step_eval_exTm t envi = 
   match t with
-  | Hole_exTm x -> failwith "you can't eval a hole"
   | Ann(x,_) -> big_step_eval_inTm x envi 
-  | FVar(v) -> vfree v 
-  | BVar(v) -> List.nth envi v 
-  | Etiquette x -> VNeutral(NEtiquette x) 		    
+  | Var(Bound v) -> List.nth envi v 
+  | Var(v) -> vfree v 
   | Appl(x,y) -> vapp((big_step_eval_exTm x envi),(big_step_eval_inTm y envi))    
-(*=big_step_iter *)
   | Iter(p,n,f,a) -> vitter ((big_step_eval_inTm p envi),
 			     (big_step_eval_inTm n envi),
 			     (big_step_eval_inTm f envi),
 			     (big_step_eval_inTm a envi))
-(*=End *)
-(*=big_step_bool *)
   | Ifte(p,c,tHen,eLse) -> vifte((big_step_eval_inTm p envi),
 				 (big_step_eval_inTm c envi),
 				 (big_step_eval_inTm tHen envi),
 				 (big_step_eval_inTm eLse envi))
-  (*=End *)
   | P0(p) -> let eval_p = big_step_eval_exTm p envi in
      begin 
        match eval_p with 
@@ -795,8 +583,8 @@ and big_step_eval_exTm t envi =
 
 let boundfree i n = 
   match n with 
-  | Quote k -> BVar (i - k - 1)
-  | x -> FVar x
+  | Quote k -> Var(Bound (i - k - 1))
+  | x -> Var(x)
 
 let gensym =
   let c = ref 0 in
@@ -808,17 +596,15 @@ let rec value_to_inTm i v =
   | VLam (name,f) -> value_to_inTm (i+1) (f (vfree(Quote i)))
   | VNeutral n -> Inv(neutral_to_exTm i n)
 (*=value_to_inTm_new *)		     
-  | VPi(var,x,f) -> 
+  | VPi(var,(x,f)) -> 
 		  Pi(var,
-		     (value_to_inTm i x),
-		     (value_to_inTm (i+1) (f(vfree(Quote i)))))
+		     ((value_to_inTm i x),
+		     (value_to_inTm (i+1) (f(vfree(Quote i))))))
 (*=End *)
-  | VSig(x,f) -> let var = gensym () in 
-		 begin 
-		   Sig(Global(var),
-		       (value_to_inTm i x),
-		       (value_to_inTm (i+1) (f(vfree(Quote i)))))
-		 end 
+  | VSig(var,(x,f)) -> 
+		   Sig(var,
+		       ((value_to_inTm i x),
+		       (value_to_inTm (i+1) (f(vfree(Quote i))))))
   | VPair(x,y) -> Pair((value_to_inTm i x),(value_to_inTm i y))
   | VStar -> Star
   | VNat -> Nat
@@ -831,7 +617,7 @@ let rec value_to_inTm i v =
   | VDNil(alpha) -> DNil(value_to_inTm i alpha)
   | VDCons(a,xs) -> DCons((value_to_inTm i a),(value_to_inTm i xs)) 
   | VId(gA,a,b) -> Id((value_to_inTm i gA),(value_to_inTm i a),(value_to_inTm i b))
-  | VRefl(a) -> Refl(value_to_inTm i a) 
+  | VRefl -> Refl
   | VListe(a) -> Liste(value_to_inTm i a)
   | VNil -> Nil
   | VCons(a,xs) -> Cons((value_to_inTm i a),(value_to_inTm i xs)) 
@@ -843,20 +629,26 @@ and neutral_to_exTm i v =
 				      (value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
   | NIter(p,n,f,a) -> Iter((value_to_inTm i p),(value_to_inTm i n),(value_to_inTm i f),(value_to_inTm i a))
   | NIfte(p,c,tHen,eLse) -> Ifte((value_to_inTm i p),(value_to_inTm i c),(value_to_inTm i tHen),(value_to_inTm i eLse))
-  | NTrans(gA,p,a,b,q,x) -> Trans((value_to_inTm i gA),(value_to_inTm i p),(value_to_inTm i a),
+  | NTransp(gA,p,a,b,q,x) -> Transp((value_to_inTm i gA),(value_to_inTm i p),(value_to_inTm i a),
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
   (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
   | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
-  | NEtiquette x-> Etiquette x
+  | NLabel(x,t)-> Label(x,value_to_inTm i t)
   | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
   | NFold(p,alpha,xs,f,a) -> Fold((value_to_inTm i p),(value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
 
-let rec equal_inTm t1 t2 = 
+
+(* TODO :: faire une petite fonction qui normalise d'abord avant d'appel cette fonction *)
+let rec equal t1 t2 =  
+  let eval_t1 = value_to_inTm 0 (big_step_eval_inTm t1 []) in 
+  let eval_t2 = value_to_inTm 0 (big_step_eval_inTm t2 []) in 
+  equal_inTm eval_t1 eval_t2
+and equal_inTm t1 t2 = 
   match (t1,t2) with 
   | (Abs(_,x1),Abs(_,x2)) -> equal_inTm x1 x2
-  | (Pi(_,x1,y1),Pi(_,x2,y2)) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
-  | (Sig(_,x1,y1),Sig(_,x2,y2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 
+  | (Pi(_,(x1,y1)),Pi(_,(x2,y2))) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
+  | (Sig(_,(x1,y1)),Sig(_,(x2,y2))) -> equal_inTm x1 x2 && equal_inTm y1 y2 
   | (Star,Star) -> true 
   | (Zero,Zero) -> true 
   | (Succ(n1),Succ(n2)) -> equal_inTm n1 n2
@@ -866,12 +658,11 @@ let rec equal_inTm t1 t2 =
   | (False,False) -> true 
   | (Inv(x1),Inv(x2)) -> equal_exTm x1 x2
   | (Pair(x1,y1),Pair(x2,y2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 
-  | (What(a),What(b)) -> true
   | (Vec(x1,y1),Vec(x2,y2)) -> equal_inTm x1 x2 && equal_inTm y1 y2
   | (DNil x1,DNil x2) -> equal_inTm x1 x2 
   | (DCons(x1,y1),DCons(x2,y2)) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
   | (Id(x1,y1,z1),Id(x2,y2,z2)) -> equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2
-  | (Refl(a),Refl(b)) -> equal_inTm a b 
+  | (Refl,Refl) -> true 
   | (Liste(a),Liste(b))-> equal_inTm a b
   | (Nil,Nil) -> true
   | (Cons(y1,z1),Cons(y2,z2)) -> equal_inTm y1 y2 && equal_inTm z1 z2				  
@@ -879,8 +670,7 @@ let rec equal_inTm t1 t2 =
 and equal_exTm t1 t2 = 
   match (t1,t2) with 
   | (Ann(x1,y1),Ann(x2,y2)) ->  equal_inTm x1 x2 && equal_inTm y1 y2 
-  | (BVar(x1),BVar(x2)) -> x1 = x2 
-  | (FVar(x1),FVar(x2)) -> x1 = x2
+  | (Var(x1),Var(x2)) -> x1 = x2 (* j'ai tout tester avec ocaml ça marche niquel l'égalité pour ce truc la *)
   | (Appl(x1,y1),Appl(x2,y2)) -> equal_exTm x1 x2 && equal_inTm y1 y2 
   | (Iter(w1,x1,y1,z1),Iter(w2,x2,y2,z2)) -> 
      equal_inTm w1 w2 && equal_inTm x1 x2 && equal_inTm y1 y2 && equal_inTm z1 z2 
@@ -896,216 +686,7 @@ and equal_exTm t1 t2 =
      equal_inTm p1 p2 && equal_inTm alpha1 alpha2 && equal_inTm xs1 xs2 && 
        equal_inTm f1 f2 && equal_inTm a1 a2  
   | _ -> false							 
-															      
-(*=check_head *)      
-let rec lcheck contexte ty inT =
-  match inT with
-  (*=End *)
-    (*=check_abs *)      
-  | Abs(x,y) ->
-     begin
-       match ty with
-       | VPi(name,s,t) -> let freshVar = gensym() in
-		     lcheck (((Global freshVar),s)::contexte)
-		       (t (vfree (Global freshVar)))
-		       (substitution_inTm y (FVar(Global(freshVar))) 0)
-       | _ -> false
-     end
-  (*=End *)
-  (*=check_inv *)
-  | Inv(x) -> 
-     let ret = lsynth contexte x in
-	 if equal_inTm (value_to_inTm 0 (ty)) (value_to_inTm 0 ret)
-	 then true
-	 else false
-	   
-(*=End *)
-(*=check_star *)
-  | Star -> 
-     begin 
-      match ty with 
-	| VStar -> true 
-	| _ -> false 
-     end
-(*=End *)
-(*=check_pi *)
-  | Pi (v,s,t) -> 
-     begin 
-       match ty with 
-       | VStar -> let freshVar = gensym () in 
-		  lcheck contexte VStar s 
-		  && lcheck (((Global freshVar),
-			      (big_step_eval_inTm s []))::contexte)
-			    VStar
-			    (substitution_inTm t (FVar(Global(freshVar))) 0)
-       | _ -> false
-     end 
-  | Sig (x,a,b) -> 
-     begin
-       match ty with 
-       | VStar -> let freshVar = gensym () in 
-		  lcheck contexte VStar a 
-		  && lcheck (((Global freshVar),
-			      (big_step_eval_inTm a []))::contexte)
-			    VStar
-			    (substitution_inTm b (FVar(Global(freshVar))) 0)
-       | _ -> false
-     end
-  (*=End *)
-  | Pair(x,y) -> 
-     begin 
-       match ty with 
-       | VSig(a,b) -> lcheck contexte a x &&
-			  lcheck contexte (b (big_step_eval_inTm x [])) y 
-       | _ -> false
-     end 
-  (*=check_nat *)
-  | Nat -> ty = VStar
-  | Zero -> ty = VNat
-  | Succ(x) -> 
-     begin 
-       match ty with 
-	 | VNat -> lcheck contexte VNat x 
-	 | _ -> false
-     end
-  (*=End *)
-  | Bool -> ty = VStar
-  | True -> ty = VBool
-  | False -> ty = VBool
-(*=check_vec *)
-  | Vec(alpha,n) -> ty = VStar && 
-		      lcheck contexte VStar alpha  &&
-	  		lcheck contexte VNat n   			       
-(*=End *)
-(*=check_dnil *)
-  | DNil(alpha) -> 
-     begin
-       match ty with
-       | VVec(alpha_vec,VZero) ->
-	  equal_inTm (value_to_inTm 0
-			(big_step_eval_inTm alpha [])) 
-	    (value_to_inTm 0 alpha_vec)								
-       | _ -> false
-     end 
-(*=End *)
-(*=check_dcons *)
-  | DCons(a,xs) -> 
-     begin 
-       match ty with 
-       | VVec(alpha,VSucc(n)) ->
-	  lcheck contexte (VVec(alpha,n)) xs  && 				 
-	    lcheck contexte alpha a  				 
-       | _ -> false
-     end 
-(*=End *)
-  | What(a) -> false 
-(*=check_id *)
-  | Id(gA,a,b) ->
-     let eval_gA = big_step_eval_inTm gA [] in
-     ty = VStar &&
-     lcheck contexte VStar gA  &&
-       lcheck contexte eval_gA a  &&
-       lcheck contexte eval_gA b 
-(*=End *)
-(*=check_refl *)
-  | Refl(a) ->
-     begin
-       match ty with 
-       | VId(gA,ta,ba) -> 
-	  if equal_inTm a (value_to_inTm 0 ta) &&
-	    equal_inTm a (value_to_inTm 0 ba)
-	  then lcheck contexte gA a
-	  else false
-       | _ -> false
-     end
-(*=End *)
-  | _ -> failwith "HEHEHEHEHE"
-(*=synth_head *)     
-and lsynth ctxt exT =
-  match exT with
-  (*=End *)
-  (*=synth_var *)
-  | BVar x -> failwith "Impossible to check a BoundVar"
-  | FVar x -> List.assoc x ctxt
-  (*=End *)
-(*=End *)
-(*=synth_ann *) 
-  | Ann(x,t) -> let eval_t = big_step_eval_inTm t [] in
-		if lcheck ctxt VStar t 
-		  && lcheck ctxt (big_step_eval_inTm t []) x 
-		then eval_t 		    		   
-		else failwith "fail synth Ann"  
-(*=End *)
-(*=synth_app *) 
-  | Appl(f,s) -> 
-     let synth_f = lsynth ctxt f in
-     begin
-       match synth_f with
-       | VPi(name,s_pi,fu) -> if lcheck ctxt s_pi s 
-		     then (fu (big_step_eval_inTm s [])) 
-		     else failwith "fail synth Appl"
-       | _ -> failwith "fail synth Appl"
-     end
-  (*=End *)
-  (*=synth_iter *)
-  | Iter(p,n,f,a) ->
-     let big_p = big_step_eval_inTm p [] in
-     let big_n = big_step_eval_inTm n [] in 
-     if lcheck ctxt (big_step_eval_inTm (read "(-> N *)") []) p &&
-       lcheck ctxt (big_step_eval_inTm (read "N") []) n &&
-       lcheck ctxt (big_step_eval_inTm
-			  (Pi(Global("n"),Nat,
-			      Pi(Global("NO"),(Inv(Appl(Ann(p,Pi(Global"NO",Nat,Star)),n))),
-				 (Inv(Appl(Ann(p,Pi(Global"NO",Nat,Star)),Succ(n))))))) [])
-       f &&
-       lcheck ctxt (vapp(big_p,VZero)) a 
-     then (vapp(big_p,big_n))
-     else failwith "Iter synth fail"
-  (*=End *)
-  | Ifte(p,c,tHen,eLse) -> 
-     let big_p = big_step_eval_inTm p [] in 
-     let big_c = big_step_eval_inTm c [] in 
-     if lcheck ctxt (big_step_eval_inTm (read "(-> B *)") []) p &&
-	  lcheck ctxt (big_step_eval_inTm (read "B") []) c &&
-	    lcheck ctxt (vapp(big_p,VTrue)) tHen && 
-	      lcheck ctxt (vapp(big_p,VFalse)) eLse 
-     then (vapp(big_p,big_c))
-     else failwith "Ifte synth fail" 
-  (*=synth_dfold *)
-  | DFold(alpha,p,n,xs,f,a) ->
-     let type_p = (Pi(Global"n",Nat,(Pi(Global"xs",Vec(alpha,Inv(BVar 0)),Star)))) in 
-     if lcheck ctxt VStar alpha &&
-       lcheck ctxt (big_step_eval_inTm type_p []) p &&
-       lcheck ctxt VNat n &&
-       lcheck ctxt (big_step_eval_inTm (Vec(alpha,n)) []) xs &&
-       lcheck ctxt
-       (big_step_eval_inTm 
-	  (Pi(Global"n",Nat,
-	      Pi(Global"xs",Vec(alpha,Inv(BVar 0)),
-		 Pi(Global"a",alpha,
-		    Pi(Global"NO",Inv(Appl(Appl(Ann(p,type_p),n),xs)),
-		       Inv(Appl(Appl(Ann(p,type_p),Succ(n)),DCons(a,xs)))))))) []) f &&
-       lcheck ctxt (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),Zero),DNil(alpha)))) []) a				 
-     then (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),n),xs))) [])
-     else failwith "DFOld synth something goes wrong"
-  (*=End *)
-  (*=synth_trans *)
-  | Trans(gA,p,a,b,q,x) ->
-     let type_p = Pi(Global"a",gA,Pi(Global"b",gA,Pi(Global"NO",Id(gA,Inv(BVar 1),Inv(BVar 0)),Star))) in 
-     if lcheck ctxt VStar gA &&
-       lcheck ctxt (big_step_eval_inTm gA []) a &&
-       lcheck ctxt (big_step_eval_inTm gA []) b &&
-       lcheck ctxt  (big_step_eval_inTm (Id(gA,a,b)) []) q &&  
-       lcheck ctxt (big_step_eval_inTm type_p []) p && 
-       lcheck ctxt (big_step_eval_inTm (Inv(Appl(Appl(Appl(Ann(p,type_p),a),b),q))) []) x
-     then (big_step_eval_inTm (Inv(Appl(Appl(Appl(Ann(p,type_p),a),b),q))) [])
-     else failwith "Trans synth fail"           			       
-  (*=End *)
-  | _ -> failwith "HAHAHAHAHAHAHA"
-    
-
-
-
+															          
 
      
 let rec contexte_to_string contexte = 
@@ -1117,16 +698,14 @@ let rec contexte_to_string contexte =
 
 
 
-     
+     (* TODO :: faire une fonction de type check qui prend deux termes et retourne un booléens *)
 let rec check contexte inT ty steps = 
   match inT with
-  | Ref(name) -> create_report false (contexte_to_string contexte) steps "check : there is a ref in the terme"
-  | Hole_inTm x -> create_report false (contexte_to_string contexte) steps "IT'S A HOLE!!!!"
   | Abs(x,y) -> 
      begin  
        match ty with 
-       | VPi(name,s,t) -> let freshVar = gensym () in 
-		     check (((Global freshVar),s)::contexte) (substitution_inTm y (FVar(Global(freshVar))) 0) (t (vfree (Global freshVar))) (pretty_print_inTm inT [] ^ ";"^ steps) 
+       | VPi(name,(s,t)) -> let freshVar = gensym () in 
+		     check (((Global freshVar),s)::contexte) (substitution_inTm y (Var(Global(freshVar))) 0) (t (vfree (Global freshVar))) (pretty_print_inTm inT [] ^ ";"^ steps) 
        | _ -> create_report false (contexte_to_string contexte) steps "Abs type must be a Pi"
      end 
   | Inv(x) -> 
@@ -1146,22 +725,22 @@ test le retour de la synthèse *)
 	| VStar -> create_report true (contexte_to_string contexte) steps "No"
 	| _ -> create_report false (contexte_to_string contexte) steps "Star : ty must be of type Star"
      end
-  | Pi (v,s,t) -> 
+  | Pi (v,(s,t)) -> 
      begin 
        match ty with 
        | VStar -> let freshVar = gensym () in 
 		  let check_s = check contexte s VStar steps in 
 		  if res_debug(check_s)
-		  then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar steps
+		  then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (Var(Global(freshVar))) 0) VStar steps
 		  else create_report false (contexte_to_string contexte) steps "Pi : S is not of type Star"
        | _ -> create_report false (contexte_to_string contexte) steps "Pi : ty must be of type Star"
      end 
-  |Sig(v,s,t) -> 
+  |Sig(v,(s,t)) -> 
     begin 
       match ty with 
       | VStar -> let freshVar = gensym () in 
 		 if res_debug(check contexte s VStar steps)
-		 then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (FVar(Global(freshVar))) 0) VStar steps
+		 then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (Var(Global(freshVar))) 0) VStar steps
 		 else create_report false (contexte_to_string contexte) steps "Sig : A is not of type Star"
       | _ -> create_report false (contexte_to_string contexte) steps "Sig : ty must be of type Star"
     end 
@@ -1204,7 +783,7 @@ test le retour de la synthèse *)
   | Pair(x,y) -> 
      begin
        match ty with 
-       | VSig(a,b) -> 
+       | VSig(n,(a,b)) -> 
 	  let check_x = check contexte x a steps in
 	  let check_y = check (*pas sur a 100% de ne rien mettre dans le contexte ici à réfléchir*)
 			  contexte y (b (big_step_eval_inTm x [])) steps in 
@@ -1246,9 +825,6 @@ test le retour de la synthèse *)
 				 else create_report false (contexte_to_string contexte) steps "DCons : xs must be of type (VVec alpha n)"
        | _ -> create_report false (contexte_to_string contexte) steps "DCons : ty must be a VVec"
      end
-  (*=check_what *)
-  | What(a) -> create_report true (contexte_to_string contexte) steps ("(contexte " ^ (contexte_to_string contexte) ^ ")(type " ^ (pretty_print_inTm inT []) ^ ")")
-  (*=End *)
   | Id(gA,a,b) -> let check_gA = check contexte gA VStar steps in 		  
 		  let eval_gA = big_step_eval_inTm gA [] in 
 		  let check_a = check contexte a eval_gA steps in 
@@ -1266,17 +842,10 @@ test le retour de la synthèse *)
 		      else create_report false (contexte_to_string contexte) steps "Id : a must be of type gA"
 		    end  
 		  else create_report false (contexte_to_string contexte) steps "Id : gA must be of type Star"
-  | Refl(a) -> 
+  | Refl -> 
      begin
        match ty with 
-       | VId(gA,ta,ba) -> let quote_ta = value_to_inTm 0 ta in 
-			  let quote_ba = value_to_inTm 0 ba in
-			  if equal_inTm a quote_ta && equal_inTm a quote_ba
-			  then
-			    begin 
-			      check contexte a gA steps
-			    end 
-			  else create_report false (contexte_to_string contexte) steps "refl : a and ta must be equal"	       
+       | VId(gA,ta,ba) -> create_report true (contexte_to_string contexte) steps "NO"	       
        | _ -> create_report false (contexte_to_string contexte) steps "refl : ty must be of type Id"
      end
   | Liste(alpha) -> 
@@ -1309,20 +878,21 @@ test le retour de la synthèse *)
 				else create_report false (contexte_to_string contexte) steps "Cons : a is not of type alpha"
        | _ -> create_report false (contexte_to_string contexte) steps "Cons : ty must be VListe(alpha)"
      end 
-(*=synth_var *) 
 and synth contexte exT steps =
   match exT with 
-  | Hole_exTm x -> create_retSynth (create_report false (contexte_to_string contexte) steps "IT'S A HOLE") VStar
-  | BVar x -> create_retSynth (create_report false (contexte_to_string contexte) steps "BVar : not possible during type checking") VStar
-  | FVar x -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
-(*=End *)
-  | Etiquette x -> create_retSynth (create_report false (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") VStar
+  | Var(Bound x) -> 
+     create_retSynth (create_report false (contexte_to_string contexte) steps "Var(Bound x) : not possible during type checking") VStar
+  | Var(Quote i) -> 
+     create_retSynth (create_report false (contexte_to_string contexte) steps "Var(quote i) : not possible during type checking") VStar
+  | Var(x) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
+  | Label(name,t) -> 
+     create_retSynth (create_report true (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") (big_step_eval_inTm t [])
   | P0(x) -> let synth_x = synth contexte x steps in 
 	     if res_debug_synth synth_x
 	     then
 	       begin
 		 match ret_debug_synth synth_x with 
-		 | VSig(a,b) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") a
+		 | VSig(n,(a,b)) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") a
 		 | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : has to be applied to a pair") VStar
 	       end 
 	     else create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : synth of elem don't work") VStar
@@ -1331,11 +901,10 @@ and synth contexte exT steps =
 	     then
 	       begin
 		 match ret_debug_synth synth_x with 
-		 | VSig(a,b) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (b (big_step_eval_exTm (P0(x)) []))
+		 | VSig(n,(a,b)) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (b (big_step_eval_exTm (P0(x)) []))
 		 | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : has to be applied to a pair") VStar
 	       end 
 	     else create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : synth of elem don't work") VStar
-  (*=synth_ann *) 
   | Ann(x,t) -> let ret = check contexte t VStar (pretty_print_exTm exT [] ^ ";"^ steps) in 
 		let eval_t = big_step_eval_inTm t [] in
 		if res_debug(ret)
@@ -1354,7 +923,7 @@ and synth contexte exT steps =
      then
      begin
        match ret_debug_synth synth_f with 
-       | VPi(name,s_pi,fu) -> if res_debug(check contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
+       | VPi(name,(s_pi,fu)) -> if res_debug(check contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
 		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (fu (big_step_eval_inTm s [])) 
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : s is not of type S") VStar
        | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : f is not of type Pi") VStar
@@ -1366,7 +935,7 @@ and synth contexte exT steps =
 		     let type_p = read "(pi x N *)" in 		     
  		     let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in    
 		     let check_n = check contexte n (big_step_eval_inTm (read "N") []) (pretty_print_exTm exT [] ^ ";") in
-		     let type_f = (Pi(Global("n"),Nat,Pi(Global("NO"),(Inv(Appl(Ann(p,type_p),Inv(BVar 0)))),(Inv(Appl(Ann(p,type_p),Succ(Inv(BVar 1)))))))) in 
+		     let type_f = (Pi("n",(Nat,Pi("NO",((Inv(Appl(Ann(p,type_p),Inv(Var(Bound 0))))),(Inv(Appl(Ann(p,type_p),Succ(Inv(Var(Bound 1))))))))))) in 
 		     let check_f = check contexte f (big_step_eval_inTm type_f [])  (pretty_print_exTm exT [] ^ ";") in
 		     let check_a = check contexte a (vapp(big_p,VZero)) (pretty_print_exTm exT [] ^ ";") in
 		     let steps_iter = "(<= " ^ pretty_print_inTm n []^ "((" ^ pretty_print_inTm type_f [] ^ ") (-> " ^ pretty_print_inTm f []
@@ -1417,17 +986,17 @@ and synth contexte exT steps =
      else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : p is not of type (-> B *)") VStar
      (* le check de f est nul parceque j'utilise pas les boundvar qui sont binde par les premier pi, A CHANGER *)
   | DFold(alpha,p,n,xs,f,a) -> let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in
-			       let type_p = (Pi(Global"n",Nat,(Pi(Global"xs",Vec(alpha,Inv(BVar 0)),Star)))) in 
+			       let type_p = (Pi("n",(Nat,(Pi("xs",(Vec(alpha,Inv(Var (Bound 0))),Star)))))) in 
 			       let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
 			       let check_n = check contexte n VNat (pretty_print_exTm exT [] ^ ";") in			       
  			       let check_xs = check contexte xs (big_step_eval_inTm (Vec(alpha,n)) [])  (pretty_print_exTm exT [] ^ ";") in 
   			       let check_f = check contexte f 
 						   (big_step_eval_inTm 
-						      (Pi(Global"n",Nat,
-							  Pi(Global"xs",Vec(alpha,Inv(BVar 0)),
-							     Pi(Global"a",alpha,
-								Pi(Global"NO",Inv(Appl(Appl(Ann(p,type_p),n),xs)),
-								   Inv(Appl(Appl(Ann(p,type_p),Succ(n)),DCons(a,xs)))))))) []) 
+						      (Pi("n",(Nat,
+							  Pi("xs",(Vec(alpha,Inv(Var(Bound 0))),
+							     Pi("a",(alpha,
+								Pi("NO",(Inv(Appl(Appl(Ann(p,type_p),n),xs)),
+								   Inv(Appl(Appl(Ann(p,type_p),Succ(n)),DCons(a,xs)))))))))))) [])
 						   (pretty_print_exTm exT [] ^ ";") in 
 			       let check_a = check contexte a (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),Zero),DNil(alpha)))) [])
 						   (pretty_print_exTm exT [] ^ ";") in 
@@ -1460,11 +1029,11 @@ and synth contexte exT steps =
 				 end 				   
 			       else create_retSynth (create_report false (contexte_to_string contexte) steps "DFold alpha must be of type star") VStar 
 			 
-  | Trans(gA,p,a,b,q,x) -> let check_gA = check contexte gA VStar (pretty_print_exTm exT [] ^ ";") in
+  | Transp(gA,p,a,b,q,x) -> let check_gA = check contexte gA VStar (pretty_print_exTm exT [] ^ ";") in
 			   let check_a = check contexte a (big_step_eval_inTm gA []) (pretty_print_exTm exT [] ^ ";") in
 			   let check_b = check contexte b (big_step_eval_inTm gA []) (pretty_print_exTm exT [] ^ ";") in
 			   let check_q = check contexte q (big_step_eval_inTm (Id(gA,a,b)) [])(pretty_print_exTm exT [] ^ ";") in
-			   let type_p = Pi(Global"a",gA,Pi(Global"b",gA,Pi(Global"NO",Id(gA,Inv(BVar 1),Inv(BVar 0)),Star))) in 
+			   let type_p = Pi("a",(gA,Pi("b",(gA,Pi("NO",(Id(gA,Inv(Var(Bound 1)),Inv(Var(Bound 0))),Star)))))) in 
 			   let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
 			   let check_x = check contexte x (big_step_eval_inTm (Inv(Appl(Appl(Appl(Ann(p,type_p),a),b),q))) []) (pretty_print_exTm exT [] ^ ";") in
 			   if res_debug check_gA 
@@ -1498,14 +1067,14 @@ and synth contexte exT steps =
   | Fold(p,alpha,xs,f,a) -> 
      let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
      let () = Printf.printf "Check alpha = %s \n" (string_of_bool(res_debug check_alpha)) in
-     let type_p = Pi(Global"xs",Liste(alpha),Star) in 
+     let type_p = Pi("xs",(Liste(alpha),Star)) in 
      let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
      let () = Printf.printf "Check p = %s \n" (string_of_bool(res_debug check_p)) in
      let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
-     let type_f = (Pi(Global"a",alpha,
-		      Pi(Global"xs",Liste(alpha),			 
-			 Pi(Global"NO",Inv(Appl(Ann(p,type_p),Liste(alpha))),
-			    Inv(Appl(Ann(p,type_p),Cons(Inv(BVar 2),Inv(BVar 1)))))))) in		    
+     let type_f = (Pi("a",(alpha,
+		      Pi("xs",(Liste(alpha),			 
+			 Pi("NO",(Inv(Appl(Ann(p,type_p),Liste(alpha))),
+			    Inv(Appl(Ann(p,type_p),Cons(Inv(Var(Bound 2)),Inv(Var(Bound 1)))))))))))) in		    
      let check_f = check contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
      let () = Printf.printf "Check f = %s \n" (string_of_bool(res_debug check_f)) in
      let check_a = check contexte a (big_step_eval_inTm (Inv(Appl(Ann(p,type_p),Nil))) []) (pretty_print_exTm exT [] ^ ";") in 

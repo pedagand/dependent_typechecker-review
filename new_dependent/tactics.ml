@@ -206,7 +206,7 @@ let rec intros (Loc(t,p),d) =
     | (Pi(x,s,tp)) -> intros (intro_auto (Loc(t,p),d)) 
     | _ -> (Loc(t,p),d)
   end
-(* LOL *)
+
 
 let procedure_start_definition typ_not_parsed (Loc(t,p),d) = 
   let d = set_def_userDef d typ_not_parsed in
