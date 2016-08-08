@@ -1,3 +1,6 @@
+Au retour de la pause il faut que je fasse le fichier .mli de lambda
+
+
 implémenter iterface de zipper et interface de tactic
 
 Méta tactique de débug

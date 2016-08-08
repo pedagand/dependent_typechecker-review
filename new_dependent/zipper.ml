@@ -194,7 +194,7 @@ let rec go_down_until_pi (Loc(t,p),d) =
   | Item(Definition(typ,terme,save)) -> go_down_until_pi(go_down(go_right(Loc(t,p),d)))
   | Item(Intermediaire(n,typ,terme,save)) -> begin 
       match typ with 
-      | Pi(_,_,_) -> go_down_until_pi(go_down(go_right(Loc(t,p),d)))
+      | Pi(_,(_,_)) -> go_down_until_pi(go_down(go_right(Loc(t,p),d)))
       | _ -> (Loc(t,p),d)
     end
   | _ -> failwith "supposed not to append" 
@@ -323,12 +323,12 @@ let replace_item (Loc(t,p),d) tsub =
   | Item(_) -> (Loc(tsub,p),d)
   | _ -> failwith "replac_item : you are supposed to change an item" 
 
-let complete_focus_terme (Loc(t,p),d) tsub num = 
+let complete_focus_terme (Loc(t,p),d) tsub name_hole = 
   match t with 
-  | Item(Intermediaire(n,typ,terme,save)) -> (Loc(Item(Intermediaire(n,typ,(replace_hole_inTm terme tsub num),save)),p),d)
-  | Item(Definition(name,Complete(typ,terme),save)) -> (Loc(Item(Definition(name,Complete(typ,(replace_hole_inTm terme tsub num)),save)),p),d)
+  | Item(Intermediaire(n,typ,terme,save)) -> (Loc(Item(Intermediaire(n,typ,(replace_hole terme name_hole tsub),save)),p),d)
+  | Item(Definition(name,Complete(typ,terme),save)) -> (Loc(Item(Definition(name,Complete(typ,(replace_hole terme name_hole tsub)),save)),p),d)
   | Item(Definition(name,Incomplete(typ,terme),save)) -> 
-     (Loc(Item(Definition(name,Incomplete(typ,(replace_hole_inTm terme tsub num)),save)),p),d)
+     (Loc(Item(Definition(name,Incomplete(typ,(replace_hole terme name_hole tsub)),save)),p),d)
   | _ -> failwith "complete_focus_terme : you can't get the type of something else than an item"
 
 let get_type_focus debug_string (Loc(t,p),d) = 
@@ -426,13 +426,14 @@ let verif_and_push_up_item (Loc(t,p)) =
 
 let rec verif_and_push_up_item (Loc(t,p),d) =     
   let terme_to_put = get_terme_item (Loc(t,p),d) in   
+  let typ_terme_to_put = get_typ_item (Loc(t,p),d) in
   if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p),d)
   then     
     begin 
     let trou = get_num_Inter (Loc(t,p),d) in 
     let arbre = proof_up (Loc(t,p),d) in 
     let terme_to_fullfill = get_terme_item arbre in 
-    let terme = replace_hole_inTm terme_to_fullfill terme_to_put trou in 
+    let terme = replace_hole terme_to_fullfill trou terme_to_put in 
     let arbre = 
       begin 
 	match arbre with 

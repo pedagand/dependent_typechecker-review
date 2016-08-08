@@ -2,58 +2,56 @@ open OUnit2
 open Lambda
 
 
-let test1x = (Pi(Global "A",Star,Pi(Global "B",(Pi (Global "x", Inv(BVar 0),Star)),Pi(Global "C",(Pi (Global "x", Inv(BVar 1),Star)), (Pi (Global "1",(Pi (Global "2", (Pi(Global "a",Star,Pi(Global "b",(Inv(Appl(BVar 2 ,Inv(BVar 1)))),Inv(Appl(BVar 2, Inv(BVar 1)))))),(Pi (Global "a",Inv(BVar 3),Inv(Appl(BVar 3,Inv(BVar 0))))))),(Pi (Global "a",Inv(BVar 3),Inv(Appl(BVar 2,Inv(BVar 0)))))))))))
+(* let test1x = (Pi("A",(Star,(Pi "B",(Pi "x", (Inv(Var(Bound 0)),Star)),Pi("C",(Pi ("x", (Inv(Var(Bound 1)),Star)), (Pi "1",(Pi "2", (Pi("a",(Star,Pi("b",(Inv(Appl(Var(Bound 2) ,Inv(Var(Bound 1))))),Inv(Appl(Var(Bound 2), Inv(Var(Bound 1))))))),(Pi ("a",(Inv(Var(Bound 3)),Inv(Appl(Var(Bound 3),Inv(Var(Bound 0)))))))),(Pi ("a",(Inv(Var(Bound 3)),Inv(Appl(Var(Bound 2),Inv(Var(Bound 0))))))))))))))) *)
 
 let test1y = "(pi A * (pi B (pi x A *) (pi C (pi x A *) (pi 1 (pi 2 (pi a * (pi b (B a) (C a))) (pi a A (B a))) (pi a A (C a))))))"
 
 let inputs
-    = [("(lambda x x)", Abs(Global("x"),Inv(BVar 0)));
-       ("(lambda x y)", Abs(Global("x"),Inv(FVar(Global("y")))));
+    = [("(lambda x x)", Abs("x",(Inv(Var(Bound 0)))));
+       ("(lambda x y)", Abs("x",Inv(Var(Global("y")))));
        ("(x y z)", 
-	Inv(Appl(Appl(FVar (Global"x"), Inv(FVar (Global "y"))), Inv(FVar (Global "z")))));
-       ("(lambda (x y z) (x (y z)))", Abs((Global "x"),Abs((Global "y"),Abs((Global "z"),Inv(Appl(BVar 2, Inv(Appl(BVar 1, Inv(BVar 0)))))))));
-       ("(lambda (x y z) (x y z))", Abs(Global "x",Abs(Global "y",Abs(Global "z",Inv(Appl (Appl (BVar 2, Inv(BVar 1)), Inv(BVar 0)))))));
-       ("(: (lambda x x) (-> N N))",Inv(Ann(Abs(Global("x"),Inv(BVar 0)),Pi(Global "NO",Nat,Nat))));
-       ("((: (lambda x x) *) y)", Inv(Appl(Ann(Abs(Global("x"),Inv(BVar 0)),Star),Inv(FVar (Global "y")))));
-       ("((: (lambda x x) (-> N N)) y)",Inv(Appl(Ann(Abs(Global "x",Inv(BVar 0)),Pi(Global "NO",Nat,Nat)),Inv(FVar (Global "y")))));
-       ("(pi x * *)",Pi(Global "x",Star,Star));
-       ("(pi x (pi y * *) *)", Pi(Global "x",Pi(Global "y",Star,Star),Star));
-       ("(pi (x y z) * (lambda w w))",Pi(Global "x",Star,Pi(Global "y",Star,Pi(Global "z",Star,Abs(Global "w",Inv(BVar 0))))));
-       ("(pi A * (pi B (pi x A *) *))",Pi(Global "A",Star,Pi(Global "B",(Pi (Global "x" ,Inv(BVar 0), Star)),Star)));
-       ("(pi x * (pi y N (vec x (succ zero))))",Pi(Global"x",Star,Pi(Global"y",Nat,Vec(Inv(BVar 1),Succ(Zero)))));
-       ("(pi x * (pi y N (vec x y)))",Pi(Global"x",Star,Pi(Global"y",Nat,Vec(Inv(BVar 1),Inv(BVar 0)))));
-       ("(-> * *)",Pi(Global "NO",Star,Star));
+	Inv(Appl(Appl(Var(Global"x"), Inv(Var (Global "y"))), Inv(Var (Global "z")))));
+       ("(lambda (x y z) (x (y z)))", Abs("x",(Abs("y",(Abs("z",(Inv(Appl(Var(Bound 2), Inv(Appl(Var(Bound 1), Inv(Var(Bound 0)))))))))))));
+       ("(lambda (x y z) (x y z))", Abs("x",Abs("y",Abs("z",Inv(Appl (Appl (Var(Bound 2), Inv(Var(Bound 1))), Inv(Var(Bound 0))))))));
+       ("(: (lambda x x) (-> N N))",Inv(Ann(Abs("x",Inv(Var(Bound 0))),Pi("NO",(Nat,Nat)))));
+       ("((: (lambda x x) *) y)", Inv(Appl(Ann(Abs("x",Inv(Var(Bound 0))),Star),Inv(Var (Global "y")))));
+       ("((: (lambda x x) (-> N N)) y)",Inv(Appl(Ann(Abs("x",Inv(Var(Bound 0))),Pi("NO",(Nat,Nat))),Inv(Var (Global "y")))));
+       ("(pi x * *)",Pi("x",(Star,Star)));
+       ("(pi x (pi y * *) *)", Pi("x",(Pi("y",(Star,Star)),Star)));
+       ("(pi (x y z) * (lambda w w))",Pi("x",(Star,Pi("y",(Star,Pi("z",(Star,Abs("w",Inv(Var(Bound 0))))))))));
+       ("(pi A * (pi B (pi x A *) *))",Pi("A",(Star,Pi("B",(Pi ("x" ,(Inv(Var(Bound 0)), Star)),Star)))));
+       ("(pi x * (pi y N (vec x (succ zero))))",Pi("x",(Star,Pi("y",(Nat,Vec(Inv(Var(Bound 1)),Succ(Zero)))))));
+       ("(pi x * (pi y N (vec x y)))",Pi("x",(Star,Pi("y",(Nat,Vec(Inv(Var(Bound 1)),Inv(Var(Bound 0))))))));
+       ("(-> * *)",Pi("NO",(Star,Star)));
        ("(succ (succ zero))",Succ(Succ(Zero)));
        ("(: (succ zero) N)",Inv(Ann(Succ(Zero),Nat)));
        ("(iter N N N N)",Inv(Iter(Nat,Nat,Nat,Nat)));
-       ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (succ x))) zero)",Inv(Iter(Abs(Global "x",Nat),Succ(Succ Zero),Abs(Global "n",Abs(Global "x",Succ (Inv (BVar 0)))),Zero)));
+       ("(iter (lambda x N) (succ (succ zero)) (lambda n (lambda x (succ x))) zero)",Inv(Iter(Abs("x",Nat),Succ(Succ Zero),Abs("n",Abs("x",Succ (Inv (Var(Bound 0))))),Zero)));
        ("(pi P (-> A *) (-> (P a) (P b)))", 
-	Pi(Global "P",Pi(Global "NO",Inv(FVar (Global "A")),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(FVar (Global"a")))),Inv(Appl(BVar 1,Inv(FVar (Global"b")))))));
-       ("(sig x N N)",Sig(Global "x",Nat,Nat));
-       ("(sig x N x)",Sig(Global "x",Nat,Inv(BVar 0)));
-       ("(p0 (: (true , false) (sig n B B)))",Inv(P0(Ann(Pair(True,False),Sig(Global"n",Bool,Bool)))));
+	Pi("P",((Pi("NO",(Inv(Var(Global "A")),Star))),Pi("NO",(Inv(Appl(Var(Bound 0),Inv(Var (Global"a")))),Inv(Appl(Var(Bound 1),Inv(Var (Global"b")))))))));
+       ("(sig x N N)",Sig("x",(Nat,Nat)));
+       ("(sig x N x)",Sig("x",(Nat,Inv(Var(Bound 0)))));
+       ("(p0 (: (true , false) (sig n B B)))",Inv(P0(Ann(Pair(True,False),Sig("n",(Bool,Bool))))));
        ("(lambda A (lambda a (lambda b (pi P (-> A *) (-> (P a) (P b))))))",
-	Abs(Global "A",Abs(Global "a",Abs(Global "b",(Pi(Global "P",Pi(Global "NO",Inv(BVar 2),Star),Pi(Global "NO",Inv(Appl(BVar 0,Inv(BVar 2))),Inv(Appl(BVar 1,Inv(BVar 2))))))))));
-       ("(a , b)",Pair(Inv(FVar (Global "a")),Inv(FVar (Global"b"))));
-       ("((p1 x2) , (succ (p1 x2)))",Pair(Inv(P1(FVar(Global"x2"))),Succ(Inv(P1(FVar(Global"x2"))))));
+	Abs("A",Abs("a",Abs("b",(Pi("P",((Pi("NO",(Inv(Var(Bound 2)),Star))),Pi("NO",(Inv(Appl(Var(Bound 0),Inv(Var(Bound 2)))),Inv(Appl(Var(Bound 1),Inv(Var(Bound 2)))))))))))));
+       ("(a , b)",Pair(Inv(Var (Global "a")),Inv(Var (Global"b"))));
+       ("((p1 x2) , (succ (p1 x2)))",Pair(Inv(P1(Var(Global"x2"))),Succ(Inv(P1(Var(Global"x2"))))));
        ("(iter (lambda x x) zero (lambda x (succ x)) zero)",
-	Inv(Iter(Abs(Global "x",Inv(BVar 0)),Zero,Abs(Global "x",Succ(Inv(BVar 0))),Zero)));
+	Inv(Iter(Abs("x",Inv(Var(Bound 0))),Zero,Abs("x",Succ(Inv(Var(Bound 0)))),Zero)));
        ("B",Bool);
        ("true",True);
        ("false",False);
-       ("(ifte (lambda x B) true true false)",Inv(Ifte(Abs(Global"x",Bool),True,True,False))); 
+       ("(ifte (lambda x B) true true false)",Inv(Ifte(Abs("x",Bool),True,True,False))); 
        ("(liste N)",Liste(Nat));
        ("nil", Nil);
        ("(cons zero nil)",(Cons(Zero,Nil)));
        ("(vec N (succ zero))",Vec(Nat,Succ(Zero)));
        ("(dnil N)",DNil(Nat));
        ("(dcons zero (dnil N))",DCons(Zero,DNil(Nat)));
-       ("(dfold alpha P m xs f a)",Inv(DFold(Inv(FVar(Global "alpha")),Inv(FVar(Global "P")),Inv(FVar(Global "m")),Inv(FVar(Global "xs")),Inv(FVar(Global "f")),Inv(FVar(Global "a")))));
-       ("(? lol)",What("lol"));      
-       ("(lambda x (? lol))",Abs(Global("x"),What("lol")));
+       ("(dfold alpha P m xs f a)",Inv(DFold(Inv(Var(Global "alpha")),Inv(Var(Global "P")),Inv(Var(Global "m")),Inv(Var(Global "xs")),Inv(Var(Global "f")),Inv(Var(Global "a")))));
        ("(id N zero (succ zero))", Id(Nat,Zero,Succ(Zero)));
-       ("(refl zero)",Refl(Zero));
-       ("(trans N N N N N N)",Inv(Trans(Nat,Nat,Nat,Nat,Nat,Nat)));
+       ("refl",Refl);
+       ("(trans N N N N N N)",Inv(Transp(Nat,Nat,Nat,Nat,Nat,Nat)));
 (*        ("(pi A * (pi a A (pi b A (-> (id A a b) (id A b a)))))", Nat);
        ("(lambda (A a b q) (trans A (lambda (a b q) (id A b a)) a b q (lambda a (refl a))))", Nat); *)
        ("(+ (succ (succ zero)) (succ (succ zero)))", Inv(Appl(Appl(Ann((read "(lambda n_plus (lambda a_plus (iter (lambda x_plus N) n_plus (lambda ni_plus (lambda x_plus (succ x_plus))) a_plus)))"),(read "(-> N (-> N N))")),(Succ(Succ Zero))),(Succ(Succ Zero)))));
@@ -62,7 +60,7 @@ let inputs
        ("(number 5)",(Succ(Succ(Succ(Succ(Succ(Zero)))))));
        ("(number 0)",Zero);
        ("(number 7)",(Succ(Succ(Succ(Succ(Succ(Succ(Succ(Zero)))))))));
-       ("(lambda x (lambda y (lambda x x)))",(Abs(Global"x",Abs(Global"y",Abs(Global"x",Inv(BVar 0))))))
+       ("(lambda x (lambda y (lambda x x)))",(Abs("x",Abs("y",Abs("x",Inv(Var(Bound 0)))))))
       (* ( (pretty_print_inTm test1x []),(test1x)); *)
       (* (test1y),(test1x) ;*)]
 	

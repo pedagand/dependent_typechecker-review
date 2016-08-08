@@ -15,6 +15,7 @@ type name =
   | Global of ident
   | Bound of int 
   | Quote of int
+  | Hole of int
 
 
 type 'a binder = ident * 'a
@@ -298,54 +299,60 @@ let rec def_is_in_the_liste_exTm env name_to_find =
      if name = name_to_find then Ann(terme,typ) else def_is_in_the_liste_exTm suite name_to_find
 
 
-
-let rec is_var_in_inTm terme var = 
+(* cette fonction retourne aussi les holes *)
+let rec freevars_inTm terme l = 
   match terme with 
-  | Inv x -> is_var_in_exTm x var
-  | Abs(x,y) -> is_var_in_inTm y var 
-  | Star -> false
-  | Pi(v,(x,y)) -> is_var_in_inTm x var || is_var_in_inTm y var
+  | Inv x -> freevars_exTm x l
+  | Abs(x,y) -> freevars_inTm y l 
+  | Star -> l
+  | Pi(v,(x,y)) -> freevars_inTm x l @ freevars_inTm y l
   (*=End *)
-  | Sig(x,(a,b)) -> is_var_in_inTm a var || is_var_in_inTm b var
-  | Zero -> false
-  | Succ n -> is_var_in_inTm n var
-  | Nat -> false
-  | Bool -> false
-  | True -> false
-  | False -> false
-  | Pair(x,y) -> is_var_in_inTm x var || is_var_in_inTm y var
-  | Liste(alpha) -> is_var_in_inTm alpha var
-  | Nil -> false
-  | Cons(a,xs) -> is_var_in_inTm a var || is_var_in_inTm xs var
-  | Vec(alpha,n) -> is_var_in_inTm alpha var || is_var_in_inTm n var
-  | DNil(alpha) -> is_var_in_inTm alpha var
-  | DCons(a,xs) -> is_var_in_inTm a var || is_var_in_inTm a var
-  | Id(gA,a,b) -> is_var_in_inTm gA var || is_var_in_inTm a var || is_var_in_inTm b var
-  | Refl -> false
-and is_var_in_exTm terme var = 
+  | Sig(x,(a,b)) -> freevars_inTm a l @ freevars_inTm b l
+  | Zero -> l
+  | Succ n -> freevars_inTm n l
+  | Nat -> l
+  | Bool -> l
+  | True -> l
+  | False -> l
+  | Pair(x,y) -> freevars_inTm x l @ freevars_inTm y l
+  | Liste(alpha) -> freevars_inTm alpha l
+  | Nil -> l
+  | Cons(a,xs) -> freevars_inTm a l @ freevars_inTm xs l
+  | Vec(alpha,n) -> freevars_inTm alpha l @ freevars_inTm n l
+  | DNil(alpha) -> freevars_inTm alpha l
+  | DCons(a,xs) -> freevars_inTm a l @ freevars_inTm a l
+  | Id(gA,a,b) -> freevars_inTm gA l @ freevars_inTm a l @ freevars_inTm b l
+  | Refl -> l
+and freevars_exTm terme l = 
   match terme with 
-  | Label(n,t) -> false (* je considère qu'il ne peut pas y avoir de trous dans un label *)
-  | Var x -> x = var 
-  | Appl(x,y) -> is_var_in_exTm x var || is_var_in_inTm y var
-  | Ann(x,y) -> is_var_in_inTm x var || is_var_in_inTm y var
-  | Iter(p,n,f,a) -> is_var_in_inTm p var || is_var_in_inTm n var || is_var_in_inTm f var || is_var_in_inTm a var
-  | Ifte(p,c,tHen,eLse) -> is_var_in_inTm p var || is_var_in_inTm c var || is_var_in_inTm tHen var || is_var_in_inTm eLse var
-  | P0(x) -> is_var_in_exTm x var
-  | P1(x) -> is_var_in_exTm x var
-  | DFold(alpha,p,n,xs,f,a) -> is_var_in_inTm alpha var || is_var_in_inTm p var || is_var_in_inTm n var ||
-				 is_var_in_inTm xs var || is_var_in_inTm f var || is_var_in_inTm a var
-  | Transp(gA,p,a,b,q,x) -> is_var_in_inTm gA var || is_var_in_inTm p var || is_var_in_inTm a var || 
-				 is_var_in_inTm b var || is_var_in_inTm q var || is_var_in_inTm x var
-  | Fold(gA,alpha,xs,f,a) -> is_var_in_inTm gA var || is_var_in_inTm alpha var || is_var_in_inTm xs var || 
-				  is_var_in_inTm f var || is_var_in_inTm a var
+  | Label(n,t) -> l
+  | Var(Global x) -> (Global(x) :: l)
+  | Var(Hole x) -> (Hole(x) :: l)
+  | Var(x) -> l
+  | Appl(x,y) -> freevars_exTm x l @ freevars_inTm y l
+  | Ann(x,y) -> freevars_inTm x l @ freevars_inTm y l
+  | Iter(p,n,f,a) -> freevars_inTm p l @ freevars_inTm n l @ freevars_inTm f l @ freevars_inTm a l
+  | Ifte(p,c,tHen,eLse) -> freevars_inTm p l @ freevars_inTm c l @ freevars_inTm tHen l @ freevars_inTm eLse l
+  | P0(x) -> freevars_exTm x l
+  | P1(x) -> freevars_exTm x l
+  | DFold(alpha,p,n,xs,f,a) -> freevars_inTm alpha l @ freevars_inTm p l @ freevars_inTm n l @
+				 freevars_inTm xs l @ freevars_inTm f l @ freevars_inTm a l
+  | Transp(gA,p,a,b,q,x) -> freevars_inTm gA l @ freevars_inTm p l @ freevars_inTm a l @ 
+				 freevars_inTm b l @ freevars_inTm q l @ freevars_inTm x l
+  | Fold(gA,alpha,xs,f,a) -> freevars_inTm gA l @ freevars_inTm alpha l @ freevars_inTm xs l @ 
+				  freevars_inTm f l @ freevars_inTm a l
 
 
 (* check_if_no_hole_inTm : ident liste -> inTm -> bool *)
-let rec check_if_no_elem_inTm l terme = (* TODO :: faire cette fonction mais avec une liste de var *)
+let rec check_if_no_hole_inTm terme = 
+  let l = freevars_inTm terme [] in 
+  hole_in_liste l
+and hole_in_liste l = 
   match l with 
   | [] -> true
-  | elem :: suite -> not(is_var_in_inTm terme elem) && check_if_no_elem_inTm suite terme
-
+  | Hole(x) :: suite -> false 
+  | _ :: suite -> hole_in_liste suite
+  
 
 
  
@@ -395,16 +402,18 @@ and pretty_print_exTm t l =
   | _ -> failwith "TODO refléchir et faire le parsing ainsi que le pretty_print d'un label"
 
 (* TODO :: faire une fonction qui appelle celle ci avec les bons paramètres CF tableau *)
-let rec subst_inTm (t : inTm binder) tsub = 
+let rec subst_inTm t tsub = 
   match t with 
-  | (name,terme) -> substitution_inTm terme tsub 0
+  | Abs(name,terme) -> substitution_inTm terme tsub 0
+  | Pi(name,(s,t)) -> substitution_inTm t tsub 0
+  | Sig(name,(s,t)) -> substitution_inTm t tsub 0
+  | _ -> failwith "subst_inTm : can't substituate if not an abstraction" 
 and substitution_inTm t tsub var = 
   match t with 
   | Inv x -> Inv(substitution_exTm x tsub var)
   | Abs(x,y) -> Abs(x,(substitution_inTm y tsub (var+1)))
   | Star -> Star
   | Pi(v,(x,y)) -> Pi(v,((substitution_inTm x tsub var),(substitution_inTm y tsub (var+1))))
-  (*=End *)
   | Sig(v,(x,y)) -> Sig(v,((substitution_inTm x tsub var),(substitution_inTm y tsub (var+1))))
   | Zero -> Zero 
   | Succ n -> Succ(substitution_inTm n tsub var)
@@ -450,7 +459,6 @@ and bound_var_inTm t i var =
   | Abs(x,y) -> Abs(x,(bound_var_inTm y (i + 1) var))
   | Star -> Star
   | Pi(v,(x,y)) -> Pi(v,((bound_var_inTm x i var),(bound_var_inTm y (i + 1) var)))
-  (*=End *)
   | Sig(x,(a,b)) -> Sig(x,((bound_var_inTm a i var),(bound_var_inTm b (i + 1) var)))
   | Zero -> Zero 
   | Succ n -> Succ(bound_var_inTm n i var)
@@ -470,12 +478,12 @@ and bound_var_inTm t i var =
 (*=replace_var_exTm *)
 and bound_var_exTm  t i var = 
   match t with 
-  | Var(Global x) -> begin if x = var then Var(Bound(i - 1)) else Var(Global x) end 
+  | Var(Global x) -> begin if x = var then Var(Bound i) else Var(Global x) end 
+  | Var(Hole(x)) -> begin if string_of_int x = var then Var(Bound i) else Var(Hole(x)) end 
   | Var(x) -> Var(x)
   | Label(name,term) -> Label(name,term)
   | Appl(x,y) -> Appl((bound_var_exTm x i var),(bound_var_inTm y i var))
   | Ann(x,y) -> Ann((bound_var_inTm x i var),(bound_var_inTm y i var))
-  (*=End *)
   | Iter(p,n,f,a) -> Iter((bound_var_inTm p i var),(bound_var_inTm n i var),(bound_var_inTm f i var),(bound_var_inTm a i var))
   | Ifte(p,c,tHen,eLse) -> Ifte((bound_var_inTm p i var),(bound_var_inTm c i var),(bound_var_inTm tHen i var),(bound_var_inTm eLse i var))
   | P0(x) -> P0(bound_var_exTm x i var)
@@ -485,8 +493,22 @@ and bound_var_exTm  t i var =
   | Transp(gA,p,a,b,q,x) -> Transp((bound_var_inTm gA i var),(bound_var_inTm p i var),(bound_var_inTm a i var),
 				 (bound_var_inTm b i var),(bound_var_inTm q i var),(bound_var_inTm x i var))
   | Fold(gA,alpha,xs,f,a) -> Fold((bound_var_inTm gA i var),(bound_var_inTm alpha i var),(bound_var_inTm xs i var),(bound_var_inTm f i var),
-			    (bound_var_inTm a i var))
+ 			    (bound_var_inTm a i var))
 
+
+(* Petite macro permettant de changer le nom d'une variable libre *)
+let change_name_var terme name new_name = 
+  let terme = abstract name terme in 
+  subst_inTm terme (Var(Global(new_name)))
+
+
+let gen_hole =
+  let c = ref 0 in
+  fun () -> incr c; "_" ^ string_of_int !c  
+
+let replace_hole terme name new_terme = 
+  let terme = abstract name terme in 
+  subst_inTm terme new_terme
  
 
 
@@ -589,18 +611,16 @@ let boundfree i n =
 let gensym =
   let c = ref 0 in
   fun () -> incr c; "x" ^ string_of_int !c
-(*=value_to_inTm_head *)
+
+
 let rec value_to_inTm i v =
   match v with 
-(*=End *)
   | VLam (name,f) -> value_to_inTm (i+1) (f (vfree(Quote i)))
   | VNeutral n -> Inv(neutral_to_exTm i n)
-(*=value_to_inTm_new *)		     
   | VPi(var,(x,f)) -> 
 		  Pi(var,
 		     ((value_to_inTm i x),
 		     (value_to_inTm (i+1) (f(vfree(Quote i))))))
-(*=End *)
   | VSig(var,(x,f)) -> 
 		   Sig(var,
 		       ((value_to_inTm i x),
@@ -686,9 +706,14 @@ and equal_exTm t1 t2 =
      equal_inTm p1 p2 && equal_inTm alpha1 alpha2 && equal_inTm xs1 xs2 && 
        equal_inTm f1 f2 && equal_inTm a1 a2  
   | _ -> false							 
-															          
 
-     
+
+let rec check_if_no_elem_inTm l terme = (* TODO :: faire cette fonction mais avec une liste de var *)
+  match l with 
+  | [] -> true
+  | elem :: suite -> if equal elem terme then false else check_if_no_elem_inTm suite terme
+
+ 
 let rec contexte_to_string contexte = 
   match contexte with 
   | [] -> "|" 	    
@@ -699,13 +724,18 @@ let rec contexte_to_string contexte =
 
 
      (* TODO :: faire une fonction de type check qui prend deux termes et retourne un booléens *)
-let rec check contexte inT ty steps = 
+(* let check *)
+
+let rec check inT ty = 
+  let ty = big_step_eval_inTm ty [] in 
+  res_debug (check_inTm [] inT ty "")
+and check_inTm contexte inT ty steps = 
   match inT with
   | Abs(x,y) -> 
      begin  
        match ty with 
        | VPi(name,(s,t)) -> let freshVar = gensym () in 
-		     check (((Global freshVar),s)::contexte) (substitution_inTm y (Var(Global(freshVar))) 0) (t (vfree (Global freshVar))) (pretty_print_inTm inT [] ^ ";"^ steps) 
+		     check_inTm (((Global freshVar),s)::contexte) (substitution_inTm y (Var(Global(freshVar))) 0) (t (vfree (Global freshVar))) (pretty_print_inTm inT [] ^ ";"^ steps) 
        | _ -> create_report false (contexte_to_string contexte) steps "Abs type must be a Pi"
      end 
   | Inv(x) -> 
@@ -729,9 +759,9 @@ test le retour de la synthèse *)
      begin 
        match ty with 
        | VStar -> let freshVar = gensym () in 
-		  let check_s = check contexte s VStar steps in 
-		  if res_debug(check_s)
-		  then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (Var(Global(freshVar))) 0) VStar steps
+		  let check_inTm_s = check_inTm contexte s VStar steps in 
+		  if res_debug(check_inTm_s)
+		  then check_inTm (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (Var(Global(freshVar))) 0) VStar steps
 		  else create_report false (contexte_to_string contexte) steps "Pi : S is not of type Star"
        | _ -> create_report false (contexte_to_string contexte) steps "Pi : ty must be of type Star"
      end 
@@ -739,8 +769,8 @@ test le retour de la synthèse *)
     begin 
       match ty with 
       | VStar -> let freshVar = gensym () in 
-		 if res_debug(check contexte s VStar steps)
-		 then check (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (Var(Global(freshVar))) 0) VStar steps
+		 if res_debug(check_inTm contexte s VStar steps)
+		 then check_inTm (((Global freshVar),(big_step_eval_inTm s []))::contexte) (substitution_inTm t (Var(Global(freshVar))) 0) VStar steps
 		 else create_report false (contexte_to_string contexte) steps "Sig : A is not of type Star"
       | _ -> create_report false (contexte_to_string contexte) steps "Sig : ty must be of type Star"
     end 
@@ -759,7 +789,7 @@ test le retour de la synthèse *)
   | Succ(x) -> 
      begin 
        match ty with 
-	 | VNat -> check contexte x VNat (pretty_print_inTm inT [] ^ ";"^ steps)
+	 | VNat -> check_inTm contexte x VNat (pretty_print_inTm inT [] ^ ";"^ steps)
 	 | _ -> create_report false (contexte_to_string contexte) steps "Succ : ty must be VNat"
      end 
   | Bool -> 
@@ -784,13 +814,13 @@ test le retour de la synthèse *)
      begin
        match ty with 
        | VSig(n,(a,b)) -> 
-	  let check_x = check contexte x a steps in
-	  let check_y = check (*pas sur a 100% de ne rien mettre dans le contexte ici à réfléchir*)
+	  let check_inTm_x = check_inTm contexte x a steps in
+	  let check_inTm_y = check_inTm (*pas sur a 100% de ne rien mettre dans le contexte ici à réfléchir*)
 			  contexte y (b (big_step_eval_inTm x [])) steps in 
-	  if res_debug(check_x) 
+	  if res_debug(check_inTm_x) 
 	  then
 	    begin 
-	      if res_debug(check_y) 
+	      if res_debug(check_inTm_y) 
 	      then create_report true (contexte_to_string contexte) steps "No"
 	      else create_report false (contexte_to_string contexte) steps "Pair: element y of the pair as the wrong type"
 	    end 
@@ -801,9 +831,9 @@ test le retour de la synthèse *)
   | Vec(alpha,n) -> 
      begin        
        match ty with 
-       | VStar -> let check_alpha = check contexte alpha VStar steps in
-		  if res_debug(check_alpha) 
-		  then check contexte n VNat steps
+       | VStar -> let check_inTm_alpha = check_inTm contexte alpha VStar steps in
+		  if res_debug(check_inTm_alpha) 
+		  then check_inTm contexte n VNat steps
 		  else create_report false (contexte_to_string contexte) steps "Vec : alpha must be of type star"
        | _ -> create_report false (contexte_to_string contexte) steps "Vec : ty must be VStar" 
      end
@@ -819,23 +849,23 @@ test le retour de la synthèse *)
   | DCons(a,xs) -> 
      begin 
        match ty with 
-       | VVec(alpha,VSucc(n)) -> let check_xs = check contexte xs (VVec(alpha,n)) steps in 
-				 if res_debug(check_xs)
-				 then check contexte a alpha steps
+       | VVec(alpha,VSucc(n)) -> let check_inTm_xs = check_inTm contexte xs (VVec(alpha,n)) steps in 
+				 if res_debug(check_inTm_xs)
+				 then check_inTm contexte a alpha steps
 				 else create_report false (contexte_to_string contexte) steps "DCons : xs must be of type (VVec alpha n)"
        | _ -> create_report false (contexte_to_string contexte) steps "DCons : ty must be a VVec"
      end
-  | Id(gA,a,b) -> let check_gA = check contexte gA VStar steps in 		  
+  | Id(gA,a,b) -> let check_inTm_gA = check_inTm contexte gA VStar steps in 		  
 		  let eval_gA = big_step_eval_inTm gA [] in 
-		  let check_a = check contexte a eval_gA steps in 
-		  let check_b = check contexte b eval_gA steps in 
-		  if res_debug(check_gA) 
+		  let check_inTm_a = check_inTm contexte a eval_gA steps in 
+		  let check_inTm_b = check_inTm contexte b eval_gA steps in 
+		  if res_debug(check_inTm_gA) 
 		  then 
 		    begin 
-		      if res_debug(check_a) 
+		      if res_debug(check_inTm_a) 
 		      then 
 			begin 
-			  if res_debug(check_b) 
+			  if res_debug(check_inTm_b) 
 			  then create_report true (contexte_to_string contexte) steps "NO"
 			  else create_report false (contexte_to_string contexte) steps "Id : b must be of type gA"
 			end 
@@ -851,8 +881,8 @@ test le retour de la synthèse *)
   | Liste(alpha) -> 
      begin 
        match ty with 
-       | VStar -> let check_alpha = check contexte alpha VStar steps in
-		  if res_debug(check_alpha) 
+       | VStar -> let check_inTm_alpha = check_inTm contexte alpha VStar steps in
+		  if res_debug(check_inTm_alpha) 
 		  then create_report true (contexte_to_string contexte) steps "NO"
 		  else create_report false (contexte_to_string contexte) steps "Liste : alpha seems to not be of type Star"
        | _ -> create_report false (contexte_to_string contexte) steps "Liste : ty must be VStar" 
@@ -866,12 +896,12 @@ test le retour de la synthèse *)
   | Cons(a,xs) -> 
      begin 
        match ty with 
-       | VListe(alpha_liste) -> let check_a = check contexte a alpha_liste steps in
-				let check_xs = check contexte xs (VListe(alpha_liste)) steps in
-				if res_debug(check_a) 
+       | VListe(alpha_liste) -> let check_inTm_a = check_inTm contexte a alpha_liste steps in
+				let check_inTm_xs = check_inTm contexte xs (VListe(alpha_liste)) steps in
+				if res_debug(check_inTm_a) 
 				then 
 				  begin 
-				    if res_debug(check_xs)
+				    if res_debug(check_inTm_xs)
 				    then create_report true (contexte_to_string contexte) steps "NO"
 				    else create_report false (contexte_to_string contexte) steps "Cons : xs is not of type Liste(alpha)"
 				  end
@@ -881,9 +911,9 @@ test le retour de la synthèse *)
 and synth contexte exT steps =
   match exT with 
   | Var(Bound x) -> 
-     create_retSynth (create_report false (contexte_to_string contexte) steps "Var(Bound x) : not possible during type checking") VStar
+     create_retSynth (create_report false (contexte_to_string contexte) steps "Var(Bound x) : not possible during type check_inTming") VStar
   | Var(Quote i) -> 
-     create_retSynth (create_report false (contexte_to_string contexte) steps "Var(quote i) : not possible during type checking") VStar
+     create_retSynth (create_report false (contexte_to_string contexte) steps "Var(quote i) : not possible during type check_inTming") VStar
   | Var(x) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
   | Label(name,t) -> 
      create_retSynth (create_report true (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") (big_step_eval_inTm t [])
@@ -905,12 +935,12 @@ and synth contexte exT steps =
 		 | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : has to be applied to a pair") VStar
 	       end 
 	     else create_retSynth (create_report false (contexte_to_string contexte) steps "P0 : synth of elem don't work") VStar
-  | Ann(x,t) -> let ret = check contexte t VStar (pretty_print_exTm exT [] ^ ";"^ steps) in 
+  | Ann(x,t) -> let ret = check_inTm contexte t VStar (pretty_print_exTm exT [] ^ ";"^ steps) in 
 		let eval_t = big_step_eval_inTm t [] in
 		if res_debug(ret)
 		then 
 		  begin 
-		    if res_debug(check contexte x eval_t (pretty_print_exTm exT [] ^ ";"))
+		    if res_debug(check_inTm contexte x eval_t (pretty_print_exTm exT [] ^ ";"))
 		    then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") eval_t
 		    else create_retSynth (create_report false (contexte_to_string contexte) steps "Ann : x is not of type t") VStar
 		  end
@@ -923,7 +953,7 @@ and synth contexte exT steps =
      then
      begin
        match ret_debug_synth synth_f with 
-       | VPi(name,(s_pi,fu)) -> if res_debug(check contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
+       | VPi(name,(s_pi,fu)) -> if res_debug(check_inTm contexte s s_pi (pretty_print_exTm exT [] ^ ";"))
 		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (fu (big_step_eval_inTm s [])) 
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : s is not of type S") VStar
        | _ -> create_retSynth (create_report false (contexte_to_string contexte) steps "Appl : f is not of type Pi") VStar
@@ -933,24 +963,24 @@ and synth contexte exT steps =
   | Iter(p,n,f,a) -> let big_p = big_step_eval_inTm p [] in
 		     let big_n = big_step_eval_inTm n [] in 
 		     let type_p = read "(pi x N *)" in 		     
- 		     let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in    
-		     let check_n = check contexte n (big_step_eval_inTm (read "N") []) (pretty_print_exTm exT [] ^ ";") in
+ 		     let check_inTm_p = check_inTm contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in    
+		     let check_inTm_n = check_inTm contexte n (big_step_eval_inTm (read "N") []) (pretty_print_exTm exT [] ^ ";") in
 		     let type_f = (Pi("n",(Nat,Pi("NO",((Inv(Appl(Ann(p,type_p),Inv(Var(Bound 0))))),(Inv(Appl(Ann(p,type_p),Succ(Inv(Var(Bound 1))))))))))) in 
-		     let check_f = check contexte f (big_step_eval_inTm type_f [])  (pretty_print_exTm exT [] ^ ";") in
-		     let check_a = check contexte a (vapp(big_p,VZero)) (pretty_print_exTm exT [] ^ ";") in
+		     let check_inTm_f = check_inTm contexte f (big_step_eval_inTm type_f [])  (pretty_print_exTm exT [] ^ ";") in
+		     let check_inTm_a = check_inTm contexte a (vapp(big_p,VZero)) (pretty_print_exTm exT [] ^ ";") in
 		     let steps_iter = "(<= " ^ pretty_print_inTm n []^ "((" ^ pretty_print_inTm type_f [] ^ ") (-> " ^ pretty_print_inTm f []
 				     ^ ")(" ^ pretty_print_inTm (value_to_inTm 0 (vapp(big_p,VZero))) [] ^ ")(-> " 
 				     ^ pretty_print_inTm a [] ^ ")))" in 
-		     if res_debug(check_n)
+		     if res_debug(check_inTm_n)
 		     then 
 		       begin 
-			 if res_debug(check_p)
+			 if res_debug(check_inTm_p)
 			 then 
 			   begin 
-			     if res_debug(check_f)
+			     if res_debug(check_inTm_f)
 			     then
 			       begin 
-				 if res_debug(check_a)
+				 if res_debug(check_inTm_a)
 				 then create_retSynth (create_report true (contexte_to_string contexte) steps_iter "NO") (vapp(big_p,big_n)) 
 				 else create_retSynth (create_report false (contexte_to_string contexte) steps "Iter : a is not of type (P 0)") VStar
 			       end
@@ -962,20 +992,20 @@ and synth contexte exT steps =
   | Ifte(p,c,tHen,eLse) -> 
      let big_p = big_step_eval_inTm p [] in
      let big_c = big_step_eval_inTm c [] in 
-     let check_p = check contexte p (big_step_eval_inTm (read "(-> B *)") []) (pretty_print_exTm exT [] ^ ";") in    
-     let check_c = check contexte c (big_step_eval_inTm (read "B") []) (pretty_print_exTm exT [] ^ ";") in
-     let check_tHen = check contexte tHen (vapp(big_p,VTrue)) (pretty_print_exTm exT [] ^ ";") in
-     let check_eLse = check contexte eLse (vapp(big_p,VFalse)) (pretty_print_exTm exT [] ^ ";") in
-     if res_debug(check_p)
+     let check_inTm_p = check_inTm contexte p (big_step_eval_inTm (read "(-> B *)") []) (pretty_print_exTm exT [] ^ ";") in    
+     let check_inTm_c = check_inTm contexte c (big_step_eval_inTm (read "B") []) (pretty_print_exTm exT [] ^ ";") in
+     let check_inTm_tHen = check_inTm contexte tHen (vapp(big_p,VTrue)) (pretty_print_exTm exT [] ^ ";") in
+     let check_inTm_eLse = check_inTm contexte eLse (vapp(big_p,VFalse)) (pretty_print_exTm exT [] ^ ";") in
+     if res_debug(check_inTm_p)
      then
        begin 
-	 if res_debug(check_c)
+	 if res_debug(check_inTm_c)
 	 then 
 	   begin
-	     if res_debug(check_tHen)
+	     if res_debug(check_inTm_tHen)
 	     then 
 	       begin 
-		 if res_debug(check_eLse) 
+		 if res_debug(check_inTm_eLse) 
 		 then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (vapp(big_p,big_c)) 
 		 else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : eLse is not of type (P VFalse)") VStar
 	       end 
@@ -984,13 +1014,13 @@ and synth contexte exT steps =
 	 else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : c is not of type VBool") VStar     
        end  
      else create_retSynth (create_report false (contexte_to_string contexte) steps "Ifte : p is not of type (-> B *)") VStar
-     (* le check de f est nul parceque j'utilise pas les boundvar qui sont binde par les premier pi, A CHANGER *)
-  | DFold(alpha,p,n,xs,f,a) -> let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in
+     (* le check_inTm de f est nul parceque j'utilise pas les boundvar qui sont binde par les premier pi, A CHANGER *)
+  | DFold(alpha,p,n,xs,f,a) -> let check_inTm_alpha = check_inTm contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in
 			       let type_p = (Pi("n",(Nat,(Pi("xs",(Vec(alpha,Inv(Var (Bound 0))),Star)))))) in 
-			       let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
-			       let check_n = check contexte n VNat (pretty_print_exTm exT [] ^ ";") in			       
- 			       let check_xs = check contexte xs (big_step_eval_inTm (Vec(alpha,n)) [])  (pretty_print_exTm exT [] ^ ";") in 
-  			       let check_f = check contexte f 
+			       let check_inTm_p = check_inTm contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
+			       let check_inTm_n = check_inTm contexte n VNat (pretty_print_exTm exT [] ^ ";") in			       
+ 			       let check_inTm_xs = check_inTm contexte xs (big_step_eval_inTm (Vec(alpha,n)) [])  (pretty_print_exTm exT [] ^ ";") in 
+  			       let check_inTm_f = check_inTm contexte f 
 						   (big_step_eval_inTm 
 						      (Pi("n",(Nat,
 							  Pi("xs",(Vec(alpha,Inv(Var(Bound 0))),
@@ -998,24 +1028,24 @@ and synth contexte exT steps =
 								Pi("NO",(Inv(Appl(Appl(Ann(p,type_p),n),xs)),
 								   Inv(Appl(Appl(Ann(p,type_p),Succ(n)),DCons(a,xs)))))))))))) [])
 						   (pretty_print_exTm exT [] ^ ";") in 
-			       let check_a = check contexte a (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),Zero),DNil(alpha)))) [])
+			       let check_inTm_a = check_inTm contexte a (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),Zero),DNil(alpha)))) [])
 						   (pretty_print_exTm exT [] ^ ";") in 
-			       if res_debug check_alpha 
+			       if res_debug check_inTm_alpha 
 			       then 
 				 begin 
-				   if res_debug check_p
+				   if res_debug check_inTm_p
 				   then 
 				     begin 
-				       if res_debug check_n 
+				       if res_debug check_inTm_n 
 				       then 
 					 begin 
-					   if res_debug check_xs 
+					   if res_debug check_inTm_xs 
 					   then
 					     begin 
-					       if res_debug check_f 
+					       if res_debug check_inTm_f 
 					       then 
 						 begin 
-						   if res_debug check_a 
+						   if res_debug check_inTm_a 
 						   then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (big_step_eval_inTm (Inv(Appl(Appl(Ann(p,type_p),n),xs))) [])
 						   else create_retSynth (create_report false (contexte_to_string contexte) steps "DFold a must be of type alpha") VStar
 						 end 						   
@@ -1029,29 +1059,29 @@ and synth contexte exT steps =
 				 end 				   
 			       else create_retSynth (create_report false (contexte_to_string contexte) steps "DFold alpha must be of type star") VStar 
 			 
-  | Transp(gA,p,a,b,q,x) -> let check_gA = check contexte gA VStar (pretty_print_exTm exT [] ^ ";") in
-			   let check_a = check contexte a (big_step_eval_inTm gA []) (pretty_print_exTm exT [] ^ ";") in
-			   let check_b = check contexte b (big_step_eval_inTm gA []) (pretty_print_exTm exT [] ^ ";") in
-			   let check_q = check contexte q (big_step_eval_inTm (Id(gA,a,b)) [])(pretty_print_exTm exT [] ^ ";") in
+  | Transp(gA,p,a,b,q,x) -> let check_inTm_gA = check_inTm contexte gA VStar (pretty_print_exTm exT [] ^ ";") in
+			   let check_inTm_a = check_inTm contexte a (big_step_eval_inTm gA []) (pretty_print_exTm exT [] ^ ";") in
+			   let check_inTm_b = check_inTm contexte b (big_step_eval_inTm gA []) (pretty_print_exTm exT [] ^ ";") in
+			   let check_inTm_q = check_inTm contexte q (big_step_eval_inTm (Id(gA,a,b)) [])(pretty_print_exTm exT [] ^ ";") in
 			   let type_p = Pi("a",(gA,Pi("b",(gA,Pi("NO",(Id(gA,Inv(Var(Bound 1)),Inv(Var(Bound 0))),Star)))))) in 
-			   let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
-			   let check_x = check contexte x (big_step_eval_inTm (Inv(Appl(Appl(Appl(Ann(p,type_p),a),b),q))) []) (pretty_print_exTm exT [] ^ ";") in
-			   if res_debug check_gA 
+			   let check_inTm_p = check_inTm contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in
+			   let check_inTm_x = check_inTm contexte x (big_step_eval_inTm (Inv(Appl(Appl(Appl(Ann(p,type_p),a),b),q))) []) (pretty_print_exTm exT [] ^ ";") in
+			   if res_debug check_inTm_gA 
 			   then
 			     begin 
-			       if res_debug check_a 
+			       if res_debug check_inTm_a 
 			       then 
 				 begin 
-				   if res_debug check_b 
+				   if res_debug check_inTm_b 
 				   then 
 				     begin 
-				       if res_debug check_q 
+				       if res_debug check_inTm_q 
 				       then
 					 begin 
-					   if res_debug check_p
+					   if res_debug check_inTm_p
 					   then 
 					     begin 
-					       if res_debug check_x
+					       if res_debug check_inTm_x
 					       then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (big_step_eval_inTm (Inv(Appl(Appl(Appl(Ann(p,type_p),a),b),q))) [])
 					       else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: x wrong type") VStar 
 					     end 
@@ -1065,33 +1095,33 @@ and synth contexte exT steps =
 			     end
 			   else create_retSynth (create_report false (contexte_to_string contexte) steps "Trans: gA must be of type Star") VStar     			      
   | Fold(p,alpha,xs,f,a) -> 
-     let check_alpha = check contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
-     let () = Printf.printf "Check alpha = %s \n" (string_of_bool(res_debug check_alpha)) in
+     let check_inTm_alpha = check_inTm contexte alpha VStar (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check_InTm alpha = %s \n" (string_of_bool(res_debug check_inTm_alpha)) in
      let type_p = Pi("xs",(Liste(alpha),Star)) in 
-     let check_p = check contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
-     let () = Printf.printf "Check p = %s \n" (string_of_bool(res_debug check_p)) in
-     let check_xs = check contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
+     let check_inTm_p = check_inTm contexte p (big_step_eval_inTm type_p []) (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check_InTm p = %s \n" (string_of_bool(res_debug check_inTm_p)) in
+     let check_inTm_xs = check_inTm contexte xs (big_step_eval_inTm (Liste(alpha)) []) (pretty_print_exTm exT [] ^ ";") in 
      let type_f = (Pi("a",(alpha,
 		      Pi("xs",(Liste(alpha),			 
 			 Pi("NO",(Inv(Appl(Ann(p,type_p),Liste(alpha))),
 			    Inv(Appl(Ann(p,type_p),Cons(Inv(Var(Bound 2)),Inv(Var(Bound 1)))))))))))) in		    
-     let check_f = check contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
-     let () = Printf.printf "Check f = %s \n" (string_of_bool(res_debug check_f)) in
-     let check_a = check contexte a (big_step_eval_inTm (Inv(Appl(Ann(p,type_p),Nil))) []) (pretty_print_exTm exT [] ^ ";") in 
-     let () = Printf.printf "Check a = %s \n" (string_of_bool(res_debug check_a)) in
-     if res_debug check_alpha 
+     let check_inTm_f = check_inTm contexte f (big_step_eval_inTm (type_f) []) (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check_InTm f = %s \n" (string_of_bool(res_debug check_inTm_f)) in
+     let check_inTm_a = check_inTm contexte a (big_step_eval_inTm (Inv(Appl(Ann(p,type_p),Nil))) []) (pretty_print_exTm exT [] ^ ";") in 
+     let () = Printf.printf "Check_InTm a = %s \n" (string_of_bool(res_debug check_inTm_a)) in
+     if res_debug check_inTm_alpha 
      then
        begin 
-	 if res_debug check_p
+	 if res_debug check_inTm_p
 	 then
 	   begin 
-	     if res_debug check_xs 
+	     if res_debug check_inTm_xs 
 	     then
 	       begin
-		 if res_debug check_f
+		 if res_debug check_inTm_f
 		 then
 		   begin 
-		     if res_debug check_a 
+		     if res_debug check_inTm_a 
 		     then create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (big_step_eval_inTm (Inv(Appl(Ann(p,type_p),xs))) [])
 		     else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: a must be of type alpha") VStar
 		   end
@@ -1104,5 +1134,5 @@ and synth contexte exT steps =
      else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: alpha must be of type Star") VStar
 
 
-(* let () = Printf.printf "%s" (print_report (check [] (read "(lamba x x)") (big_step_eval_inTm (read "(-> * *)") []) "")) *)
+(* let () = Printf.printf "%s" (print_report (check_inTm [] (read "(lamba x x)") (big_step_eval_inTm (read "(-> * *)") []) "")) *)
 

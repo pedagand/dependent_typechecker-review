@@ -9,34 +9,32 @@ let compare_term a b =
 
 
 let inputs = 
-  [ ((Abs(Global"x",Inv(BVar 0))),"(lambda x x)");
-    ((Abs(Global "x",Abs(Global "y",Abs(Global "z",Inv(Appl(BVar 2, Inv(Appl(BVar 1, Inv(BVar 0))))))))),"(lambda x (lambda y (lambda z (x (y z)))))");
-    ((Inv(Ann(Abs(Global "x",Inv(BVar 0)),Pi(Global "x",Star,Star)))),"(: (lambda x x) (pi x * *))");
-    ((Pi(Global "x",Star,Pi(Global "y",Star,Pi(Global "z",Star,Star)))),
+  [ ((Abs("x",Inv(Var(Bound 0)))),"(lambda x x)");
+    ((Abs("x",Abs("y",Abs("z",Inv(Appl(Var(Bound 2), Inv(Appl(Var(Bound 1), Inv(Var(Bound 0)))))))))),"(lambda x (lambda y (lambda z (x (y z)))))");
+    ((Inv(Ann(Abs("x",Inv(Var(Bound 0))),Pi("x",(Star,Star))))),"(: (lambda x x) (pi x * *))");
+    ((Pi("x",(Star,Pi("y",(Star,Pi("z",(Star,Star))))))),
      "(pi x * (pi y * (pi z * *)))");
     ((Succ(Succ(Zero))),"(succ (succ zero))");
     ((Inv(Iter(Nat,Nat,Nat,Nat))),"(iter N N N N)");
-    ((Pair(Inv(FVar (Global "x")),Inv(FVar (Global "y")))),"(x , y)");
-    ((Pair(Inv(P1(FVar(Global"x2"))),Succ(Inv(P1(FVar(Global"x2")))))),"((p1 x2) , (succ (p1 x2)))");
-    (Sig(Global "x",Nat,Nat),"(sig x N N)");
-    (Sig(Global "x",Nat,Inv(BVar 0)),"(sig x N x)");
+    ((Pair(Inv(Var (Global "x")),Inv(Var (Global "y")))),"(x , y)");
+    ((Pair(Inv(P1(Var(Global"x2"))),Succ(Inv(P1(Var(Global"x2")))))),"((p1 x2) , (succ (p1 x2)))");
+    (Sig("x",(Nat,Nat)),"(sig x N N)");
+    (Sig("x",(Nat,Inv(Var(Bound 0)))),"(sig x N x)");
     (Cons(Zero,Nil),"(cons zero nil)");
     (Liste(Nat),"(liste N)");
     (Nil,"nil");
-    (Inv(DFold(Inv(FVar(Global "alpha")),Inv(FVar(Global "P")),Inv(FVar(Global "m")),Inv(FVar(Global "xs")),Inv(FVar(Global "f")),Inv(FVar(Global "a")))),"(dfold alpha P m xs f a)");
+    (Inv(DFold(Inv(Var(Global "alpha")),Inv(Var(Global "P")),Inv(Var(Global "m")),Inv(Var(Global "xs")),Inv(Var(Global "f")),Inv(Var(Global "a")))),"(dfold alpha P m xs f a)");
     (DCons(Zero,DNil(Nat)),"(dcons zero (dnil N))");
     (DNil(Nat),"(dnil N)");
     (Inv(DFold(Nat,Nat,Nat,Nat,Nat,Nat)),"(dfold N N N N N N)");
     (Vec(Nat,Succ(Zero)),"(vec N (succ zero))");
-    (What("lol"),"(? lol)");
-    (Abs(Global"x",What("lol")),"(lambda x (? lol))");
     (Id(Nat,Zero,Succ(Zero)),"(id N zero (succ zero))");
-    (Refl(Zero),"(refl zero)");
-    (Inv(Trans(Nat,Nat,Nat,Nat,Nat,Nat)),"(trans N N N N N N)");
+    (Refl,"refl");
+    (Inv(Transp(Nat,Nat,Nat,Nat,Nat,Nat)),"(trans N N N N N N)");
     (Bool,"B");
     (True,"true");
     (False,"false");
-    (Inv(Ifte(Abs(Global"x",Bool),True,True,False)),"(ifte (lambda x B) true true false)"); 
+    (Inv(Ifte(Abs("x",Bool),True,True,False)),"(ifte (lambda x B) true true false)"); 
   ]
 
 let tests = List.map (fun (term, res) -> "test" >:: fun ctxt -> assert_equal (compare_term (pretty_print_inTm term []) res) true) inputs

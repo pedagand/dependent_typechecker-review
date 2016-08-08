@@ -72,8 +72,8 @@ and post_parsing_pattern_inTm t =
   | _ -> failwith "post_parsing_pattern_exTm : this is not supposed to happend" 
 and post_parsing_pattern_exTm t = 
   match t with 
-  | Appl(creuse,x) -> Appl(post_parsing_pattern_exTm creuse,x)
-  | FVar(Global(x)) -> Etiquette(x)
+  | Appl(creuse,x) -> Appl(post_parsing_pattern_exTm creuse ,x)
+  | Var(Global(x)) -> Label(x,Star) (* TODO :: faire attention cette ligne est fausse c'est juste pour bypasser l'erreur *)
   | _ -> failwith "post_parsing_pattern : it seem's that it don't work"
 
 
@@ -145,11 +145,11 @@ let pretty_print_def userDef =
 let rec matching_inTm p t l =
   match (p,t) with 
   | (Abs(_,x1),Abs(_,x2)) -> matching_inTm x1 x2 l
-  | (Pi(_,x1,y1),Pi(_,x2,y2)) -> begin match matching_inTm x1 x2 l with
+  | (Pi(_,(x1,y1)),Pi(_,(x2,y2))) -> begin match matching_inTm x1 x2 l with
 				       | Success(liste) -> matching_inTm y1 y2 liste  
 				       | Failed -> Failed
 				 end
-  | (Sig(_,x1,y1),Sig(_,x2,y2)) -> begin match matching_inTm x1 x2 l with 
+  | (Sig(_,(x1,y1)),Sig(_,(x2,y2))) -> begin match matching_inTm x1 x2 l with 
 					 | Success(liste) -> matching_inTm y1 y2 liste 
 					 | Failed -> Failed
 				   end
@@ -166,7 +166,6 @@ let rec matching_inTm p t l =
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
 				 end
-  | (What(a),What(b)) -> Success(l)
   | (Vec(x1,y1),Vec(x2,y2)) -> begin match matching_inTm x1 x2 l with 
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
@@ -183,23 +182,22 @@ let rec matching_inTm p t l =
 							   end 
 				       | Failed -> Failed 
 				 end 
-  | (Refl(a),Refl(b)) -> matching_inTm a b l
+  | (Refl,Refl) -> Success(l)
   | (Liste(a),Liste(b))-> matching_inTm a b l
   | (Nil,Nil) -> Success(l)
   | (Cons(y1,z1),Cons(y2,z2)) -> begin match matching_inTm y1 y2 l with 
-				       | Success(liste) -> matching_inTm z1 z2 liste 
+		 		       | Success(liste) -> matching_inTm z1 z2 liste 
 				       | Failed -> Failed 
 				 end				  
   | _ -> Failed 
 and matching_exTm p t l = 
   match (p,t) with 
-  | (Etiquette(x1),Etiquette(x2)) -> if x1 = x2 then Success(l) else Failed
+  | (Label(x1,y1),Label(x2,y2)) -> if x1 = x2 then Success(l) else Failed (* on suppose que si deux noms de labels sont égaux ils ont nécésserement le meme type *)
   | (Ann(x1,y1),Ann(x2,y2)) -> begin match matching_inTm x1 x2 l with 
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
 				 end
-  | (BVar(x1),BVar(x2)) -> if x1 = x2 then Success(l) else Failed 
-  | (FVar(Global(user_name)),FVar(Global(name))) -> Success((user_name,Inv(FVar(Global(name)))) :: l)
+  | (Var(x1),Var(x2)) -> if x1 = x2 then Success(l) else Failed 
   | (Appl(x1,y1),Appl(x2,y2)) -> begin match matching_exTm x1 x2 l with 
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
@@ -288,7 +286,7 @@ let rec match_pattern_goal_liste liste_goal p n =
 let rec change_name_liste terme l = 
   match l with 
   | [] -> terme
-  | (name,terme) :: suite -> let terme = change_name_FVar_inTm terme name in 
+  | (name,terme) :: suite -> let terme = change_name terme name in 
 			     change_name_liste terme suite
 	   
 
