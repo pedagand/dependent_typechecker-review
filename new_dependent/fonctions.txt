@@ -85,7 +85,11 @@ plus petit stric et pas strict (tous les comparateurs)
 
 
 
-factorielle 
+------factorielle 
+
+(fact (lambda m (iter (lambda x ((: (lambda m N) (pi m N *)) x)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N N))) x1) x2))) (succ zero))) (pi m N ((: (lambda m N) (pi m N *)) m)))
+
+
 
 le maximum et minimum de deux nombres 
 
