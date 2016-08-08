@@ -1,5 +1,8 @@
-!!!!!Questions!!!!!!!
+??????Questions??????
 ? Lorsque l'on demande une variable pour faire le split et que dans le contexte on a (var : pi x N B) par exemple... Esque l'on peut dire que l'on veut faire un split sur l'application suivante (var zero) comme ça ça nous fait un split ifte (je suis sur a 99% que on doit pouvoir faire ça)
+!!!!!TODO!!!!!!!
+!Faire fonction eval_terme qui permet d'écrire une application et de l'evaluer
+
 
 
 Booléens ---------
@@ -60,7 +63,7 @@ plus petit stric et pas strict (tous les comparateurs)
 
 (iszero (lambda m (iter (lambda x ((: (lambda m B) (pi m N *)) x)) m (lambda x1 (lambda x2 false)) true)) (pi m N ((: (lambda m B) (pi m N *)) m)))
 
-(ifte (liste N) (iszero zero) (cons zero nil) nil)
+(ifte (liste N) (iszero zero) (cons zero nil) nil) 
 
 
 ---------L'égalité entre deux entiers
@@ -75,7 +78,7 @@ plus petit stric et pas strict (tous les comparateurs)
 
 !!!!!!!!!!!!!!!!! ici (exp 2 3) equivalent a 2 ^ 3!!!!!!!!!!!!
 
-(exp (lambda e (lambda m (iter (lambda x (((: (lambda e (lambda m N)) (pi e N (pi m N *))) x) m)) e (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N N))) x2) m))) (succ zero)))) (pi e N (pi m N (((: (lambda e (lambda m N)) (pi e N (pi m N *))) e) m))))
+(exp (lambda e (lambda m (iter (lambda x (((: (lambda e (lambda m N)) (pi e N (pi m N *))) x) m)) e (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N N))) x2) m))) (succ zero)))) (pi e N (pi m N (((: (lambda e (lambda m N)) (pi e N (pi m N *))) e) m)))) 
 
 
 ------la parité 
