@@ -37,6 +37,8 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 -------------------------------------les entiers -----------
 -------addition:
 
+(def (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS (succ x1)) n) (->  (succ x2))) (((PLUS zero) n) (->  n))))))
+
 (plus (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 
 ------multiplication :
@@ -53,6 +55,8 @@ plus petit stric et pas strict (tous les comparateurs)
 ---------is zero
 
 (iszero (lambda m (iter (lambda x ((: (lambda m B) (pi m N *)) x)) m (lambda x1 (lambda x2 false)) true)) (pi m N ((: (lambda m B) (pi m N *)) m)))
+
+(ifte (liste N) (iszero zero) (cons zero nil) nil)
 
 
 ---------L'égalité entre deux entiers
@@ -114,9 +118,15 @@ le n-ième élément d'une liste
 fonction avec un prédicat (booléens) et une liste qui retourne le premier élément qui 
 retourne l'indice du premier élément qui retourne true au predicat
 
-fonction de filtrage : qui prend un prédicat et qui crée une liste avec les éléments qui ont passés le predicat(true)
+---------fonction de filtrage : qui prend un prédicat et qui crée une liste avec les éléments qui ont passés le predicat(true)
 
-fonction qui compte le nombre d'éléments qui passent le prédicat 
+(filter (lambda l (lambda p (fold (lambda x (((: (lambda l (lambda p (liste N))) (pi l (liste N) (pi p (pi x N B) *))) x) p)) N l (lambda e (lambda xs (lambda h (ifte (lambda x (liste N)) (p e) (cons e h) h)))) nil))) (pi l (liste N) (pi p (pi x N B) (((: (lambda l (lambda p (liste N))) (pi l (liste N) (pi p (pi x N B) *))) l) p))))
+
+ça marche niquel ,exemple d'arguments: (cons zero (cons (number 2) (cons zero nil))) et (: (ref iszero) (pi n N B))  
+
+
+
+-------fonction qui compte le nombre d'éléments qui passent le prédicat 
 
 Exist : fonction qui retourne vrai si au moins un élément de la liste vérifie
 le prédicat
