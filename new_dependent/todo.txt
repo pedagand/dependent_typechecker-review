@@ -5,3 +5,25 @@ implémenter iterface de zipper et interface de tactic
 
 Méta tactique de débug
 adapter l'interface terminal et fichier pour utiliser ces interfaces
+
+
+
+
+(* En attendant d'avoir un endroit plus confortable 
+ (: (lambda a (: (ifte (lambda a ((: (lambda a B) (pi a B *)) a)) a (: false ((: (lambda a B) (pi a B *)) true)) (: true ((: (lambda a B) (pi a B *)) false))) ((: (lambda a B) (pi a B *)) a))) ((: (lambda a B) (pi a B *)) a))
+
+
+ goal : (pi a B (NEG a))
+(: (lambda a (: (ifte (lambda a (NEG a)) a (: false (NEG true)) (: true (NEG false))) (NEG a))) (NEG a)))
+
+
+ (: (lambda a 
+            (: (ifte 
+                     (lambda a ((: (lambda a B) (pi a B *)) a))
+                      a 
+                      (: false ((: (lambda a B) (pi a B *)) true))
+                      (: true ((: (lambda a B) (pi a B *)) false)))
+                      ((: (lambda a B) (pi a B *)) a)))
+ ((: (lambda a B) (pi a B *)) a)) 
+
+ *)

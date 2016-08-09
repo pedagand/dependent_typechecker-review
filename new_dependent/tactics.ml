@@ -32,8 +32,9 @@ let rec modifie_return_type typ return =
 (* permet de parcourir un pi type jusqu'au bout afin d'en connaitre le type de retour *)
 let rec find_return_type typ = 
   match typ with 
-  | Pi(n,(s,t)) -> let t = subst_inTm (Pi(n,(s,t))) (Var(Global(n))) in find_return_type t 
-  | x -> x
+  | Pi(n,(s,t)) -> let t = subst_inTm (Pi(n,(s,t))) (Var(Global(n))) in 
+                   find_return_type t 
+  | x -> let () = Printf.printf "find_return_type : %s \n" (pretty_print_inTm x []) in  x
 
 (* permet de donner la liste des variables présentes dans le théorème *)
 let rec liste_me_var terme = 
@@ -288,11 +289,12 @@ let check file (Loc(t,p),d) =
       let final_terme = replace_liste_var terme defs in 
       let () = Printf.printf "Check : treatment 1\n" in
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
+      let final_terme = remove_useless_anotation_inTm final_terme in
       let final_type = replace_liste_var typ defs in 
       let () = Printf.printf "Check : treatment 2\n" in
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-(*      let () = Printf.printf "Check : This is the env used %s\n" (print_def defs) in
-      let () = Printf.printf "Check : LOL The terme juste before checking \n %s \n" (pretty_print_inTm final_terme []) in *)
+      let () = Printf.printf "Check : This is the env used %s\n" (print_def defs) in
+      let () = Printf.printf "Check : LOL The terme juste before checking \n %s \n" (pretty_print_inTm final_terme []) in
       let () = Printf.printf "Check : just before check\n" in
       let res_check = check final_terme final_type in 
       let () = Printf.printf "Check as been proceed" in 
@@ -326,15 +328,15 @@ let check file (Loc(t,p),d) =
 
 (* on sait que le prédicat iter est de type (pi x N Star ) *)
 let create_iter_predicat returneType var_induct = 
-  let predicat = Abs("x",returneType) in 
+  let predicat = abstract var_induct returneType in 
   predicat
 
 let create_bool_predicat returneType var_induct = 
-  let predicat = Abs("x",returneType) in 
-  predicat
+  let predicat = abstract var_induct returneType in 
+  predicat 
   
 let create_liste_predicat returneType var_induct = 
-  let predicat = Abs("x",returneType) in
+  let predicat = abstract var_induct returneType in
   predicat
  
 
@@ -369,7 +371,7 @@ let split_iter (Loc(t,p),d) induct_var =
   let arbre = complete_focus_terme (Loc(t,p),d) new_terme hole in
   (* maintenant on va insérer dans l'arbre deux nouvelles sections correspondants au deux nouveux goals *)
   let arbre = insert_some_right arbre [first_goal;second_goal] in
-  let () = Printf.printf "\n Finish Split Iter" in 
+  let arbre = print_to_screen_location arbre in 
   arbre
 
 let split_bool (Loc(t,p),d) induct_var = 
@@ -392,6 +394,7 @@ let split_bool (Loc(t,p),d) induct_var =
   let new_terme = Ifte(predicat,Inv(Var(Global induct_var)),Inv(Var(Hole 1)),Inv(Var(Hole 2))) in 
   let (Loc(t,p),d) = complete_focus_terme (Loc(t,p),d) new_terme hole in 
   let (Loc(t,p),d) = insert_some_right (Loc(t,p),d) [else_goal;then_goal] in
+  let (Loc(t,p),d) = print_to_screen_location (Loc(t,p),d) in 
   (Loc(t,p),d)
 
 
@@ -462,16 +465,17 @@ and find_in_env env terme =
   | (name,typ) :: suite -> if equal typ terme then name else find_in_env suite terme 
 
 
-let return (terme : exTm) hole (Loc(t,p),d) = 
+let return (terme : inTm) hole (Loc(t,p),d) = 
+  let typ = value_to_inTm 0 (big_step_eval_inTm (get_type_focus "" (Loc(t,p),d)) []) in
   let d = set_patAct_userDef d (complete_clause d.patAct (Return terme) d.pointeur) in
-  if is_tag (Inv(terme))
+  if is_tag terme
   then let () = Printf.printf "is_tag goign trhought then\n" in 
        (* let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in *)
-       let arbre = complete_focus_terme (Loc(t,p),d) terme hole in 
+       let arbre = complete_focus_terme (Loc(t,p),d) (Ann(terme,typ)) hole in 
        let () = Printf.printf "finish the return\n" in
        verif arbre
   else let () = Printf.printf "is_tag goign trhought else\n" in 
-       let arbre = complete_focus_terme (Loc(t,p),d) terme hole in
+       let arbre = complete_focus_terme (Loc(t,p),d) (Ann(terme,typ)) hole in
        let () = Printf.printf "finish the return\n" in
        verif arbre
   
@@ -712,7 +716,7 @@ let choose_tactic () =
  (* faire une fonction ou d'abord on écrit split ce qui appelle celle ci et ensuite on redirige (juste pour pas surgarger cette fonction *)
   | "split" -> let induct_var = ask_induct_var () in split induct_var
   | "return" -> let () = Printf.printf "Enter the terme you wan't to push on it \n" in
-		let terme = read_exTm (read_line ()) in 
+		let terme = read (read_line ()) in 
 		(* let () = Printf.printf "Enter the hole you wan't to complete \n" in *)
 		let hole = 1 in (* int_of_string (read_line ()) in *)
 		return terme hole

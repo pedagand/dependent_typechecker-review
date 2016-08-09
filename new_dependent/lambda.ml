@@ -2,12 +2,11 @@ open Sexplib
 
 
 (* TODO :: faire dans le fichier de zipper une fonction permettant de retrouver le type d'un label *)
-
 (*
   To load in the OCaml toplevel:
   #use "topfind";;
-  #require "sexplib";;
-  #require "oUnit";;
+  #require "sexplib";; 
+  #require "oUnit";; 
   #use "lambda.ml";;
 *)
 
@@ -1156,6 +1155,45 @@ and synth contexte exT steps =
        end 
      else create_retSynth (create_report false (contexte_to_string contexte) steps "Fold: alpha must be of type Star") VStar
 
+(* Fonction pour le debug qui permet de supprimer le surplut d'annotations *)
+
+let rec remove_useless_anotation_inTm terme = 
+  match terme with 
+  | Abs(n,x) -> Abs(n,remove_useless_anotation_inTm x)
+  | Pi(x,(y,z)) -> Pi(x,(remove_useless_anotation_inTm y, remove_useless_anotation_inTm z))
+  | Inv(Ann(t,typ)) -> t
+  | Inv(x) -> Inv(remove_useless_anotation_exTm x)
+  | Star -> Star
+  | Zero -> Zero
+  | Succ(x) -> Succ(remove_useless_anotation_inTm x)
+  | Nat -> Nat 
+  | Liste (x) -> Liste(remove_useless_anotation_inTm x)
+  | Nil -> Nil 
+  | Cons(x,y) -> Cons(remove_useless_anotation_inTm x,remove_useless_anotation_inTm y)
+  | Vec(x,y) -> Vec(remove_useless_anotation_inTm x,remove_useless_anotation_inTm y)
+  | DNil x -> remove_useless_anotation_inTm x
+  | DCons(x,y) -> DCons(remove_useless_anotation_inTm x, remove_useless_anotation_inTm y) 
+  | Id(x,y,z) -> Id(remove_useless_anotation_inTm x, remove_useless_anotation_inTm y, remove_useless_anotation_inTm z)
+  | Refl   -> Refl
+  | Bool -> Bool
+  | True -> True
+  | False -> False
+  | Pair(x,y) -> Pair(remove_useless_anotation_inTm x,remove_useless_anotation_inTm y)
+  | Sig(x,(y,z)) -> Sig(x,(remove_useless_anotation_inTm y, remove_useless_anotation_inTm z))
+and remove_useless_anotation_exTm terme = 
+  match terme with 
+  | Ann(x,y) -> Ann(remove_useless_anotation_inTm x,remove_useless_anotation_inTm y)
+  | Var x -> Var x
+  | Appl(x,y) -> Appl(remove_useless_anotation_exTm x,remove_useless_anotation_inTm y)
+  | Iter(a,b,c,d) -> Iter(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d)
+  | Transp(a,b,c,d,e,f) -> Transp(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d,remove_useless_anotation_inTm e,remove_useless_anotation_inTm f)
+  | P0(x) -> P0(remove_useless_anotation_exTm x)
+  | P1 x -> P1(remove_useless_anotation_exTm x)
+  | DFold(a,b,c,d,e,f) -> DFold(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d,remove_useless_anotation_inTm e,remove_useless_anotation_inTm f) 
+  | Fold(a,b,c,d,e) -> Fold(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d,remove_useless_anotation_inTm e)
+  | Ifte(a,b,c,d) -> Iter(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d)
+ 
+
+
 
 (* let () = Printf.printf "%s" (print_report (check_inTm [] (read "(lamba x x)") (big_step_eval_inTm (read "(-> * *)") []) "")) *)
-

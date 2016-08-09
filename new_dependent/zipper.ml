@@ -427,15 +427,15 @@ let verif_and_push_up_item (Loc(t,p)) =
 
 
 let rec verif_and_push_up_item (Loc(t,p),d) =     
+  let terme_to_put = get_terme_item (Loc(t,p),d) in   
   let typ_terme_to_put = get_type_item (Loc(t,p),d) in (* TODO :: ici il faut faire une annotation *)
-  let terme_to_put = Ann(get_terme_item (Loc(t,p),d),typ_terme_to_put) in   
-  if check_if_no_hole_inTm (Inv(terme_to_put)) && know_def_inter (Loc(t,p),d)
+  if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p),d)
   then     
     begin 
     let trou = get_num_Inter (Loc(t,p),d) in 
     let arbre = proof_up (Loc(t,p),d) in 
     let terme_to_fullfill = get_terme_item arbre in 
-    let terme = replace_hole terme_to_fullfill trou terme_to_put in 
+    let terme = replace_hole terme_to_fullfill trou (Ann(terme_to_put,typ_terme_to_put)) in 
     let arbre = 
       begin 
 	match arbre with 

@@ -14,7 +14,7 @@ type matching =
 
 
 type act = 
-  | Return of exTm 
+  | Return of inTm
   | Split of string * clause list
   | Hole of int
 and clause = 
@@ -64,7 +64,7 @@ and parse_act str =
   | Sexp.List [Sexp.Atom "<="; Sexp.Atom id;Sexp.List clauses] -> 
      let liste_clause = List.fold_right (fun c suite -> (parse_clause c) :: suite) clauses [] in 
      Split(id,liste_clause)		       		 
-  | Sexp.List [Sexp.Atom "->";t] -> Return(read_exTm (Sexp.to_string t))
+  | Sexp.List [Sexp.Atom "->";t] -> Return(read (Sexp.to_string t))
   | _ -> failwith ("parse_act : your action don't have a good shape" ^ Sexp.to_string str)
 (*and post_parsing_pattern_inTm t = 
   match t with 
@@ -115,7 +115,7 @@ let read_definition str =
 let rec pretty_print_act a = 
   match a with 
   | Split(id,l) -> "(<= " ^ id ^ " (" ^ pretty_print_clause_liste l ^ "))"
-  | Return(t) -> "(-> " ^ " " ^ pretty_print_exTm t [] ^ ")"
+  | Return(t) -> "(-> " ^ " " ^ pretty_print_inTm t [] ^ ")"
   | Hole(x) -> "_" ^ string_of_int x
 and pretty_print_clause c = 
   match c with 

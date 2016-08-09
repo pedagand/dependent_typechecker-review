@@ -64,7 +64,7 @@ val check_if_no_elem_inTm : inTm list -> inTm -> bool
 val check : inTm -> inTm -> bool
 val replace_liste_var : inTm -> (ident * inTm * inTm) list -> inTm
 val replace_var_terme : inTm -> ident -> exTm -> inTm
-
+val remove_useless_anotation_inTm : inTm -> inTm 
 
 
 
