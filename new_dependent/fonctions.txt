@@ -49,6 +49,9 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 (or (lambda a (lambda b (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) x) b)) a true (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) false) x)) b true false)))) (pi a B (pi b B (((: (lambda a (lambda b B)) (pi a B (pi b B *))) a) b))))
 
 ---------et
+(def (or (pi a B (pi b B B))) (((OR a) b) (<= a (( ((OR true) b) (<= b (( ((OR true) true) (->  true)) (((OR true) false) (->  false))))) (((OR false) b) (->  true))))))
+
+
 
 (and (lambda a (lambda b (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) x) b)) a (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) true) x)) b true false) false))) (pi a B (pi b B (((: (lambda a (lambda b B)) (pi a B (pi b B *))) a) b))))
 

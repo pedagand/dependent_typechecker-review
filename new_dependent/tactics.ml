@@ -284,20 +284,13 @@ let check file (Loc(t,p),d) =
     end in 
   if check_if_no_hole_inTm terme 
   then begin
-      let () = Printf.printf "Check : start to make treatment\n" in
       let defs = get_def (Loc(t,p),d) [] in
       let final_terme = replace_liste_var terme defs in 
-      let () = Printf.printf "Check : treatment 1\n" in
       let final_terme = read (pretty_print_inTm final_terme []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
       let final_terme = remove_useless_anotation_inTm final_terme in
       let final_type = replace_liste_var typ defs in 
-      let () = Printf.printf "Check : treatment 2\n" in
       let final_type = read (pretty_print_inTm final_type []) in (* ici c'est le petit tricks, il faut quand meme que j'en parle a pierre *)
-      let () = Printf.printf "Check : This is the env used %s\n" (print_def defs) in
-      let () = Printf.printf "Check : LOL The terme juste before checking \n %s \n" (pretty_print_inTm final_terme []) in
-      let () = Printf.printf "Check : just before check\n" in
       let res_check = check final_terme final_type in 
-      let () = Printf.printf "Check as been proceed" in 
       if res_check 
       then let () = Printf.printf "\n%s\n" (pretty_print_def d) in
 		   replace_item (Loc(t,p),d) (Item(Definition(name,Complete(final_type,final_terme),"")))

@@ -1161,7 +1161,7 @@ let rec remove_useless_anotation_inTm terme =
   match terme with 
   | Abs(n,x) -> Abs(n,remove_useless_anotation_inTm x)
   | Pi(x,(y,z)) -> Pi(x,(remove_useless_anotation_inTm y, remove_useless_anotation_inTm z))
-  | Inv(Ann(t,typ)) -> t
+  | Inv(Ann(t,typ)) -> remove_useless_anotation_inTm t
   | Inv(x) -> Inv(remove_useless_anotation_exTm x)
   | Star -> Star
   | Zero -> Zero
@@ -1171,7 +1171,7 @@ let rec remove_useless_anotation_inTm terme =
   | Nil -> Nil 
   | Cons(x,y) -> Cons(remove_useless_anotation_inTm x,remove_useless_anotation_inTm y)
   | Vec(x,y) -> Vec(remove_useless_anotation_inTm x,remove_useless_anotation_inTm y)
-  | DNil x -> remove_useless_anotation_inTm x
+  | DNil x -> DNil(remove_useless_anotation_inTm x)
   | DCons(x,y) -> DCons(remove_useless_anotation_inTm x, remove_useless_anotation_inTm y) 
   | Id(x,y,z) -> Id(remove_useless_anotation_inTm x, remove_useless_anotation_inTm y, remove_useless_anotation_inTm z)
   | Refl   -> Refl
@@ -1191,7 +1191,7 @@ and remove_useless_anotation_exTm terme =
   | P1 x -> P1(remove_useless_anotation_exTm x)
   | DFold(a,b,c,d,e,f) -> DFold(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d,remove_useless_anotation_inTm e,remove_useless_anotation_inTm f) 
   | Fold(a,b,c,d,e) -> Fold(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d,remove_useless_anotation_inTm e)
-  | Ifte(a,b,c,d) -> Iter(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d)
+  | Ifte(a,b,c,d) -> Ifte(remove_useless_anotation_inTm a,remove_useless_anotation_inTm b,remove_useless_anotation_inTm c,remove_useless_anotation_inTm d)
  
 
 
