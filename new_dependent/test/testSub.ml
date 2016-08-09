@@ -20,22 +20,22 @@ let inputs =
    ("(pi P (-> A *) (-> (P a) (P b)))",(Var (Global "x1")),
     "(-> (x1 a) (x1 b))"); 
    ("(lambda A (lambda a (lambda b (pi P (-> A *) (-> (P a) (P b))))))",
-    Var (Global "x1"),"(lambda a (lambda b (pi P (-> x1 *) (-> (P a) (P b)))))");
+    (Var (Global "x1")),"(lambda a (lambda b (pi P (-> x1 *) (-> (P a) (P b)))))");
    ("(lambda a (lambda b (pi P (-> A *) (-> (P a) (P b)))))",
-    Var (Global "x1"),"(lambda b (pi P (-> A *) (-> (P x1) (P b))))");
+    (Var (Global "x1")),"(lambda b (pi P (-> A *) (-> (P x1) (P b))))");
    ("(lambda b (pi P (-> A *) (-> (P a) (P b))))",
-    Var (Global "x1"),"(pi P (-> A *) (-> (P a) (P x1)))");   
+    (Var (Global "x1")),"(pi P (-> A *) (-> (P a) (P x1)))");   
    ("(lambda x (: (p0 (x , b)) (N X N)))",
-    Var (Global "x1"),"(: (p0(x1 , b)) (N X N))");
+    (Var (Global "x1")),"(: (p0(x1 , b)) (N X N))");
    ("(lambda x (: (p1 (x , b)) (N X N)))",
-    Var (Global "x1"),"(: (p1(x1 , b)) (N X N))");
-   ("(pi x * (x X N))",Var (Global "x1"),"(x1 X N)");
-   ("(lambda x (pi x x *))",Var (Global "x1"),"(pi x x1 *)");      
+    (Var (Global "x1")),"(: (p1(x1 , b)) (N X N))");
+   ("(pi x * (x X N))",(Var (Global "x1")),"(x1 X N)");
+   ("(lambda x (pi x x *))",(Var (Global "x1")),"(pi x x1 *)");      
 
   ]
 
 
 (* il va me falloir une technique pour les noms je pense le faire avec gensym *)
 
-let tests = List.map (fun (term,sub,res) -> "testsub" >:: fun ctxt -> assert_equal (subst_inTm (read term) sub) (read res)) inputs
+let tests = List.map (fun (term,sub,res) -> "testsub" >:: fun ctxt -> assert_equal (equal (subst_inTm (read term) sub) (read res)) (true)) inputs
 

@@ -16,7 +16,7 @@ type definition =
 (* le premier inTm correspond au type et le second au terme *)
 (* je rajoute un int pour dire quel fils il est *)
 type noeud = 
-  | Variable of string * inTm 
+  | Variable of string * inTm
   | Definition of string * definition * string
   | Intermediaire of int * inTm * inTm * string
 
@@ -302,7 +302,9 @@ let rec pretty_print_tree_liste tree_liste n=
   | Item(x) :: suite -> "\n" ^ string_of_int n ^ " : \n" ^ pretty_print_item (Item(x)) ^ "\n" ^ pretty_print_tree_liste suite (n + 1)
   | Section(x) :: suite -> "\n " ^ string_of_int n ^ " Section \n" ^ pretty_print_tree_liste suite (n+1)
 let pretty_print_state_proof (Loc(t,p),d) = 
+  let () = Printf.printf "\n state proof enter \n" in 
   let env = get_and_print_env (Loc(t,p),d) in
+  let () = Printf.printf "\n we have env " in 
   match t with 
   | Item(x) -> "---------Environment : ------------\n" ^ 
 		 env ^ 
@@ -425,9 +427,9 @@ let verif_and_push_up_item (Loc(t,p)) =
 
 
 let rec verif_and_push_up_item (Loc(t,p),d) =     
-  let terme_to_put = get_terme_item (Loc(t,p),d) in   
-  let typ_terme_to_put = get_typ_item (Loc(t,p),d) in
-  if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p),d)
+  let typ_terme_to_put = get_type_item (Loc(t,p),d) in (* TODO :: ici il faut faire une annotation *)
+  let terme_to_put = Ann(get_terme_item (Loc(t,p),d),typ_terme_to_put) in   
+  if check_if_no_hole_inTm (Inv(terme_to_put)) && know_def_inter (Loc(t,p),d)
   then     
     begin 
     let trou = get_num_Inter (Loc(t,p),d) in 

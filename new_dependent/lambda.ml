@@ -1,6 +1,8 @@
 open Sexplib
 
 
+(* TODO :: faire dans le fichier de zipper une fonction permettant de retrouver le type d'un label *)
+
 (*
   To load in the OCaml toplevel:
   #use "topfind";;
@@ -20,13 +22,10 @@ type name =
 
 type 'a binder = ident * 'a
 
-(* TODO :: supprimer les commentaires pour latex *)
 type inTm =
-(*   | Ref of string (* TODO :: supprimer et faire en sorte que ce soit une FVAR *) *)
-(*   | Hole_inTm of int (* TODO :: supprimer et faire en sorte que ce soit une FVAR *) *)
-  | Abs of inTm binder (* TODO :: remplacer name par un ident *) (* Abs of inTm binder (cf photo) *)
+  | Abs of inTm binder 
   | Inv of exTm
-  | Pi of (inTm * inTm) binder (* le premier inTm est celui ou il ne peut pas y avoir de variables libres *)
+  | Pi of (inTm * inTm) binder 
   | Star
   | Zero
   | Succ of inTm
@@ -45,7 +44,7 @@ type inTm =
   | Pair of inTm * inTm 
   | Sig of (inTm * inTm) binder
 and exTm = 
-  | Label of ident * inTm 
+(*   | Label of ident * inTm * string *)
   | Ann of inTm * inTm 
   | Var of name 
   | Appl of exTm * inTm
@@ -84,7 +83,7 @@ type value =
   | VId of value * value * value 
   | VRefl
 and neutral = 
-  | NLabel of string * value
+(*  | NLabel of string * value *)
   | NFree of name 
   | NApp of neutral * value 
   | NIter of value * value * value * value
@@ -185,6 +184,8 @@ let rec parse_term env t =
       | Sexp.List [Sexp.Atom "id";gA;a;b] -> 
 	 Id((parse_term env gA),(parse_term env a),(parse_term env b))
       | Sexp.Atom "refl" -> Refl
+(*      | Sexp.List [Sexp.Atom "<"; Sexp.Atom name; Sexp.Atom ":" ;typ ; Sexp.Atom ">"] -> 
+         Label( *)
       | Sexp.List [Sexp.Atom "lambda"; Sexp.Atom var; body] -> 
          Abs(var,(parse_term (var::env) body))
 (* 	 Abs(Global(var),(parse_term (Global(var)::env) body)) *)
@@ -284,10 +285,11 @@ and parse_exTm env t =
   | _ -> failwith "erreur de parsing" 
 
 let read t = parse_term [] (Sexp.of_string t)
+let read_exTm t = parse_exTm [] (Sexp.of_string t)
 
 (* prend en argument une liste de ref ainsi qu'un nom et retourne le terme associé au nom si celui ci existe *)
 (*-----------LOLOLOL surement à changer quand le moment viendra---------------------*)
-let rec def_is_in_the_liste_inTm env name_to_find= 
+let rec def_is_in_the_liste_inTm (env : (name * inTm * inTm) list) name_to_find = 
   match env with 
   | [] -> failwith "def_is_in_the_liste : Dummy you call a ref wich is not present in the context ..... You can shut down your computer now" 
   | (name,typ,terme) :: suite -> 
@@ -325,7 +327,7 @@ let rec freevars_inTm terme l =
   | Refl -> l
 and freevars_exTm terme l = 
   match terme with 
-  | Label(n,t) -> l
+(*   | Label(n,t) -> l *)
   | Var(Global x) -> (Global(x) :: l)
   | Var(Hole x) -> (Hole(x) :: l)
   | Var(x) -> l
@@ -343,6 +345,7 @@ and freevars_exTm terme l =
 				  freevars_inTm f l @ freevars_inTm a l
 
 
+
 (* check_if_no_hole_inTm : ident liste -> inTm -> bool *)
 let rec check_if_no_hole_inTm terme = 
   let l = freevars_inTm terme [] in 
@@ -353,7 +356,6 @@ and hole_in_liste l =
   | Hole(x) :: suite -> false 
   | _ :: suite -> hole_in_liste suite
   
-
 
  
 let rec pretty_print_inTm t l = 
@@ -381,14 +383,15 @@ let rec pretty_print_inTm t l =
 and pretty_print_exTm t l =
   match t with 
   | Ann(x,y) ->  "(: " ^ pretty_print_inTm x l ^ " " ^ pretty_print_inTm y l ^ ")"
-  | Var (Global x) ->  x
+  | Var (Global x) -> x 
   | Var (Quote x) -> string_of_int x 
-  | Var (Bound x) ->       
+  | Var (Bound x) -> let rec print_liste_debug l =  match l with | [] -> "" | elem :: suite -> elem ^ ";" ^ print_liste_debug suite in
      begin
        try List.nth l x with 
-       | Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong list is to short BVar de " ^ string_of_int x) 
+       | Failure("nth") ->  failwith ("Pretty_print_exTm BVar: something goes wrong with var : \n "^ string_of_int x ^ "\n list : \n " ^ print_liste_debug l^ " \n is to short BVar de ") 
        | _ -> List.nth l x
      end
+  | Var (Hole x) -> string_of_int x
   | Appl(x,y) -> "(" ^ pretty_print_exTm x l ^ " " ^ pretty_print_inTm y l ^ ")"
   | Iter(p,n,f,z) -> "(iter " ^ pretty_print_inTm p l ^ " " ^ pretty_print_inTm n l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm z l ^ ")"
   | Ifte(p,c,tHen,eLse) -> "(ifte " ^ pretty_print_inTm p l ^ " " ^ pretty_print_inTm c l ^ " " ^ pretty_print_inTm tHen l ^ " " ^ pretty_print_inTm eLse l ^ ")"
@@ -399,15 +402,23 @@ and pretty_print_exTm t l =
   | Transp(bA,p,a,b,q,x) -> "(trans " ^ pretty_print_inTm bA l ^ " " ^pretty_print_inTm p l ^ " " ^pretty_print_inTm a l ^ " " ^
 			     pretty_print_inTm b l ^ " " ^pretty_print_inTm q l ^ " " ^pretty_print_inTm x l ^ ")"
   | Fold(bA,alpha,xs,f,a) -> "(fold " ^ pretty_print_inTm bA l ^ " " ^ pretty_print_inTm alpha l ^ " " ^ pretty_print_inTm xs l ^ " " ^ pretty_print_inTm f l ^ " " ^ pretty_print_inTm a l ^ ")"
-  | _ -> failwith "TODO refléchir et faire le parsing ainsi que le pretty_print d'un label"
+
+(* TODO :: a supprimer le plus vite possible *)
+let pretty_print_inTm t l = 
+ (*  let () = Printf.printf "\n enter pretty prin_inTm" in *)
+  pretty_print_inTm t l
 
 (* TODO :: faire une fonction qui appelle celle ci avec les bons paramètres CF tableau *)
+
 let rec subst_inTm t tsub = 
-  match t with 
+(*   let () =  Printf.printf "\nSubst_inTm with t = %s\n and tsub = %s\n" (pretty_print_inTm t []) (pretty_print_exTm tsub []) in *)
+  let ret = begin match t with 
   | Abs(name,terme) -> substitution_inTm terme tsub 0
   | Pi(name,(s,t)) -> substitution_inTm t tsub 0
   | Sig(name,(s,t)) -> substitution_inTm t tsub 0
-  | _ -> failwith "subst_inTm : can't substituate if not an abstraction" 
+  | _ -> failwith "subst_inTm : can't substituate if not an abstraction" end in 
+(*   let () = Printf.printf "subst_inTm exit with t = %s \n" (pretty_print_inTm ret []) in  *)
+  ret
 and substitution_inTm t tsub var = 
   match t with 
   | Inv x -> Inv(substitution_exTm x tsub var)
@@ -435,7 +446,7 @@ and substitution_exTm  t tsub var =
   match t with 
   | Var(Bound n) -> if n = var then tsub else Var(Bound n)
   | Var(x)  -> Var(x)
-  | Label (x,t) -> Label(x,substitution_inTm t tsub var)
+(*  | Label (x,t) -> Label(x,substitution_inTm t tsub var) *)
   | Appl(x,y) -> Appl((substitution_exTm x tsub var),(substitution_inTm y tsub var))
   | Ann(x,y) -> Ann((substitution_inTm x tsub var),(substitution_inTm y tsub var))
   (*=End *)
@@ -481,7 +492,7 @@ and bound_var_exTm  t i var =
   | Var(Global x) -> begin if x = var then Var(Bound i) else Var(Global x) end 
   | Var(Hole(x)) -> begin if string_of_int x = var then Var(Bound i) else Var(Hole(x)) end 
   | Var(x) -> Var(x)
-  | Label(name,term) -> Label(name,term)
+(*   | Label(name,term) -> Label(name,term) *)
   | Appl(x,y) -> Appl((bound_var_exTm x i var),(bound_var_inTm y i var))
   | Ann(x,y) -> Ann((bound_var_inTm x i var),(bound_var_inTm y i var))
   | Iter(p,n,f,a) -> Iter((bound_var_inTm p i var),(bound_var_inTm n i var),(bound_var_inTm f i var),(bound_var_inTm a i var))
@@ -502,12 +513,24 @@ let change_name_var terme name new_name =
   subst_inTm terme (Var(Global(new_name)))
 
 
+let replace_var_terme terme name new_terme = 
+  let terme = abstract name terme in 
+  subst_inTm terme new_terme
+
+(* prend en argument un truc du style un terme et une liste de def (string * inTm * inTm) et retourne le terme en ayant substituer les refs *)
+let rec replace_liste_var terme def =
+  match def with 
+  | [] -> terme 
+  | (name,typ,new_terme) :: suite -> replace_liste_var (replace_var_terme terme name (Ann(new_terme,typ))) suite 
+          
+
 let gen_hole =
   let c = ref 0 in
   fun () -> incr c; "_" ^ string_of_int !c  
 
-let replace_hole terme name new_terme = 
-  let terme = abstract name terme in 
+let replace_hole terme trou new_terme = 
+  let trou = string_of_int trou in
+  let terme = abstract trou terme in 
   subst_inTm terme new_terme
  
 
@@ -653,7 +676,7 @@ and neutral_to_exTm i v =
 				  (value_to_inTm i b),(value_to_inTm i q),(value_to_inTm i x))
   (* ça me plait pas du tout mais je suis un peu dans le flou la, cette annotation qui ne sert a rien *)
   | NP0(x) -> P0(Ann((value_to_inTm i x),Star))
-  | NLabel(x,t)-> Label(x,value_to_inTm i t)
+(*   | NLabel(x,t)-> Label(x,value_to_inTm i t) *)
   | NP1(x) -> P1(Ann((value_to_inTm i x),Star))
   | NFold(p,alpha,xs,f,a) -> Fold((value_to_inTm i p),(value_to_inTm i alpha),(value_to_inTm i xs),(value_to_inTm i f),(value_to_inTm i a))
 
@@ -915,8 +938,8 @@ and synth contexte exT steps =
   | Var(Quote i) -> 
      create_retSynth (create_report false (contexte_to_string contexte) steps "Var(quote i) : not possible during type check_inTming") VStar
   | Var(x) -> create_retSynth (create_report true (contexte_to_string contexte) steps "NO") (List.assoc x contexte)
-  | Label(name,t) -> 
-     create_retSynth (create_report true (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") (big_step_eval_inTm t [])
+(*   | Label(name,t) ->  
+     create_retSynth (create_report true (contexte_to_string contexte) steps "syth : maybe you just couldn't do it") (big_step_eval_inTm t []) *)
   | P0(x) -> let synth_x = synth contexte x steps in 
 	     if res_debug_synth synth_x
 	     then

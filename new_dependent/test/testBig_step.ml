@@ -26,6 +26,7 @@ let inputs =
   ("(pow (succ (succ zero)) (succ zero))","(succ (succ zero))");
   ("(pow (succ (succ zero)) (succ (succ (succ zero))))","(succ (succ (succ (succ (succ (succ (succ (succ zero))))))))");
   ("(pow (number 2) (number 10))","(number 1024)");
+  ("(((: (lambda x (lambda y (x y))) (pi x N (pi y N N))) (lambda x x)) lol)","lol");
 
 
 

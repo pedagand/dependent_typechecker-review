@@ -9,12 +9,12 @@ type pattern =
 
 (* le inTm de ce résult est une substitution *)
 type matching = 
-  | Success of (string * inTm) list
+  | Success of (string * exTm) list
   | Failed
 
 
 type act = 
-  | Return of inTm 
+  | Return of exTm 
   | Split of string * clause list
   | Hole of int
 and clause = 
@@ -57,24 +57,24 @@ let set_pointeur_userDef u p =
 
 let rec parse_clause str = 
   match str with 
-  | Sexp.List [p;a] -> Clause(Pattern(post_parsing_pattern_inTm (parse_term [] p)),parse_act a)
+  | Sexp.List [p;a] -> Clause(Pattern((* post_parsing_pattern_inTm *) (read (Sexp.to_string p))),parse_act a)
   | _ -> failwith "parse_clause : your clause don't have a good shape" 
 and parse_act str = 
   match str with 
   | Sexp.List [Sexp.Atom "<="; Sexp.Atom id;Sexp.List clauses] -> 
      let liste_clause = List.fold_right (fun c suite -> (parse_clause c) :: suite) clauses [] in 
      Split(id,liste_clause)		       		 
-  | Sexp.List [Sexp.Atom "->";t] -> Return(parse_term [] t)
+  | Sexp.List [Sexp.Atom "->";t] -> Return(read_exTm (Sexp.to_string t))
   | _ -> failwith ("parse_act : your action don't have a good shape" ^ Sexp.to_string str)
-and post_parsing_pattern_inTm t = 
+(*and post_parsing_pattern_inTm t = 
   match t with 
   | Inv(x) -> Inv(post_parsing_pattern_exTm x)
-  | _ -> failwith "post_parsing_pattern_exTm : this is not supposed to happend" 
-and post_parsing_pattern_exTm t = 
+  | _ -> failwith "post_parsing_pattern_exTm : this is not supposed to happend" *)
+(*and post_parsing_pattern_exTm t = 
   match t with 
   | Appl(creuse,x) -> Appl(post_parsing_pattern_exTm creuse ,x)
   | Var(Global(x)) -> Label(x,Star) (* TODO :: faire attention cette ligne est fausse c'est juste pour bypasser l'erreur *)
-  | _ -> failwith "post_parsing_pattern : it seem's that it don't work"
+  | _ -> failwith "post_parsing_pattern : it seem's that it don't work" *)
 
 
 (* j'initialise le pointeur à 1!!! *)
@@ -115,7 +115,7 @@ let read_definition str =
 let rec pretty_print_act a = 
   match a with 
   | Split(id,l) -> "(<= " ^ id ^ " (" ^ pretty_print_clause_liste l ^ "))"
-  | Return(t) -> "(-> " ^ " " ^ pretty_print_inTm t [] ^ ")"
+  | Return(t) -> "(-> " ^ " " ^ pretty_print_exTm t [] ^ ")"
   | Hole(x) -> "_" ^ string_of_int x
 and pretty_print_clause c = 
   match c with 
@@ -142,7 +142,7 @@ let pretty_print_def userDef =
 (* le premier est un terme faisant office de pattern et le second le terme à matcher *)
 (* fonction en cour de modification *)
 (* le truc de gauche c'est le pattern de l'utilisateur et a droite le terme *)
-let rec matching_inTm p t l =
+let rec matching_inTm p t (l : (string * exTm) list) =
   match (p,t) with 
   | (Abs(_,x1),Abs(_,x2)) -> matching_inTm x1 x2 l
   | (Pi(_,(x1,y1)),Pi(_,(x2,y2))) -> begin match matching_inTm x1 x2 l with
@@ -192,12 +192,13 @@ let rec matching_inTm p t l =
   | _ -> Failed 
 and matching_exTm p t l = 
   match (p,t) with 
-  | (Label(x1,y1),Label(x2,y2)) -> if x1 = x2 then Success(l) else Failed (* on suppose que si deux noms de labels sont égaux ils ont nécésserement le meme type *)
+(*  | (Label(x1,y1),Label(x2,y2)) -> if x1 = x2 then Success(l) else Failed (* on suppose que si deux noms de labels sont égaux ils ont nécésserement le meme type *) *)
   | (Ann(x1,y1),Ann(x2,y2)) -> begin match matching_inTm x1 x2 l with 
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
 				 end
-  | (Var(x1),Var(x2)) -> if x1 = x2 then Success(l) else Failed 
+  | (Var(Global(x1)),Var(Global(x2))) -> if x1 = x2 then Success((x1,(Var(Global x2))) :: l) else Failed 
+  | (Var(x1),Var(x2)) -> if x1 = x2 then Success(l) else Failed
   | (Appl(x1,y1),Appl(x2,y2)) -> begin match matching_exTm x1 x2 l with 
 				       | Success(liste) -> matching_inTm y1 y2 liste 
 				       | Failed -> Failed 
@@ -286,7 +287,7 @@ let rec match_pattern_goal_liste liste_goal p n =
 let rec change_name_liste terme l = 
   match l with 
   | [] -> terme
-  | (name,terme) :: suite -> let terme = change_name terme name in 
+  | (name,new_terme) :: suite -> let terme = replace_var_terme terme name new_terme  in 
 			     change_name_liste terme suite
 	   
 

@@ -7,7 +7,7 @@ open Lambda
 let test1y = "(pi A * (pi B (pi x A *) (pi C (pi x A *) (pi 1 (pi 2 (pi a * (pi b (B a) (C a))) (pi a A (B a))) (pi a A (C a))))))"
 
 let inputs
-    = [("(lambda x x)", Abs("x",(Inv(Var(Bound 0)))));
+    = [("(lambda x x)", Abs("x",Inv(Var(Bound 0))));
        ("(lambda x y)", Abs("x",Inv(Var(Global("y")))));
        ("(x y z)", 
 	Inv(Appl(Appl(Var(Global"x"), Inv(Var (Global "y"))), Inv(Var (Global "z")))));

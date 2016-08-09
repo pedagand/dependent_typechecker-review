@@ -214,6 +214,6 @@ let inputs =
 (* let () = Printf.printf "%s" (print_report (check [] (read "(dfold N (lambda n (lambda xs N)) (dcons zero (dnil N)) 
 	    (lambda n (lambda xs (lambda a a))) zero)") VNat "")) *)
     
-let tests = List.map (fun (term,chek, res) -> term >:: fun ctxt -> assert_equal (res_debug(check [] (read term) (big_step_eval_inTm (read chek) []) "")) res) inputs 
+let tests = List.map (fun (term,chek, res) -> term >:: fun ctxt -> assert_equal (check (read term) (read chek)) res) inputs 
 
 (* let ltests = List.map (fun (term,chek,res) -> term >:: fun ctxt -> assert_equal (lcheck [] (big_step_eval_inTm (read chek) []) (read term)) res) inputs *)
