@@ -131,6 +131,10 @@ let ask_the_son () =
   let son = read_line () in 
   int_of_string son 
 
+let rec count_args terme = 
+  match terme with 
+  | Pi(x,(s,t)) -> 1 + count_args t
+  | _ -> 0 
 
 (* -------------- Ensemble des tactics ------------ *)
 let intro (Loc(t,p),d) = 
@@ -163,6 +167,7 @@ let intro (Loc(t,p),d) =
   go_down(go_right(insert_right arbre (Section([new_son]))))
 
 let intro_auto (Loc(t,p),d) = 
+  let d = set_pointeur_userDef d (d.pointeur * 2) in 
   let () = Printf.printf "\n enter in intro auto" in
   let typ = get_type_item (Loc(t,p),d) in 
   let name_var = 
@@ -241,7 +246,7 @@ let procedure_start_definition typ_not_parsed (Loc(t,p),d) =
 	end in
       let arbre = (go_down(go_right(insert_right arbre (Section([Item(second_def)]))))) in 
       let (Loc(t,p),d) = intros arbre in
-      let d = set_patAct_userDef d (Clause(Pattern(get_type_item (Loc(t,p),d)),Hole(1))) in
+      let d = set_patAct_userDef d (Clause(Pattern(get_type_item (Loc(t,p),d)),Hole((count_args typ) * 2))) in
       (Loc(t,p),d)
   | _ -> failwith "procedure_start_definition : something goes wrong during the creation of the definition"
 
@@ -349,11 +354,14 @@ let split_iter (Loc(t,p),d) induct_var =
 					Inv(Appl(Ann(predicat,Pi("x",(Nat,Star))),Succ(Inv(Var(Bound 1))))))))))
 					     []) in 
 (* find_return_type typ a faire après pour les userDef EN RENTRANT DE LA PAUSE FAIRE LA FONCTION QUI ENLEVE LES TROUS DE ACT *)
-  let clause_un = Clause(Pattern(find_return_type first_goal_typ),Hole(d.pointeur + 1)) in 
-  let clause_deux = Clause(Pattern(find_return_type second_goal_typ),Hole(d.pointeur + 2)) in   
+  (* ??? The line below may create some issue *)
+  let old_d = d in
+(*   let d = set_pointeur_userDef d (d.pointeur * 2) in *)
+  let clause_un = Clause(Pattern(find_return_type first_goal_typ),Hole(d.pointeur * 8 (* because it's son 2 * intro 2 * intro 2 *))) in 
+  let clause_deux = Clause(Pattern(find_return_type second_goal_typ),Hole(d.pointeur * 3)) in   
   let liste_clause = [clause_un;clause_deux] in
   let spl = (Split(induct_var,liste_clause)) in
-  let d = set_patAct_userDef d (complete_clause d.patAct spl d.pointeur) in
+  let d = set_patAct_userDef d (complete_clause d.patAct spl old_d.pointeur) in
 (*   let d = set_pointeur_userDef d (d.pointeur + 1) in JE PENSE QUE CETTE LIGNE N4EST PAS NECESSAIRE *)
   let second_goal  = Section([Item(Intermediaire(1,first_goal_typ,Inv(Var(Hole 1)),""))]) in 
   let first_goal = Section([Item(Intermediaire(2,second_goal_typ,Inv(Var(Hole 1)),""))]) in
@@ -377,11 +385,13 @@ let split_bool (Loc(t,p),d) induct_var =
   let then_goal = Section([Item(Intermediaire(1,then_type,Inv(Var(Hole 1)),""))]) in 
   let else_goal = Section([Item(Intermediaire(2,else_type,Inv(Var(Hole 1)),""))]) in 
   (* start the save of the def *)
-  let clause_un = Clause(Pattern(find_return_type then_type),Hole(d.pointeur + 1)) in 
-  let clause_deux = Clause(Pattern(find_return_type else_type),Hole(d.pointeur + 2)) in   
+  let old_d = d in
+(*   let d = set_pointeur_userDef d (d.pointeur * 2) in *)
+  let clause_un = Clause(Pattern(find_return_type then_type),Hole(d.pointeur * 2)) in 
+  let clause_deux = Clause(Pattern(find_return_type else_type),Hole(d.pointeur * 3)) in   
   let liste_clause = [clause_un;clause_deux] in
   let spl = (Split(induct_var,liste_clause)) in
-  let d = set_patAct_userDef d (complete_clause d.patAct spl d.pointeur) in
+  let d = set_patAct_userDef d (complete_clause d.patAct spl old_d.pointeur) in
 (*   let d = set_pointeur_userDef d (d.pointeur + 1) in MEME JUSTIFICATION QUE POUR SPLIT ITER *)
   (* end *)
   let hole = 1 in 
@@ -392,6 +402,7 @@ let split_bool (Loc(t,p),d) induct_var =
   (Loc(t,p),d)
 
 
+(* TODO :: faire la sauvegarde pour le split_liste *)
 (* alpha is the type of the list which is called with *)
 let split_liste (Loc(t,p),d) induct_var alpha = 
   let returne_type = get_type_focus "split_liste" (Loc(t,p),d) in 
@@ -434,8 +445,8 @@ let split induct_var (Loc(t,p),d) =
   (* C'est un test mais a chaque fois que je vérifie un terme je vais decrémenter le compteur de 1 *)
 let verif (Loc(t,p),d) = 
   let () = Printf.printf "\nEnter in the verif \n" in
-  let n = get_num_Inter (Loc(t,p),d) in 
-  let d = set_pointeur_userDef d (d.pointeur - n) in
+(*   let n = get_num_Inter (Loc(t,p),d) in *)
+(*   let d = set_pointeur_userDef d (d.pointeur / (n + 1)) in*)
   (verif_and_push_up_item (Loc(t,p),d))
 
 (* TODO :: refaire ces fonctions  *)
@@ -463,19 +474,14 @@ and find_in_env env terme =
 let return (terme : inTm) hole (Loc(t,p),d) = 
   let typ = value_to_inTm 0 (big_step_eval_inTm (get_type_focus "" (Loc(t,p),d)) []) in
   let d = set_patAct_userDef d (complete_clause d.patAct (Return terme) d.pointeur) in
-  if is_tag terme
-  then let () = Printf.printf "is_tag goign trhought then\n" in 
-       (* let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in *)
-       let arbre = complete_focus_terme (Loc(t,p),d) (Ann(terme,typ)) hole in 
-       let () = Printf.printf "finish the return\n" in
-       verif arbre
-  else let () = Printf.printf "is_tag goign trhought else\n" in 
-       let arbre = complete_focus_terme (Loc(t,p),d) (Ann(terme,typ)) hole in
-       let () = Printf.printf "finish the return\n" in
-       verif arbre
+  let () = Printf.printf "is_tag goign trhought then\n" in 
+  (* let var = Inv(FVar(Global(find_var_with_type (Loc(t,p),d) terme))) in *)
+  let arbre = complete_focus_terme (Loc(t,p),d) (Ann(terme,typ)) hole in 
+  let () = Printf.printf "finish the return\n" in
+  verif arbre
   
 let son n (Loc(t,p),d) = 
-  let d = set_pointeur_userDef d (d.pointeur + n) in  
+  let d = set_pointeur_userDef d (d.pointeur * (n + 1)) in  
   let arbre = (go_n_son (Loc(t,p),d) n) in 
   intros arbre
 

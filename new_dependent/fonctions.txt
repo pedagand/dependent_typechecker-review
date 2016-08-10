@@ -115,12 +115,8 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 	    
 -----plus petit stric et pas strict (tous les comparateurs) : 
 
-(def (lz (pi m N (pi n N B))) 
-(((LZ m) n) (<= m
-((((LZ (succ x1)) n) (<= n
-       ((((LZ (succ x1)) (succ x2)) (->  H1))
-       (((LZ (succ x1)) zero) (->  false))))) 
-(((LZ zero) n) (->  H1))))))
+
+(def (lz (pi m N (pi n N B))) (((LZ m) n) (<= m ((((LZ (succ x1)) n) (<= n ((((LZ (succ x1)) (succ x2)) (->  H1)) (((LZ (succ x1)) zero) (->  false))))) (((LZ zero) n) (-> true))))))
 
 
 !!!! TODO :: ICI j'ai un bug avec la sauvegarde le dernier cas ne devrais pas retourner H1 mais false (je pense savoir d'ou ça viens)

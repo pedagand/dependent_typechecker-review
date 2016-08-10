@@ -1,5 +1,5 @@
 open Lambda
-
+open Compiler
 
 (*
   To load in the OCaml toplevel:
@@ -104,7 +104,7 @@ let get_type_item (Loc(t,p),d) =
 let get_num_Inter (Loc(t,p),d) = 
   match Loc(t,p) with 					
   | Loc(Item(Intermediaire(n,typ,terme,save)),t) -> n
-  | _ -> failwith "get_num_Inter : you can't ask for a num if you are no on Inter" 					 
+  | _ -> 0
 
 (* fonctions permettants de savoir quand s'arreter *)
 let know_def_inter (Loc(t,p),d) = 
@@ -433,20 +433,23 @@ let verif_and_push_up_item (Loc(t,p)) =
 
 
 
-
-
+let is_abstraction terme = 
+  match terme with
+  | Abs(x,y) -> true 
+  | _ -> false
+  
 
 let rec verif_and_push_up_item (Loc(t,p),d) =     
   let terme_to_put = get_terme_item (Loc(t,p),d) in   
   let typ_terme_to_put = get_type_item (Loc(t,p),d) in (* TODO :: ici il faut faire une annotation *)
+  let trou = get_num_Inter (Loc(t,p),d) in 
   if check_if_no_hole_inTm terme_to_put && know_def_inter (Loc(t,p),d)
   then     
     begin 
-    let trou = get_num_Inter (Loc(t,p),d) in 
     let arbre = proof_up (Loc(t,p),d) in 
     let terme_to_fullfill = get_terme_item arbre in 
     let terme = replace_hole terme_to_fullfill trou (Ann(terme_to_put,typ_terme_to_put)) in 
-    let arbre = 
+    let (Loc(t,p),d) = 
       begin 
 	match arbre with 
 	| (Loc(Item(Intermediaire(n,x,y,save)),p),d) -> replace_item arbre (Item(Intermediaire(n,x,terme,save)))
@@ -454,7 +457,9 @@ let rec verif_and_push_up_item (Loc(t,p),d) =
 	   replace_item arbre (Item(Definition(name,Incomplete(typ,terme),save)))
 	| _ -> failwith "verif_and_push_up_item : this case is supposed to be impossible" 
       end in 
-    verif_and_push_up_item arbre
+    let () = Printf.printf "exit from verif and push with : d = %s and will call verif with d %s & num inter = %s \n" (string_of_int d.pointeur)
+                           (string_of_int (d.pointeur / (trou + 1))) (string_of_int (trou)) in
+    verif_and_push_up_item (Loc(t,p),set_pointeur_userDef d (d.pointeur / (trou + 1)))
     end
   else (Loc(t,p),d)
   
