@@ -5,8 +5,8 @@
 
 !!!!!TODO!!!!!!!
 !Faire fonction eval_terme qui permet d'écrire une application et de l'evaluer
-!Faire le parsing et le pretty_print d'un label
-!faire une fonction qui génère des trou (ce seront des variables libres avec des id de la forme tr1 tr2 ect.... 
+
+!Il faut rajouter dans le parseur quand j'écris hypothesis 
 
 
 
@@ -62,8 +62,10 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 -------------------------------------les entiers -----------
 -------addition:
 
-(def (plus (pi m N (pi n N N))) (((PLUS m) n) 
-     (<= m ((((PLUS (succ x1)) n) (->  (succ x2))) (((PLUS zero) n) (->  n))))))
+(def (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS (succ x1)) n) (->  (succ H1))) (((PLUS zero) n) (->  n))))))
+
+
+
 
 
 (plus (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
@@ -82,6 +84,8 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 
 (pred (lambda m (p0 (iter (lambda x (sig y N N)) m (lambda x1 (lambda x2 ((p1 x2) , (succ (p1 x2))))) (zero , zero)))) (pi m N N))
 
+(def (pred (pi m N N)) ((PRED m) (<= m (((PRED (succ x1)) (->  x1)) ((PRED zero) (->  zero))))))
+
 ---------is zero
 
 (iszero (lambda m (iter (lambda x ((: (lambda m B) (pi m N *)) x)) m (lambda x1 (lambda x2 false)) true)) (pi m N ((: (lambda m B) (pi m N *)) m)))
@@ -94,6 +98,12 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 
 
 ---------La soustraction
+
+(def (soustr (pi m N (pi n N N))) (((SOUSTR m) n) (<= n
+((((SOUSTR m) (succ x2)) (->  (pred H2))
+) (((SOUSTR m) zero) (->  m)
+) ))))
+
 
 (soustr (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 ((: (lambda m (p0 (iter (lambda x (sig y N N)) m (lambda x1 (lambda x2 ((p1 x2) , (succ (p1 x2))))) (zero , zero)))) (pi m N N)) x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 

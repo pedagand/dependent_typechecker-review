@@ -168,7 +168,7 @@ let intro_auto (Loc(t,p),d) =
   let name_var = 
     begin 
       match typ with 
-      | (Pi(x,(s,t))) -> x
+      | (Pi (x,(s,t))) -> x
       | _ -> failwith "intro_auto : it's not possible to intro something else then a pi" 
     end in 
   let typ_var = 
@@ -215,6 +215,7 @@ let rec intros (Loc(t,p),d) =
 
 
 let procedure_start_definition typ_not_parsed (Loc(t,p),d) = 
+  let () = init_hypothesis in
   let d = set_def_userDef d typ_not_parsed in
   let d = set_pointeur_userDef d 1 in
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
@@ -339,7 +340,7 @@ let fresh_var  =
 
 let split_iter (Loc(t,p),d) induct_var = 
   let var_un = fresh_var () in
-  let var_deux = "H" in
+  let var_deux = gen_hypothesis () in
   let returne_type  = get_type_focus "split iter" (Loc(t,p),d) in 
   let predicat = create_iter_predicat returne_type induct_var in    
   let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(var_un,(Nat,Star))),Zero))) []) in 
@@ -437,6 +438,7 @@ let verif (Loc(t,p),d) =
   let d = set_pointeur_userDef d (d.pointeur - n) in
   (verif_and_push_up_item (Loc(t,p),d))
 
+(* TODO :: refaire ces fonctions  *)
 let rec is_etiquette t = 
   match t with 
   | Appl(creuse,suite) -> is_etiquette creuse 

@@ -15,6 +15,8 @@ type definition =
 
 (* le premier inTm correspond au type et le second au terme *)
 (* je rajoute un int pour dire quel fils il est *)
+
+
 type noeud = 
   | Variable of string * inTm
   | Definition of string * definition * string
@@ -30,6 +32,14 @@ type path =
   
 type location = Loc of tree * path
 
+let compteur_hypothesis = ref 0
+
+let gen_hypothesis =  
+  fun () -> incr compteur_hypothesis; "H" ^ string_of_int  !compteur_hypothesis  
+
+let rec init_hypothesis = 
+  compteur_hypothesis) = 0 then () else decr compteur_hypothesis;init_hypothesis;()
+  
   
 (* -----------------Fonctions d'affichage-------------- *)
 

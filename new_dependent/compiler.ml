@@ -15,7 +15,6 @@ type matching =
 
 type act = 
   | Return of inTm
-  | Hypothesis of int
   | Split of string * clause list
   | Hole of int
 and clause = 
@@ -35,7 +34,6 @@ let rec complete_act a sub indice=
   | Hole x -> if indice = x then sub else Hole x
   | Split(str,l) -> Split(str,(complete_clause_liste l sub indice))
   | Return(x) -> Return(x)
-  | Hypothesis x -> Hypothesis x
 and complete_clause_liste l sub indice = 
   match l with 
     | [] -> []
@@ -119,7 +117,6 @@ let rec pretty_print_act a =
   | Split(id,l) -> "(<= " ^ id ^ "\n(" ^ pretty_print_clause_liste l ^ "))"
   | Return(t) -> "(-> " ^ " " ^ pretty_print_inTm t [] ^ ")\n"
   | Hole(x) -> "_" ^ string_of_int x
-  | Hypothesis(x) -> "Pour l'instant j'ai pas fait l'affichage de l'hypothèse" 
 and pretty_print_clause c = 
   match c with 
   | Clause(Pattern(p),a) -> "(" ^ pretty_print_inTm p [] ^ " " ^ pretty_print_act a ^ ")"
