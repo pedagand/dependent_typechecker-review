@@ -28,6 +28,18 @@ type userDefinition =
     pointeur : int;
   }
 
+(* Fonction permettant l'ouverture d'un fichier *)
+let file_to_string file = 
+  let string_fichier = ref "" in
+  let in_channel = open_in file in
+  try
+    while true do
+      let line = input_line in_channel in
+      string_fichier := !string_fichier ^ line
+    done 
+  with End_of_file ->
+    close_in in_channel 
+
 
 let rec complete_act a sub indice= 
   match a with 

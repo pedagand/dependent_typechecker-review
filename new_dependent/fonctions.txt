@@ -10,6 +10,7 @@
 
 
 
+
 //////////Reminder///////////////
 /pour faire comme avec la fonction qui permettait de modifier le nom d'une FVar il faut faire une abstraction suivis d'une substitution
 
@@ -33,7 +34,14 @@ Booléens ---------
 POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 (IDEE SUR LE BUG : peut etre qu'il faut simplement réinitialiser la variable du compteur des def a chaque fois que on a sauvegarder un truc)
 
-(def (impl (pi a B (pi b B B))) (((IMPL a) b) (<= a ((((IMPL true) b) (<= b ((((IMPL true) true) (->  true)) (((IMPL true) false) (->  false)) ))) (((IMPL false) b) (->  true)) ))))
+(def (impl (pi a B (pi b B B))) 
+(((IMPL a) b) (<= a
+((((IMPL true) b) (<= b
+         ((((IMPL true) true) (->  true)) 
+         (((IMPL true) false) (->  false))))) 
+(((IMPL false) b) (->  true))))))
+
+
 
 (impl (lambda a (lambda b (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) x) b)) a (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) true) x)) b true false) true))) (pi a B (pi b B (((: (lambda a (lambda b B)) (pi a B (pi b B *))) a) b))))
 		       	 
@@ -41,15 +49,37 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 
 ----------ou exclusif 
 
+(def (xor (pi a B (pi b B B))) 
+(((XOR a) b) (<= a
+((((XOR true) b) (<= b
+        ((((XOR true) true) (->  false)
+        ) (((XOR true) false) (->  true))))) 
+(((XOR false) b) (->  false))))))
+
 (xor (lambda a (lambda b (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) x) b)) a (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) true) x)) b false true) (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) false) x)) b true false)))) (pi a B (pi b B (((: (lambda a (lambda b B)) (pi a B (pi b B *))) a) b))))
 
 
 ---------ou 
 
+(def (or (pi a B (pi b B B))) 
+(((OR a) b) (<= a
+((((OR true) b) (->  true)) 
+(((OR false) b) (<= b
+          ((((OR false) true) (->  true)) 
+          (((OR false) false) (->  false)))))))))
+
+
 (or (lambda a (lambda b (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) x) b)) a true (ifte (lambda x (((: (lambda a (lambda b B)) (pi a B (pi b B *))) false) x)) b true false)))) (pi a B (pi b B (((: (lambda a (lambda b B)) (pi a B (pi b B *))) a) b))))
 
 ---------et
-(def (or (pi a B (pi b B B))) (((OR a) b) (<= a (( ((OR true) b) (<= b (( ((OR true) true) (->  true)) (((OR true) false) (->  false))))) (((OR false) b) (->  true))))))
+
+(def (and (pi a B (pi b B B))) 
+(((AND a) b) (<= a
+((((AND true) b) (<= b
+        ((((AND true) true) (->  true))
+        (((AND true) false) (->  false))))) 
+(((AND false) b) (->  true))))))
+
 
 
 
@@ -62,20 +92,40 @@ POUR RESOUDRE UN DES BUG DE LA SAUVEGARDE FAIRE AVEC CET EXEMPLE
 -------------------------------------les entiers -----------
 -------addition:
 
-(def (plus (pi m N (pi n N N))) (((PLUS m) n) (<= m ((((PLUS (succ x1)) n) (->  (succ H1))) (((PLUS zero) n) (->  n))))))
-
-
-
+(def (plus (pi m N (pi n N N))) 
+(((PLUS m) n) (<= m 
+((((PLUS (succ x1)) n) (->  (succ H1))) 
+(((PLUS zero) n) (->  n))))))
 
 
 (plus (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
 
 ------multiplication :
 
-(mult (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N N))) x2) n))) zero))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
+(def (mult (pi m N (pi n N N))) 
+(((MULT m) n) (<= m
+((((MULT (succ x1)) n) (->  ((plus n) H1))) 
+(((MULT zero) n) (->  zero))))))
+
+(def (mult (pi m N (pi n N N))) (((MULT m) n) (<= m ((((MULT (succ x1)) n) (->  ((plus n) H1))) (((MULT zero) n) (->  zero))))))
+
+(mult (lambda m (lambda n (iter (lambda m (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n)) m (lambda x1 (lambda H1 (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 (succ x2))) n))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n)))) n) H1))) zero))) (pi m N (pi n N (((: (lambda m (lambda n N)) (pi m N (pi n N *))) m) n))))
+
 
 	    
 -----plus petit stric et pas strict (tous les comparateurs) : 
+
+(def (lz (pi m N (pi n N B))) 
+(((LZ m) n) (<= m
+((((LZ (succ x1)) n) (<= n
+       ((((LZ (succ x1)) (succ x2)) (->  H1))
+       (((LZ (succ x1)) zero) (->  false))))) 
+(((LZ zero) n) (->  H1))))))
+
+
+!!!! TODO :: ICI j'ai un bug avec la sauvegarde le dernier cas ne devrais pas retourner H1 mais false (je pense savoir d'ou ça viens)
+
+
 (lz (lambda m (lambda n (ifte (lambda x B) ((: (lambda m (iter (lambda x ((: (lambda m B) (pi m N *)) x)) m (lambda x1 (lambda x2 false)) true)) (pi m N B)) (((: (lambda m (lambda n (iter (lambda x (((: (lambda m (lambda n N)) (pi m N (pi n N *))) x) n)) m (lambda x1 (lambda x2 ((: (lambda m (p0 (iter (lambda x (sig y N N)) m (lambda x1 (lambda x2 ((p1 x2) , (succ (p1 x2))))) (zero , zero)))) (pi m N N)) x2))) n))) (pi m N (pi n N N))) n) m)) true false))) (pi m N (pi n N (((: (lambda m (lambda n B)) (pi m N (pi n N *))) m) n))))
 
 

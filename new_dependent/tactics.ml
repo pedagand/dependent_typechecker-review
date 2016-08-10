@@ -215,7 +215,7 @@ let rec intros (Loc(t,p),d) =
 
 
 let procedure_start_definition typ_not_parsed (Loc(t,p),d) = 
-  let () = init_hypothesis in
+  let _ = gen_hypothesis true in
   let d = set_def_userDef d typ_not_parsed in
   let d = set_pointeur_userDef d 1 in
   let second_def = parse_definition (Sexp.of_string typ_not_parsed) "" in
@@ -340,7 +340,7 @@ let fresh_var  =
 
 let split_iter (Loc(t,p),d) induct_var = 
   let var_un = fresh_var () in
-  let var_deux = gen_hypothesis () in
+  let var_deux = gen_hypothesis false () in
   let returne_type  = get_type_focus "split iter" (Loc(t,p),d) in 
   let predicat = create_iter_predicat returne_type induct_var in    
   let second_goal_typ  = value_to_inTm 0 (big_step_eval_inTm (Inv(Appl(Ann(predicat,Pi(var_un,(Nat,Star))),Zero))) []) in 
@@ -683,7 +683,10 @@ let replace_def (Loc(t,p),d) =
   let () = Printf.printf "\nThis is your terme with def replaced %s \n" (pretty_print_inTm terme []) in
   (Loc(t,p),d)
   
-  
+let print_def_tactique (Loc(t,p),d) =
+  let () = Printf.printf "def \n %s \n" (pretty_print_def d) in 
+  (Loc(t,p),d)
+
   
 (* --------------Fonctions de manipulation de tactiques ----------------- *)			    
 let choose_tactic () = 
@@ -728,6 +731,10 @@ let choose_tactic () =
      let str = read_line () in 
      load_fichier_terme str 
   | "replace def" -> replace_def
+  | "test load" -> 
+     let () = Printf.printf "Mettre le nom du ficher à charger\n" in 
+     failwith "in progress"
+  | "print def" -> print_def_tactique
   | _ -> nothing
 
 (* --------------Idées-------------------*)
